@@ -1,5 +1,5 @@
 import type { AppInfo } from "@shared/ipc";
-import { IconFolder, IconPlus, IconServer } from "../ui/icons";
+import { IconEve, IconFolder, IconPlus } from "../ui/icons";
 import { Button } from "../ui/kit";
 
 export function Welcome({
@@ -15,8 +15,8 @@ export function Welcome({
     <div className="relative flex h-full flex-col bg-bg text-text">
       <div className="titlebar-drag h-11 shrink-0" />
       <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/15 text-accent shadow-glow">
-          <IconServer className="h-7 w-7" />
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-white text-text shadow-card">
+          <IconEve className="h-8 w-8" />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight">Eve Studio</h1>
         <p className="mt-2 max-w-md text-[14px] leading-relaxed text-muted">
@@ -38,7 +38,7 @@ export function Welcome({
 
         <p className="mt-6 max-w-sm text-2xs leading-relaxed text-faint">
           Point at any Eve project folder (the one with an{" "}
-          <code className="rounded bg-white/5 px-1 font-mono">agent/</code>{" "}
+          <code className="rounded bg-black/[0.05] px-1 font-mono">agent/</code>{" "}
           directory). Studio spawns its dev server and talks to it locally.
         </p>
       </div>

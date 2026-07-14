@@ -93,7 +93,7 @@ export function Evals(): JSX.Element {
           {!items || items.length === 0 ? (
             <EmptyState icon={<IconCheck className="h-5 w-5" />} title="No evals">
               Add scored checks as
-              <code className="mx-1 rounded bg-white/5 px-1 font-mono text-xs">
+              <code className="mx-1 rounded bg-black/[0.05] px-1 font-mono text-xs">
                 evals/*.eval.ts
               </code>
               with defineEval.
@@ -102,7 +102,7 @@ export function Evals(): JSX.Element {
             <div className="space-y-2">
               {items.map((e) => (
                 <Card key={e.id} className="flex items-start gap-3 p-3">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.05] text-muted">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/[0.04] text-muted">
                     <IconCheck className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">

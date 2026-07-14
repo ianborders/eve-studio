@@ -63,11 +63,11 @@ function BlockView({
           <Badge tone={tone}>{block.status}</Badge>
         </summary>
         <div className="space-y-1 px-2.5 pb-2">
-          <pre className="overflow-x-auto rounded bg-black/40 p-2 text-2xs text-muted">
+          <pre className="overflow-x-auto rounded bg-subtle border border-border p-2 text-2xs text-muted">
             {json(block.input)}
           </pre>
           {block.output !== undefined ? (
-            <pre className="overflow-x-auto rounded bg-black/40 p-2 text-2xs text-faint">
+            <pre className="overflow-x-auto rounded bg-subtle border border-border p-2 text-2xs text-muted">
               {json(block.output)}
             </pre>
           ) : null}
@@ -87,7 +87,7 @@ function BlockView({
           </Badge>
         </summary>
         {block.output !== undefined ? (
-          <pre className="mx-2.5 mb-2 overflow-x-auto rounded bg-black/40 p-2 text-2xs text-faint">
+          <pre className="mx-2.5 mb-2 overflow-x-auto rounded bg-subtle border border-border p-2 text-2xs text-muted">
             {json(block.output)}
           </pre>
         ) : null}
@@ -128,7 +128,7 @@ function BlockView({
             href={block.url}
             target="_blank"
             rel="noreferrer"
-            className="mt-2 inline-flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5 text-xs text-text hover:bg-white/15"
+            className="mt-2 inline-flex items-center gap-1 rounded-lg bg-black/[0.05] px-3 py-1.5 text-xs text-text hover:bg-black/[0.08]"
           >
             <IconExternal className="h-3.5 w-3.5" />
             Open sign-in
@@ -196,7 +196,7 @@ export function Chat(): JSX.Element {
           <button
             type="button"
             onClick={() => newThread(activeAgentId)}
-            className="rounded p-0.5 text-muted hover:bg-white/10 hover:text-text"
+            className="rounded p-0.5 text-muted hover:bg-black/[0.05] hover:text-text"
           >
             <IconPlus className="h-3.5 w-3.5" />
           </button>
@@ -209,8 +209,8 @@ export function Chat(): JSX.Element {
               onClick={() => selectThread(t.id)}
               className={`group flex w-full items-center gap-1 rounded-lg px-2 py-1.5 text-left text-xs ${
                 t.id === activeThreadId
-                  ? "bg-white/[0.07] text-text"
-                  : "text-muted hover:bg-white/[0.04]"
+                  ? "bg-black/[0.05] text-text"
+                  : "text-muted hover:bg-black/[0.03]"
               }`}
             >
               <span className="flex-1 truncate">{t.title}</span>

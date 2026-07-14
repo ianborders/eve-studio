@@ -37,7 +37,7 @@ export function Settings({ info }: { info: AppInfo | null }): JSX.Element {
           <div className="divide-y divide-border">
             {agents.map((a) => (
               <div key={a.id} className="flex items-center gap-3 px-4 py-2.5">
-                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-white/[0.05] text-muted">
+                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-black/[0.04] text-muted">
                   <IconServer className="h-3.5 w-3.5" />
                 </div>
                 <div className="min-w-0 flex-1">

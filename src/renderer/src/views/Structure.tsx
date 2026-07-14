@@ -38,7 +38,7 @@ function Group({
       <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
         <span className="text-muted">{icon}</span>
         <span className="text-[13px] font-medium text-text">{title}</span>
-        <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-2xs text-muted">
+        <span className="rounded-full bg-black/[0.04] px-1.5 py-0.5 text-2xs text-muted">
           {count}
         </span>
       </div>

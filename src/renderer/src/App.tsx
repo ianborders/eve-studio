@@ -7,6 +7,7 @@ import {
   IconCalendar,
   IconChat,
   IconCheck,
+  IconEve,
   IconExternal,
   IconFile,
   IconFolder,
@@ -15,7 +16,6 @@ import {
   IconPlus,
   IconPlug,
   IconRocket,
-  IconServer,
   IconSettings,
   IconStop,
   IconWand,
@@ -208,14 +208,12 @@ export function App(): JSX.Element {
   return (
     <div className="flex h-full bg-bg text-text">
       {/* Rail: agents */}
-      <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-[#0d0e11]">
+      <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-subtle">
         <div className="titlebar-drag h-11 shrink-0" />
-        <div className="no-drag flex items-center justify-between px-3 pb-2">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent/15 text-accent">
-              <IconServer className="h-3.5 w-3.5" />
-            </div>
-            <span className="text-[13px] font-semibold tracking-tight text-text">
+        <div className="no-drag flex items-center justify-between px-3.5 pb-2.5">
+          <div className="flex items-center gap-2 text-text">
+            <IconEve className="h-4 w-4" />
+            <span className="text-[14px] font-semibold tracking-tight">
               Eve Studio
             </span>
           </div>
@@ -259,7 +257,9 @@ export function App(): JSX.Element {
                   void setActiveAgent(a.id);
                 }}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors ${
-                  on ? "bg-white/[0.07]" : "hover:bg-white/[0.04]"
+                  on
+                    ? "border border-border bg-white shadow-card"
+                    : "border border-transparent hover:bg-black/[0.03]"
                 }`}
               >
                 <StatusDot status={st} />
@@ -285,7 +285,7 @@ export function App(): JSX.Element {
             type="button"
             onClick={() => setSection("settings")}
             className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-colors ${
-              inSettings ? "bg-white/[0.07] text-text" : "text-muted hover:bg-white/[0.04]"
+              inSettings ? "bg-black/[0.05] text-text" : "text-muted hover:bg-black/[0.03]"
             }`}
           >
             <IconSettings className="h-4 w-4" />

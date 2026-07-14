@@ -17,11 +17,10 @@ type ButtonSize = "sm" | "md";
 const BTN_BASE =
   "no-drag inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors disabled:pointer-events-none disabled:opacity-40 select-none";
 const BTN_VARIANT: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-black hover:bg-accent/90",
-  secondary:
-    "bg-white/[0.06] text-text hover:bg-white/[0.1] border border-border",
-  ghost: "text-muted hover:bg-white/[0.06] hover:text-text",
-  danger: "bg-danger/15 text-danger hover:bg-danger/25",
+  primary: "bg-text text-white hover:bg-text/85",
+  secondary: "bg-white text-text hover:bg-hover border border-border",
+  ghost: "text-muted hover:bg-black/[0.04] hover:text-text",
+  danger: "bg-danger/10 text-danger hover:bg-danger/20 border border-danger/20",
 };
 const BTN_SIZE: Record<ButtonSize, string> = {
   sm: "h-7 px-2.5 text-xs",
@@ -58,7 +57,7 @@ export function IconButton({
     <button
       type="button"
       className={cx(
-        "no-drag inline-flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-white/[0.08] hover:text-text disabled:opacity-40",
+        "no-drag inline-flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-black/[0.05] hover:text-text disabled:opacity-40",
         className
       )}
       {...rest}
@@ -71,7 +70,7 @@ export function IconButton({
 // --- Badge ---
 type Tone = "default" | "accent" | "warn" | "danger" | "info" | "violet";
 const TONE: Record<Tone, string> = {
-  default: "bg-white/[0.06] text-muted",
+  default: "bg-black/[0.04] text-muted",
   accent: "bg-accent/15 text-accent",
   warn: "bg-warn/15 text-warn",
   danger: "bg-danger/15 text-danger",
@@ -103,7 +102,7 @@ export function Badge({
 
 // --- StatusDot ---
 const DOT: Record<AgentRunStatus, string> = {
-  running: "bg-accent",
+  running: "bg-success",
   starting: "bg-warn",
   stopped: "bg-faint",
   error: "bg-danger",
@@ -277,18 +276,18 @@ export function Tabs({
             onClick={() => onChange(t.id)}
             className={cx(
               "relative flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
-              on ? "text-text" : "text-muted hover:bg-white/[0.05] hover:text-text"
+              on ? "text-text" : "text-muted hover:bg-black/[0.04] hover:text-text"
             )}
           >
             {Ico ? <Ico className="h-3.5 w-3.5" /> : null}
             {t.label}
             {typeof t.count === "number" ? (
-              <span className="rounded bg-white/[0.08] px-1 text-2xs text-muted">
+              <span className="rounded bg-black/[0.05] px-1 text-2xs text-muted">
                 {t.count}
               </span>
             ) : null}
             {on ? (
-              <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent" />
+              <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-text" />
             ) : null}
           </button>
         );
@@ -328,7 +327,7 @@ export function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-muted hover:bg-white/10 hover:text-text"
+            className="rounded-md p-1 text-muted hover:bg-black/[0.05] hover:text-text"
           >
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden="true">
               <path d="M6 6l12 12M18 6 6 18" />
@@ -356,7 +355,7 @@ export function PanelHeader({
       <div className="flex items-center gap-2">
         <span className="text-[13px] font-medium text-text">{title}</span>
         {typeof count === "number" ? (
-          <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-2xs text-muted">
+          <span className="rounded-full bg-black/[0.04] px-1.5 py-0.5 text-2xs text-muted">
             {count}
           </span>
         ) : null}

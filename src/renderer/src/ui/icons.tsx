@@ -145,3 +145,14 @@ export const IconServer = make(
     <path d="M7 7.5h.01M7 16.5h.01" />
   </>
 );
+
+/** The Eve wordmark mark — three stacked bars (☰), as in the eve CLI banner. */
+export function IconEve({ className = "h-4 w-4" }: { className?: string }): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <rect x="3" y="5" width="18" height="2.6" rx="1.3" />
+      <rect x="3" y="10.7" width="18" height="2.6" rx="1.3" />
+      <rect x="3" y="16.4" width="18" height="2.6" rx="1.3" />
+    </svg>
+  );
+}

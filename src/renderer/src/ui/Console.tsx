@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-/** A dark auto-scrolling terminal-style output pane. */
+/** A dark auto-scrolling terminal/log pane (Vercel keeps logs dark in light UI). */
 export function Console({
   text,
   placeholder,
@@ -22,9 +22,12 @@ export function Console({
   return (
     <pre
       ref={ref}
-      className={`overflow-auto rounded-lg border border-border bg-black/50 p-3 font-mono text-[11.5px] leading-relaxed text-neutral-300 ${className ?? ""}`}
+      style={{ background: "#0a0a0a", color: "#e4e4e4" }}
+      className={`overflow-auto rounded-lg border border-[#2a2a2a] p-3 font-mono text-[11.5px] leading-relaxed ${className ?? ""}`}
     >
-      {text || <span className="text-faint">{placeholder ?? "No output yet."}</span>}
+      {text || (
+        <span style={{ color: "#8f8f8f" }}>{placeholder ?? "No output yet."}</span>
+      )}
     </pre>
   );
 }

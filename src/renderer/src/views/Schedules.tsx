@@ -61,7 +61,7 @@ export function Schedules(): JSX.Element {
         {schedules.length === 0 ? (
           <EmptyState icon={<IconCalendar className="h-5 w-5" />} title="No schedules">
             Scheduled jobs wake the agent on a cron. Add them as
-            <code className="mx-1 rounded bg-white/5 px-1 font-mono text-xs">
+            <code className="mx-1 rounded bg-black/[0.05] px-1 font-mono text-xs">
               schedules/*.ts
             </code>
             in the project (root agent only).
@@ -72,7 +72,7 @@ export function Schedules(): JSX.Element {
               const human = describeCron(s.cron);
               return (
                 <Card key={s.name} className="flex items-center gap-3 p-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.05] text-muted">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.04] text-muted">
                     <IconCalendar className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -82,7 +82,7 @@ export function Schedules(): JSX.Element {
                     ) : null}
                   </div>
                   {s.cron ? (
-                    <code className="rounded bg-white/[0.05] px-2 py-1 font-mono text-2xs text-muted">
+                    <code className="rounded bg-black/[0.04] px-2 py-1 font-mono text-2xs text-muted">
                       {s.cron}
                     </code>
                   ) : null}

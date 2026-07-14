@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html,
@@ -14,11 +14,11 @@ body,
 }
 
 body {
-  background: #0a0a0c;
-  color: #ececee;
+  background: #ffffff;
+  color: #000000;
   font-family:
-    -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
+    "Geist Variable", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
+    Roboto, sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -42,23 +42,23 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2a2c33;
+  background: #d8d8d8;
   border: 3px solid transparent;
   background-clip: padding-box;
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a3d45;
+  background: #bcbcbc;
   background-clip: padding-box;
 }
 
 ::selection {
-  background: rgba(62, 207, 142, 0.28);
+  background: rgba(0, 112, 243, 0.18);
 }
 
 /* Focus ring for keyboard users only */
 :focus-visible {
-  outline: 2px solid rgba(62, 207, 142, 0.55);
+  outline: 2px solid rgba(0, 112, 243, 0.5);
   outline-offset: 1px;
 }
 button:focus:not(:focus-visible) {

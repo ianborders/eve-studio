@@ -1,59 +1,58 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./src/renderer/index.html", "./src/renderer/src/**/*.{ts,tsx}"],
-  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        // base surfaces (dark, warm-neutral, layered by elevation)
-        bg: "#0a0a0c",
-        panel: "#141518",
-        surface: "#141518",
-        elevated: "#1c1e23",
-        hover: "#212329",
-        border: "#26282e",
-        "border-strong": "#34373f",
+        // light, Vercel/Geist surfaces
+        bg: "#ffffff",
+        panel: "#ffffff",
+        surface: "#ffffff",
+        subtle: "#fafafa",
+        elevated: "#ffffff",
+        hover: "#f2f2f2",
+        border: "#eaeaea",
+        "border-strong": "#d4d4d4",
         // text
-        text: "#ececee",
-        muted: "#9a9aa5",
-        faint: "#6b6b76",
-        // brand + semantic
-        accent: "#3ecf8e",
-        "accent-dim": "#1f6f4d",
+        text: "#000000",
+        muted: "#666666",
+        faint: "#8f8f8f",
+        // brand + semantic (Geist)
+        accent: "#0070f3",
+        success: "#16a34a",
         warn: "#f5a623",
-        danger: "#f2555a",
-        info: "#5b9dff",
-        violet: "#a78bfa",
+        danger: "#e5484d",
+        info: "#0070f3",
+        violet: "#7c3aed",
       },
       fontFamily: {
         sans: [
+          "Geist Variable",
           "-apple-system",
           "BlinkMacSystemFont",
           "Inter",
           "Segoe UI",
-          "Roboto",
           "sans-serif",
         ],
         mono: [
+          "Geist Mono Variable",
           "ui-monospace",
           "SF Mono",
-          "SFMono-Regular",
           "Menlo",
-          "Monaco",
           "monospace",
         ],
       },
       fontSize: {
-        "2xs": ["10px", { lineHeight: "14px" }],
+        "2xs": ["11px", { lineHeight: "15px" }],
       },
       borderRadius: {
-        lg: "10px",
-        xl: "14px",
+        lg: "8px",
+        xl: "12px",
       },
       boxShadow: {
-        card: "0 1px 2px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.02)",
-        pop: "0 8px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)",
-        glow: "0 0 0 1px rgba(62,207,142,0.25), 0 0 20px rgba(62,207,142,0.12)",
+        card: "0 1px 2px rgba(0,0,0,0.04)",
+        pop: "0 8px 30px rgba(0,0,0,0.12)",
+        glow: "0 0 0 4px rgba(0,112,243,0.12)",
       },
       keyframes: {
         "fade-in": {
@@ -65,9 +64,9 @@ module.exports = {
           to: { opacity: "1", transform: "translateY(0)" },
         },
         "pulse-ring": {
-          "0%": { boxShadow: "0 0 0 0 rgba(62,207,142,0.5)" },
-          "70%": { boxShadow: "0 0 0 5px rgba(62,207,142,0)" },
-          "100%": { boxShadow: "0 0 0 0 rgba(62,207,142,0)" },
+          "0%": { boxShadow: "0 0 0 0 rgba(22,163,74,0.45)" },
+          "70%": { boxShadow: "0 0 0 5px rgba(22,163,74,0)" },
+          "100%": { boxShadow: "0 0 0 0 rgba(22,163,74,0)" },
         },
       },
       animation: {

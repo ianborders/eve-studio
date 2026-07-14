@@ -140,7 +140,7 @@ export function Connections(): JSX.Element {
             {conns.map((c) => (
               <Card key={c.name} className="p-4">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.05] text-muted">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.04] text-muted">
                     <IconPlug className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">

@@ -99,7 +99,7 @@ export function CreateAgent({ onClose }: { onClose: () => void }): JSX.Element {
           </label>
 
           {parentDir && validName ? (
-            <div className="rounded-lg bg-white/[0.03] px-3 py-2 font-mono text-2xs text-faint">
+            <div className="rounded-lg bg-black/[0.03] px-3 py-2 font-mono text-2xs text-faint">
               eve init {name}
               {webChat ? " --channel-web-nextjs" : ""} · in {parentDir}
             </div>

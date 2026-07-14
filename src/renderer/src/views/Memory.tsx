@@ -174,7 +174,7 @@ function Browse({ agentId }: { agentId: string }): JSX.Element {
                   {e.entities.slice(0, 8).map((ent) => (
                     <span
                       key={ent}
-                      className="rounded bg-white/[0.05] px-1.5 py-0.5 text-2xs text-muted"
+                      className="rounded bg-black/[0.04] px-1.5 py-0.5 text-2xs text-muted"
                     >
                       {ent}
                     </span>
