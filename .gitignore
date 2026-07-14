@@ -1,0 +1,12 @@
+node_modules/
+dist/
+out/
+.vite/
+*.log
+.env
+.env.local
+.DS_Store
+*.sqlite
+*.sqlite3
+data/
+release/
