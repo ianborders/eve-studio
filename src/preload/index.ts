@@ -6,11 +6,19 @@ import {
   type AgentRuntimeState,
   type AgentStructure,
   type AppInfo,
+  type ArcanaResult,
+  type ArcanaStats,
+  type BrainInfo,
   type ChatEventMessage,
   type ChatStatusMessage,
+  type DetectedBrain,
   type EveEvent,
   IPC,
+  type QueryHit,
   type ThreadRecord,
+  type TimelineEvent,
+  type WireBrainInput,
+  type WireBrainResult,
 } from "../shared/ipc";
 
 function sub<T>(channel: string, cb: (payload: T) => void): () => void {
@@ -40,6 +48,31 @@ const api = {
       ipcRenderer.invoke(IPC.agentStructure, id),
     onStatusChanged: (cb: (s: AgentRuntimeState) => void): (() => void) =>
       sub(IPC.agentStatusChanged, cb),
+  },
+
+  arcana: {
+    detect: (id: string): Promise<DetectedBrain> =>
+      ipcRenderer.invoke(IPC.arcanaDetect, id),
+    saveBrain: (
+      id: string,
+      input: { workspace: string; envVar: string; key?: string; fromEnv?: boolean }
+    ): Promise<{ ok: boolean; error?: string; info?: BrainInfo | null }> =>
+      ipcRenderer.invoke(IPC.arcanaSaveBrain, id, input),
+    forgetBrain: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC.arcanaForgetBrain, id),
+    validate: (
+      workspace: string,
+      key: string
+    ): Promise<ArcanaResult<ArcanaStats>> =>
+      ipcRenderer.invoke(IPC.arcanaValidate, workspace, key),
+    stats: (id: string): Promise<ArcanaResult<ArcanaStats>> =>
+      ipcRenderer.invoke(IPC.arcanaStats, id),
+    timeline: (id: string, limit?: number): Promise<ArcanaResult<TimelineEvent[]>> =>
+      ipcRenderer.invoke(IPC.arcanaTimeline, id, limit),
+    query: (id: string, q: string): Promise<ArcanaResult<QueryHit[]>> =>
+      ipcRenderer.invoke(IPC.arcanaQuery, id, q),
+    wire: (id: string, input: WireBrainInput): Promise<WireBrainResult> =>
+      ipcRenderer.invoke(IPC.arcanaWire, id, input),
   },
 
   chat: {

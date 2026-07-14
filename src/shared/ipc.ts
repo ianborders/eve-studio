@@ -123,6 +123,70 @@ export interface AgentStructure {
   error?: string;
 }
 
+// --- arcana (memory) ---
+/** A brain credential as surfaced to the renderer — never includes the key. */
+export interface BrainInfo {
+  workspace: string;
+  envVar: string;
+  hasKey: boolean;
+}
+export interface ArcanaStats {
+  workspace: string;
+  timeline: {
+    total_events: number;
+    by_type: Record<string, number>;
+    date_range?: { earliest?: string; latest?: string };
+  };
+  entityGraph: {
+    total_entities: number;
+    total_mentions: number;
+    total_relations: number;
+    by_type: Record<string, number>;
+  };
+}
+export interface TimelineEvent {
+  id: number | string;
+  type: string;
+  timestamp: string;
+  title: string;
+  summary?: string;
+  entities?: string[];
+  topics?: string[];
+}
+export interface QueryHit {
+  id: string;
+  title: string;
+  content: string;
+  type: string;
+  timestamp: string;
+  hybridScore?: number;
+  matchType?: string;
+}
+export interface ArcanaResult<T> {
+  ok: boolean;
+  data?: T;
+  error?: string;
+}
+/** What Studio can infer about an agent's Arcana wiring from its files. */
+export interface DetectedBrain {
+  connections: { name: string; url?: string }[];
+  workspace?: string;
+  envVar?: string;
+  keyPresent?: boolean;
+  saved?: BrainInfo | null;
+}
+export interface WireBrainInput {
+  workspace: string;
+  envVar: string;
+  key: string;
+  description?: string;
+}
+export interface WireBrainResult {
+  ok: boolean;
+  files?: string[];
+  error?: string;
+}
+
 export const IPC = {
   appInfo: "app:info",
 
@@ -135,6 +199,15 @@ export const IPC = {
   agentStatus: "agent:status",
   agentInfo: "agent:info",
   agentStructure: "agent:structure",
+
+  arcanaDetect: "arcana:detect",
+  arcanaSaveBrain: "arcana:saveBrain",
+  arcanaForgetBrain: "arcana:forgetBrain",
+  arcanaValidate: "arcana:validate",
+  arcanaStats: "arcana:stats",
+  arcanaTimeline: "arcana:timeline",
+  arcanaQuery: "arcana:query",
+  arcanaWire: "arcana:wire",
 
   chatListThreads: "chat:listThreads",
   chatCreateThread: "chat:createThread",

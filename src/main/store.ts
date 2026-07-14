@@ -17,15 +17,30 @@ export interface SessionCursor {
   streamIndex: number;
 }
 
+/**
+ * A stored Arcana brain credential, keyed by agent id.
+ *
+ * @remarks
+ * Stored so Studio can browse a brain without re-parsing the agent's files.
+ * Held in the local userData JSON for now; an OS-keychain vault is a later
+ * hardening pass.
+ */
+export interface BrainCred {
+  workspace: string;
+  envVar: string;
+  key: string;
+}
+
 interface Db {
   agents: AgentRecord[];
   threads: ThreadRecord[];
   cursors: Record<string, SessionCursor>;
+  brains: Record<string, BrainCred>;
 }
 
 let dbPath = "";
 let eventsDir = "";
-let db: Db = { agents: [], threads: [], cursors: {} };
+let db: Db = { agents: [], threads: [], cursors: {}, brains: {} };
 
 export function initStore(): void {
   const dataDir = app.getPath("userData");
@@ -39,9 +54,10 @@ export function initStore(): void {
         agents: parsed.agents ?? [],
         threads: parsed.threads ?? [],
         cursors: parsed.cursors ?? {},
+        brains: parsed.brains ?? {},
       };
     } catch {
-      db = { agents: [], threads: [], cursors: {} };
+      db = { agents: [], threads: [], cursors: {}, brains: {} };
     }
   } else {
     persist();
@@ -116,6 +132,19 @@ export function deleteThread(id: string): void {
   } catch {
     // no event file yet — fine
   }
+}
+
+// --- brains (Arcana credentials, keyed by agent id) ---
+export function getBrain(agentId: string): BrainCred | undefined {
+  return db.brains[agentId];
+}
+export function setBrain(agentId: string, cred: BrainCred): void {
+  db.brains[agentId] = cred;
+  persist();
+}
+export function deleteBrain(agentId: string): void {
+  delete db.brains[agentId];
+  persist();
 }
 
 // --- cursors ---

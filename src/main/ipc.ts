@@ -5,13 +5,38 @@ import {
   type AddAgentResult,
   type AgentRecord,
   type AppInfo,
+  type BrainInfo,
+  type DetectedBrain,
   IPC,
+  type WireBrainInput,
+  type WireBrainResult,
 } from "../shared/ipc";
 import { AgentManager } from "./agentManager";
+import {
+  arcanaQuery,
+  arcanaStats,
+  arcanaTimeline,
+  arcanaValidate,
+} from "./arcana";
+import { detectBrain, keyFromEnv, wireBrain } from "./arcanaWire";
 import { ChatController } from "./chat";
 import { getAgentInfo } from "./eveSession";
 import * as store from "./store";
 import { readStructure } from "./structure";
+
+function brainInfo(cred: store.BrainCred | undefined): BrainInfo | null {
+  return cred
+    ? { workspace: cred.workspace, envVar: cred.envVar, hasKey: Boolean(cred.key) }
+    : null;
+}
+
+function requireBrain(agentId: string): store.BrainCred {
+  const cred = store.getBrain(agentId);
+  if (!cred) {
+    throw new Error("No brain configured for this agent.");
+  }
+  return cred;
+}
 
 function broadcast(channel: string, payload: unknown): void {
   for (const w of BrowserWindow.getAllWindows()) {
@@ -146,6 +171,110 @@ export function registerIpc(): AgentManager {
     }
     return readStructure(a.path);
   });
+
+  // --- arcana (memory) ---
+  ipcMain.handle(
+    IPC.arcanaDetect,
+    (_e: IpcMainInvokeEvent, id: string): DetectedBrain => {
+      const a = store.getAgent(id);
+      if (!a) {
+        throw new Error("Unknown agent.");
+      }
+      const detected = detectBrain(a.path, readStructure(a.path));
+      return { ...detected, saved: brainInfo(store.getBrain(id)) };
+    }
+  );
+
+  ipcMain.handle(
+    IPC.arcanaSaveBrain,
+    async (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      input: { workspace: string; envVar: string; key?: string; fromEnv?: boolean }
+    ) => {
+      const a = store.getAgent(id);
+      if (!a) {
+        throw new Error("Unknown agent.");
+      }
+      const key = input.fromEnv
+        ? keyFromEnv(a.path, input.envVar)
+        : (input.key ?? null);
+      if (!key) {
+        return { ok: false, error: "No key found." };
+      }
+      const check = await arcanaValidate(input.workspace, key);
+      if (!check.ok) {
+        return { ok: false, error: check.error ?? "Validation failed." };
+      }
+      store.setBrain(id, { workspace: input.workspace, envVar: input.envVar, key });
+      return { ok: true, info: brainInfo(store.getBrain(id)) };
+    }
+  );
+
+  ipcMain.handle(IPC.arcanaForgetBrain, (_e: IpcMainInvokeEvent, id: string) => {
+    store.deleteBrain(id);
+    return true;
+  });
+
+  ipcMain.handle(
+    IPC.arcanaValidate,
+    (
+      _e: IpcMainInvokeEvent,
+      workspace: string,
+      key: string
+    ) => arcanaValidate(workspace, key)
+  );
+
+  ipcMain.handle(IPC.arcanaStats, (_e: IpcMainInvokeEvent, id: string) => {
+    const c = requireBrain(id);
+    return arcanaStats(c.workspace, c.key);
+  });
+  ipcMain.handle(
+    IPC.arcanaTimeline,
+    (_e: IpcMainInvokeEvent, id: string, limit?: number) => {
+      const c = requireBrain(id);
+      return arcanaTimeline(c.workspace, c.key, limit ?? 30);
+    }
+  );
+  ipcMain.handle(
+    IPC.arcanaQuery,
+    (_e: IpcMainInvokeEvent, id: string, q: string) => {
+      const c = requireBrain(id);
+      return arcanaQuery(c.workspace, c.key, q);
+    }
+  );
+
+  ipcMain.handle(
+    IPC.arcanaWire,
+    async (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      input: WireBrainInput
+    ): Promise<WireBrainResult> => {
+      const a = store.getAgent(id);
+      if (!a) {
+        throw new Error("Unknown agent.");
+      }
+      const check = await arcanaValidate(input.workspace, input.key);
+      if (!check.ok) {
+        return { ok: false, error: `Key rejected: ${check.error}` };
+      }
+      try {
+        const { files } = wireBrain(a.path, input);
+        store.setBrain(id, {
+          workspace: input.workspace,
+          envVar: input.envVar,
+          key: input.key,
+        });
+        return { ok: true, files };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    }
+  );
 
   // --- chat ---
   ipcMain.handle(

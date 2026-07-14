@@ -3,13 +3,14 @@ import { useEffect, useState } from "react";
 import { type Section, useStore } from "./store";
 import { Chat } from "./views/Chat";
 import { Library } from "./views/Library";
+import { Memory } from "./views/Memory";
 import { Structure } from "./views/Structure";
 
 const NAV: { id: Section; label: string; icon: string; phase: string }[] = [
   { id: "library", label: "Agents", icon: "▤", phase: "" },
   { id: "chat", label: "Chat", icon: "◇", phase: "" },
   { id: "structure", label: "Structure", icon: "⚙", phase: "" },
-  { id: "memory", label: "Memory (Arcana)", icon: "◉", phase: "P3" },
+  { id: "memory", label: "Memory (Arcana)", icon: "◉", phase: "" },
   { id: "connections", label: "Connections", icon: "⇄", phase: "P6" },
   { id: "deploy", label: "Deploy & Logs", icon: "▲", phase: "P7" },
   { id: "evals", label: "Evals", icon: "✓", phase: "P8" },
@@ -103,6 +104,8 @@ export function App(): JSX.Element {
             <Chat />
           ) : section === "structure" ? (
             <Structure />
+          ) : section === "memory" ? (
+            <Memory />
           ) : (
             <Placeholder title={current?.label ?? ""} phase={current?.phase ?? ""} />
           )}
