@@ -1,7 +1,11 @@
 import { join } from "node:path";
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
-import { BrowserWindow, app, ipcMain, shell } from "electron";
-import { type AppInfo, IPC } from "../shared/ipc";
+import { BrowserWindow, app, shell } from "electron";
+import type { AgentManager } from "./agentManager";
+import { registerIpc } from "./ipc";
+import { initStore } from "./store";
+
+let agentManager: AgentManager | null = null;
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -22,7 +26,6 @@ function createWindow(): void {
 
   mainWindow.on("ready-to-show", () => mainWindow.show());
 
-  // Open external links in the OS browser, never in-app.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: "deny" };
@@ -42,16 +45,8 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  ipcMain.handle(
-    IPC.appInfo,
-    (): AppInfo => ({
-      appVersion: app.getVersion(),
-      electron: process.versions.electron,
-      node: process.versions.node,
-      chrome: process.versions.chrome,
-      platform: process.platform,
-    })
-  );
+  initStore();
+  agentManager = registerIpc();
 
   createWindow();
 
@@ -60,6 +55,10 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+});
+
+app.on("before-quit", () => {
+  agentManager?.stopAll();
 });
 
 app.on("window-all-closed", () => {
