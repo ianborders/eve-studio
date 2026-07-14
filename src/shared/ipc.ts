@@ -230,14 +230,85 @@ export interface SkillInput {
 }
 export interface ConnectionInput {
   name: string;
-  url: string;
   description?: string;
+  kind?: "mcp" | "openapi";
+  /** MCP endpoint URL (kind=mcp). */
+  url?: string;
+  /** OpenAPI spec URL (kind=openapi). */
+  spec?: string;
+  /** OpenAPI base URL override (kind=openapi). */
+  baseUrl?: string;
+  authMode?: "static" | "header" | "connect-user" | "connect-app" | "none";
+  /** Static bearer env var (authMode=static). */
   envVar?: string;
+  /** Custom header name (authMode=header). */
+  headerName?: string;
+  /** Vercel Connect connector UID (authMode=connect-*). */
+  connector?: string;
 }
 export interface FileWriteResult {
   ok: boolean;
   relPath?: string;
   error?: string;
+}
+
+// --- model / config ---
+export interface ModelConfig {
+  model: string | null;
+  reasoning: string | null;
+  editable: boolean;
+  note: string | null;
+}
+
+// --- env ---
+export interface EnvFile {
+  name: string;
+  exists: boolean;
+  content: string;
+}
+export interface EnvState {
+  files: EnvFile[];
+}
+export interface VercelStatus {
+  linked: boolean;
+  projectName?: string | null;
+  projectId?: string | null;
+  orgId?: string | null;
+}
+export interface CmdResult {
+  ok: boolean;
+  output: string;
+}
+
+// --- authoring inputs ---
+export interface ToolInput {
+  name: string;
+  description: string;
+  approval?: "never" | "once" | "always";
+}
+export interface SubagentInput {
+  name: string;
+  description: string;
+  model?: string;
+  instructions?: string;
+}
+export interface ScheduleInput {
+  name: string;
+  cron: string;
+  prompt: string;
+}
+export interface SandboxInfo {
+  exists: boolean;
+  relPath: string | null;
+  content: string;
+}
+
+// --- channels ---
+export interface ChannelItem {
+  name: string;
+  kind?: string;
+  method?: string;
+  urlPath?: string;
 }
 
 export const IPC = {
@@ -260,6 +331,24 @@ export const IPC = {
   skillCreate: "agent:skillCreate",
   connectionAdd: "agent:connectionAdd",
   dialogPickDir: "dialog:pickDir",
+
+  modelRead: "agent:modelRead",
+  modelWrite: "agent:modelWrite",
+  envRead: "agent:envRead",
+  envWrite: "agent:envWrite",
+  toolCreate: "agent:toolCreate",
+  subagentCreate: "agent:subagentCreate",
+  hookCreate: "agent:hookCreate",
+  scheduleCreate: "agent:scheduleCreate",
+  sandboxRead: "agent:sandboxRead",
+  sandboxCreate: "agent:sandboxCreate",
+  channelsList: "agent:channelsList",
+  channelAdd: "agent:channelAdd",
+
+  vercelStatus: "vercel:status",
+  vercelEnvLs: "vercel:envLs",
+  vercelEnvPull: "vercel:envPull",
+  vercelEnvAdd: "vercel:envAdd",
 
   cliRun: "cli:run",
   cliCancel: "cli:cancel",

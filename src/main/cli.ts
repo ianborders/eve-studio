@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { EvalItem } from "../shared/ipc";
+import type { ChannelItem, CmdResult, EvalItem } from "../shared/ipc";
 
 /** Resolve the eve CLI: prefer the project-local bin, else fall back to npx. */
 export function eveBin(cwd: string): { cmd: string; pre: string[] } {
@@ -92,6 +92,63 @@ export function listEvals(cwd: string): EvalItem[] {
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+}
+
+/** Discover user-authored channels via `eve channels list --json`. */
+export function listChannels(cwd: string): ChannelItem[] {
+  const bin = eveBin(cwd);
+  try {
+    const res = spawnSync(bin.cmd, [...bin.pre, "channels", "list", "--json"], {
+      cwd,
+      encoding: "utf8",
+      timeout: 60_000,
+      env: { ...process.env, ...CLEAN_ENV },
+    });
+    const out = res.stdout ?? "";
+    const start = out.indexOf("[");
+    if (start < 0) {
+      return [];
+    }
+    const parsed = JSON.parse(out.slice(start)) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.map((c) => {
+      const o = c as Record<string, unknown>;
+      return {
+        name: String(o.name ?? ""),
+        kind: o.kind as string | undefined,
+        method: o.method as string | undefined,
+        urlPath: o.urlPath as string | undefined,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+/** Scaffold a channel with `eve channels add <kind> -y` (writes file + dep). */
+export function addChannel(cwd: string, kind: "slack" | "web"): CmdResult {
+  const bin = eveBin(cwd);
+  try {
+    const res = spawnSync(
+      bin.cmd,
+      [...bin.pre, "channels", "add", kind, "-y", "-f"],
+      {
+        cwd,
+        encoding: "utf8",
+        timeout: 180_000,
+        env: { ...process.env, ...CLEAN_ENV },
+      }
+    );
+    if (res.error) {
+      return { ok: false, output: res.error.message };
+    }
+    const out = `${res.stdout ?? ""}${res.stderr ?? ""}`.trim();
+    return { ok: res.status === 0, output: out || `(exit ${res.status})` };
+  } catch (e) {
+    return { ok: false, output: e instanceof Error ? e.message : String(e) };
   }
 }
 

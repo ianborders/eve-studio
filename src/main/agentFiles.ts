@@ -70,33 +70,46 @@ export function createSkill(
   return { relPath: `${nested ? "agent/" : ""}skills/${slug}/SKILL.md` };
 }
 
-/** Add a generic MCP connection at `connections/<name>.ts` (bearer-token env). */
+/**
+ * Add a connection at `connections/<name>.ts`. Supports MCP + OpenAPI, and
+ * static-bearer / custom-header / Vercel-Connect (user or app) / no auth.
+ */
 export function addConnection(
   agentPath: string,
   input: ConnectionInput
-): { relPath: string } {
+): { relPath: string; envVar?: string } {
   const slug = input.name.trim().toLowerCase().replace(/\s+/g, "-").replace(SLUG_RE, "");
   if (!slug) {
     throw new Error("Invalid connection name.");
   }
+  const kind = input.kind ?? "mcp";
+  const authMode = input.authMode ?? "static";
+  const desc = JSON.stringify(input.description || `${input.name} connection`);
   const envVar =
-    input.envVar?.trim() ||
-    `${slug.toUpperCase().replace(/-/g, "_")}_TOKEN`;
-  const dir = join(agentRoot(agentPath), "connections");
-  mkdirSync(dir, { recursive: true });
-  const file = join(dir, `${slug}.ts`);
-  const src = `import { defineMcpClientConnection } from "eve/connections";
+    input.envVar?.trim() || `${slug.toUpperCase().replace(/-/g, "_")}_TOKEN`;
 
-/**
- * ${input.description || `${input.name} MCP connection.`}
- *
- * @remarks
- * Static bearer-token auth from \`${envVar}\`. Added by Eve Studio.
- */
-export default defineMcpClientConnection({
-  url: ${JSON.stringify(input.url)},
-  description: ${JSON.stringify(input.description || `${input.name} connection`)},
-  auth: {
+  const imports: string[] = [];
+  const factory =
+    kind === "openapi" ? "defineOpenAPIConnection" : "defineMcpClientConnection";
+  imports.push(`import { ${factory} } from "eve/connections";`);
+  if (authMode === "connect-user" || authMode === "connect-app") {
+    imports.push(`import { connect } from "@vercel/connect/eve";`);
+  }
+
+  // endpoint block (mcp vs openapi)
+  const endpoint =
+    kind === "openapi"
+      ? `  spec: ${JSON.stringify(input.spec ?? "")},${
+          input.baseUrl ? `\n  baseUrl: ${JSON.stringify(input.baseUrl)},` : ""
+        }`
+      : `  url: ${JSON.stringify(input.url ?? "")},`;
+
+  // auth / headers block
+  let authBlock = "";
+  let usedEnvVar: string | undefined;
+  if (authMode === "static") {
+    usedEnvVar = envVar;
+    authBlock = `  auth: {
     // biome-ignore lint/suspicious/useAwait: connection getToken must return a Promise per the auth type
     getToken: async () => {
       const token = process.env.${envVar};
@@ -105,10 +118,36 @@ export default defineMcpClientConnection({
       }
       return { token };
     },
-  },
+  },`;
+  } else if (authMode === "header") {
+    usedEnvVar = envVar;
+    const headerName = input.headerName?.trim() || "X-Api-Key";
+    authBlock = `  headers: { ${JSON.stringify(headerName)}: process.env.${envVar} ?? "" },`;
+  } else if (authMode === "connect-user") {
+    authBlock = `  auth: connect(${JSON.stringify(input.connector ?? "connector/uid")}),`;
+  } else if (authMode === "connect-app") {
+    authBlock = `  auth: connect({ connector: ${JSON.stringify(
+      input.connector ?? "connector/uid"
+    )}, principalType: "app" }),`;
+  }
+
+  const dir = join(agentRoot(agentPath), "connections");
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, `${slug}.ts`);
+  if (existsSync(file)) {
+    throw new Error(`connections/${slug}.ts already exists.`);
+  }
+  const src = `${imports.join("\n")}
+
+/**
+ * ${input.description || `${input.name} connection.`} Added by Eve Studio.
+ */
+export default ${factory}({
+${endpoint}
+  description: ${desc},${authBlock ? `\n${authBlock}` : ""}
 });
 `;
   writeFileSync(file, src);
   const nested = existsSync(join(agentPath, "agent"));
-  return { relPath: `${nested ? "agent/" : ""}connections/${slug}.ts` };
+  return { relPath: `${nested ? "agent/" : ""}connections/${slug}.ts`, envVar: usedEnvVar };
 }

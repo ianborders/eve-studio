@@ -11,24 +11,35 @@ import {
   type BrainInfo,
   type ChatEventMessage,
   type ChatStatusMessage,
+  type ChannelItem,
   type CliChunk,
   type CliExit,
+  type CmdResult,
   type ConnectionInput,
   type CreateAgentInput,
   type DetectedBrain,
+  type EnvState,
   type EvalItem,
   type EveEvent,
   type FileWriteResult,
   IPC,
   type InstructionsFile,
   type LogChunk,
+  type ModelConfig,
   type QueryHit,
+  type SandboxInfo,
+  type ScheduleInput,
   type SkillInput,
+  type SubagentInput,
   type ThreadRecord,
   type TimelineEvent,
+  type ToolInput,
+  type VercelStatus,
   type WireBrainInput,
   type WireBrainResult,
 } from "../shared/ipc";
+
+type WriteResult = { ok: boolean; error?: string };
 
 function sub<T>(channel: string, cb: (payload: T) => void): () => void {
   const listener = (_e: IpcRendererEvent, payload: T): void => cb(payload);
@@ -68,9 +79,50 @@ const api = {
       ipcRenderer.invoke(IPC.skillCreate, id, input),
     addConnection: (id: string, input: ConnectionInput): Promise<FileWriteResult> =>
       ipcRenderer.invoke(IPC.connectionAdd, id, input),
+    modelRead: (id: string): Promise<ModelConfig> =>
+      ipcRenderer.invoke(IPC.modelRead, id),
+    modelWrite: (
+      id: string,
+      model: string,
+      reasoning: string | null
+    ): Promise<WriteResult> => ipcRenderer.invoke(IPC.modelWrite, id, model, reasoning),
+    envRead: (id: string): Promise<EnvState> => ipcRenderer.invoke(IPC.envRead, id),
+    envWrite: (id: string, name: string, content: string): Promise<WriteResult> =>
+      ipcRenderer.invoke(IPC.envWrite, id, name, content),
+    createTool: (id: string, input: ToolInput): Promise<FileWriteResult> =>
+      ipcRenderer.invoke(IPC.toolCreate, id, input),
+    createSubagent: (id: string, input: SubagentInput): Promise<FileWriteResult> =>
+      ipcRenderer.invoke(IPC.subagentCreate, id, input),
+    createHook: (id: string, name: string): Promise<FileWriteResult> =>
+      ipcRenderer.invoke(IPC.hookCreate, id, name),
+    createSchedule: (id: string, input: ScheduleInput): Promise<FileWriteResult> =>
+      ipcRenderer.invoke(IPC.scheduleCreate, id, input),
+    sandboxRead: (id: string): Promise<SandboxInfo> =>
+      ipcRenderer.invoke(IPC.sandboxRead, id),
+    sandboxCreate: (id: string): Promise<FileWriteResult> =>
+      ipcRenderer.invoke(IPC.sandboxCreate, id),
+    channelsList: (id: string): Promise<ChannelItem[]> =>
+      ipcRenderer.invoke(IPC.channelsList, id),
+    channelAdd: (id: string, kind: "slack" | "web"): Promise<CmdResult> =>
+      ipcRenderer.invoke(IPC.channelAdd, id, kind),
     onStatusChanged: (cb: (s: AgentRuntimeState) => void): (() => void) =>
       sub(IPC.agentStatusChanged, cb),
     onLog: (cb: (m: LogChunk) => void): (() => void) => sub(IPC.agentLog, cb),
+  },
+
+  vercel: {
+    status: (id: string): Promise<VercelStatus> =>
+      ipcRenderer.invoke(IPC.vercelStatus, id),
+    envLs: (id: string): Promise<CmdResult> => ipcRenderer.invoke(IPC.vercelEnvLs, id),
+    envPull: (id: string): Promise<CmdResult> =>
+      ipcRenderer.invoke(IPC.vercelEnvPull, id),
+    envAdd: (
+      id: string,
+      name: string,
+      value: string,
+      target: string
+    ): Promise<CmdResult> =>
+      ipcRenderer.invoke(IPC.vercelEnvAdd, id, name, value, target),
   },
 
   dialog: {

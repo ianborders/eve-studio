@@ -68,10 +68,18 @@ export function IconButton({
 }
 
 // --- Badge ---
-type Tone = "default" | "accent" | "warn" | "danger" | "info" | "violet";
+type Tone =
+  | "default"
+  | "accent"
+  | "success"
+  | "warn"
+  | "danger"
+  | "info"
+  | "violet";
 const TONE: Record<Tone, string> = {
   default: "bg-black/[0.04] text-muted",
   accent: "bg-accent/15 text-accent",
+  success: "bg-success/15 text-success",
   warn: "bg-warn/15 text-warn",
   danger: "bg-danger/15 text-danger",
   info: "bg-info/15 text-info",

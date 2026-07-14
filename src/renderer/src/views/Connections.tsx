@@ -13,6 +13,46 @@ import {
   Spinner,
 } from "../ui/kit";
 
+type Kind = "mcp" | "openapi";
+type AuthMode = "static" | "header" | "connect-user" | "connect-app" | "none";
+
+const AUTH_LABELS: Record<AuthMode, string> = {
+  static: "Static bearer token",
+  header: "Custom header (API key)",
+  "connect-user": "Vercel Connect (user OAuth)",
+  "connect-app": "Vercel Connect (app OAuth)",
+  none: "No auth",
+};
+
+function Pills<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: { id: T; label: string }[];
+  onChange: (v: T) => void;
+}): JSX.Element {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          onClick={() => onChange(o.id)}
+          className={`rounded-lg border px-2.5 py-1 text-2xs transition-colors ${
+            value === o.id
+              ? "border-text bg-text text-white"
+              : "border-border text-muted hover:bg-hover"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function AddConnectionModal({
   agentId,
   onClose,
@@ -21,11 +61,17 @@ function AddConnectionModal({
   onClose: () => void;
 }): JSX.Element {
   const [name, setName] = useState("");
+  const [kind, setKind] = useState<Kind>("mcp");
   const [url, setUrl] = useState("");
+  const [spec, setSpec] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
   const [description, setDescription] = useState("");
+  const [authMode, setAuthMode] = useState<AuthMode>("static");
   const [envVar, setEnvVar] = useState("");
+  const [headerName, setHeaderName] = useState("");
+  const [connector, setConnector] = useState("");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<string | null>(null);
+  const [done, setDone] = useState<{ path: string; env?: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const submit = async (): Promise<void> => {
@@ -33,28 +79,49 @@ function AddConnectionModal({
     setErr(null);
     const r = await window.studio.agents.addConnection(agentId, {
       name,
-      url,
+      kind,
+      url: kind === "mcp" ? url : undefined,
+      spec: kind === "openapi" ? spec : undefined,
+      baseUrl: kind === "openapi" && baseUrl ? baseUrl : undefined,
       description,
+      authMode,
       envVar: envVar || undefined,
+      headerName: headerName || undefined,
+      connector: connector || undefined,
     });
     setBusy(false);
     if (r.ok) {
-      setDone(r.relPath ?? "connection");
+      setDone({ path: r.relPath ?? "connection", env: (r as { envVar?: string }).envVar });
     } else {
       setErr(r.error ?? "Failed.");
     }
   };
 
+  const needsEndpoint = kind === "mcp" ? Boolean(url) : Boolean(spec);
+  const needsConnector = authMode.startsWith("connect") ? Boolean(connector) : true;
+
   return (
-    <Modal title="Add MCP connection" onClose={onClose}>
+    <Modal title="Add connection" onClose={onClose} width="max-w-xl">
       {done ? (
         <div className="space-y-3 p-4">
-          <div className="rounded-lg bg-accent/10 px-3 py-2 text-[13px] text-accent">
-            Wrote <span className="font-mono">{done}</span>.
+          <div className="rounded-lg bg-success/10 px-3 py-2 text-[13px] text-success">
+            Wrote <span className="font-mono">{done.path}</span>.
           </div>
           <p className="text-2xs leading-relaxed text-muted">
-            Set <span className="font-mono text-text">{envVar || "the token env var"}</span>{" "}
-            in the agent's .env, then restart it to load the connection.
+            {done.env ? (
+              <>
+                Set <span className="font-mono text-text">{done.env}</span> in the
+                agent's .env (Environment tab), then restart it.
+              </>
+            ) : authMode.startsWith("connect") ? (
+              <>
+                Provision the connector with{" "}
+                <span className="font-mono text-text">vercel connect create</span> and
+                restart the agent.
+              </>
+            ) : (
+              "Restart the agent to load the connection."
+            )}
           </p>
           <div className="flex justify-end">
             <Button variant="primary" onClick={onClose}>
@@ -63,25 +130,83 @@ function AddConnectionModal({
           </div>
         </div>
       ) : (
-        <div className="space-y-3 p-4">
+        <div className="max-h-[70vh] space-y-3 overflow-auto p-4">
           <Field label="Name" hint="becomes connections/<name>.ts">
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="linear" className="font-mono" />
           </Field>
-          <Field label="MCP URL">
-            <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://mcp.example.com/mcp" className="font-mono" />
+
+          <Field label="Kind">
+            <Pills
+              value={kind}
+              onChange={setKind}
+              options={[
+                { id: "mcp", label: "MCP server" },
+                { id: "openapi", label: "OpenAPI / REST" },
+              ]}
+            />
           </Field>
-          <Field label="Description">
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this connection is for" />
+
+          {kind === "mcp" ? (
+            <Field label="MCP URL" hint="Streamable HTTP or SSE">
+              <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://mcp.example.com/mcp" className="font-mono" />
+            </Field>
+          ) : (
+            <>
+              <Field label="OpenAPI spec URL">
+                <Input value={spec} onChange={(e) => setSpec(e.target.value)} placeholder="https://api.example.com/openapi.json" className="font-mono" />
+              </Field>
+              <Field label="Base URL" hint="optional override">
+                <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.example.com" className="font-mono" />
+              </Field>
+            </>
+          )}
+
+          <Field label="Description" hint="written for the model — routing hint">
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What the agent can do here" />
           </Field>
-          <Field label="Token env var" hint="optional — defaults to <NAME>_TOKEN">
-            <Input value={envVar} onChange={(e) => setEnvVar(e.target.value)} placeholder="LINEAR_TOKEN" className="font-mono" />
+
+          <Field label="Auth">
+            <Pills
+              value={authMode}
+              onChange={setAuthMode}
+              options={(Object.keys(AUTH_LABELS) as AuthMode[]).map((m) => ({
+                id: m,
+                label: AUTH_LABELS[m],
+              }))}
+            />
           </Field>
+
+          {authMode === "static" ? (
+            <Field label="Token env var" hint="Bearer — defaults to <NAME>_TOKEN">
+              <Input value={envVar} onChange={(e) => setEnvVar(e.target.value)} placeholder="LINEAR_TOKEN" className="font-mono" />
+            </Field>
+          ) : null}
+          {authMode === "header" ? (
+            <>
+              <Field label="Header name">
+                <Input value={headerName} onChange={(e) => setHeaderName(e.target.value)} placeholder="X-Api-Key" className="font-mono" />
+              </Field>
+              <Field label="Value env var" hint="defaults to <NAME>_TOKEN">
+                <Input value={envVar} onChange={(e) => setEnvVar(e.target.value)} placeholder="DOCS_API_KEY" className="font-mono" />
+              </Field>
+            </>
+          ) : null}
+          {authMode.startsWith("connect") ? (
+            <Field label="Connector UID" hint="from vercel connect create">
+              <Input value={connector} onChange={(e) => setConnector(e.target.value)} placeholder="linear/my-agent" className="font-mono" />
+            </Field>
+          ) : null}
+
           {err ? <div className="text-xs text-danger">{err}</div> : null}
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={submit} disabled={busy || !name || !url}>
+            <Button
+              variant="primary"
+              onClick={submit}
+              disabled={busy || !name || !needsEndpoint || !needsConnector}
+            >
               {busy ? "Writing…" : "Add connection"}
             </Button>
           </div>

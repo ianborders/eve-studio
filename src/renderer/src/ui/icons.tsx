@@ -146,6 +146,40 @@ export const IconServer = make(
   </>
 );
 
+export const IconCpu = make(
+  <>
+    <rect x="6" y="6" width="12" height="12" rx="2" />
+    <path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2" />
+    <rect x="9.5" y="9.5" width="5" height="5" rx="1" opacity="0.6" />
+  </>
+);
+export const IconRadio = make(
+  <>
+    <circle cx="12" cy="12" r="2" />
+    <path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 16.2a6 6 0 0 0 0-8.4" />
+    <path d="M4.9 4.9a10 10 0 0 0 0 14.2M19.1 19.1a10 10 0 0 0 0-14.2" opacity="0.55" />
+  </>
+);
+export const IconBox = make(
+  <>
+    <path d="M21 8 12 3 3 8v8l9 5 9-5V8Z" />
+    <path d="m3 8 9 5 9-5M12 13v8" opacity="0.55" />
+  </>
+);
+export const IconWebhook = make(
+  <>
+    <path d="M9 8a3 3 0 1 1 4 2.8l2.2 3.7" />
+    <path d="M15 16a3 3 0 1 1-3-3" opacity="0.9" />
+    <path d="M6.5 13.5a3 3 0 1 0 3.5 4.5H14" opacity="0.55" />
+  </>
+);
+export const IconKey = make(
+  <>
+    <circle cx="8" cy="8" r="4" />
+    <path d="m11 11 8 8M16 16l2-2M19 19l1.5-1.5" />
+  </>
+);
+
 /** The Eve wordmark mark — three stacked bars (☰), as in the eve CLI banner. */
 export function IconEve({ className = "h-4 w-4" }: { className?: string }): JSX.Element {
   return (

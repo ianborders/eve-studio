@@ -13,6 +13,18 @@ import {
 } from "../shared/ipc";
 import { AgentManager } from "./agentManager";
 import {
+  createHook,
+  createSandbox,
+  createSchedule,
+  createSubagent,
+  createTool,
+  readEnv,
+  readModelConfig,
+  readSandbox,
+  writeEnv,
+  writeModelConfig,
+} from "./agentAuthoring";
+import {
   addConnection,
   createSkill,
   readInstructions,
@@ -26,10 +38,35 @@ import {
 } from "./arcana";
 import { detectBrain, keyFromEnv, wireBrain } from "./arcanaWire";
 import { ChatController } from "./chat";
-import { CliRunner, initAgent, listEvals } from "./cli";
+import { addChannel, CliRunner, initAgent, listChannels, listEvals } from "./cli";
 import { getAgentInfo } from "./eveSession";
 import * as store from "./store";
 import { readStructure } from "./structure";
+import {
+  vercelEnvAdd,
+  vercelEnvLs,
+  vercelEnvPull,
+  vercelStatus,
+} from "./vercel";
+
+function agentPathOf(id: string): string {
+  const a = store.getAgent(id);
+  if (!a) {
+    throw new Error("Unknown agent.");
+  }
+  return a.path;
+}
+function tryWrite(fn: () => { relPath: string }): {
+  ok: boolean;
+  relPath?: string;
+  error?: string;
+} {
+  try {
+    return { ok: true, ...fn() };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
 
 /** What registerIpc hands back for lifecycle cleanup on quit. */
 export interface IpcHandles {
@@ -217,6 +254,99 @@ export function registerIpc(): IpcHandles {
     }
     return readStructure(a.path);
   });
+
+  // --- model / config ---
+  ipcMain.handle(IPC.modelRead, (_e: IpcMainInvokeEvent, id: string) =>
+    readModelConfig(agentPathOf(id))
+  );
+  ipcMain.handle(
+    IPC.modelWrite,
+    (_e: IpcMainInvokeEvent, id: string, model: string, reasoning: string | null) => {
+      try {
+        writeModelConfig(agentPathOf(id), model, reasoning);
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
+
+  // --- env ---
+  ipcMain.handle(IPC.envRead, (_e: IpcMainInvokeEvent, id: string) =>
+    readEnv(agentPathOf(id))
+  );
+  ipcMain.handle(
+    IPC.envWrite,
+    (_e: IpcMainInvokeEvent, id: string, name: string, content: string) => {
+      try {
+        writeEnv(agentPathOf(id), name, content);
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
+
+  // --- authoring scaffolds ---
+  ipcMain.handle(
+    IPC.toolCreate,
+    (_e: IpcMainInvokeEvent, id: string, input: import("../shared/ipc").ToolInput) =>
+      tryWrite(() => createTool(agentPathOf(id), input))
+  );
+  ipcMain.handle(
+    IPC.subagentCreate,
+    (_e: IpcMainInvokeEvent, id: string, input: import("../shared/ipc").SubagentInput) =>
+      tryWrite(() => createSubagent(agentPathOf(id), input))
+  );
+  ipcMain.handle(
+    IPC.hookCreate,
+    (_e: IpcMainInvokeEvent, id: string, name: string) =>
+      tryWrite(() => createHook(agentPathOf(id), name))
+  );
+  ipcMain.handle(
+    IPC.scheduleCreate,
+    (_e: IpcMainInvokeEvent, id: string, input: import("../shared/ipc").ScheduleInput) =>
+      tryWrite(() => createSchedule(agentPathOf(id), input))
+  );
+
+  // --- sandbox ---
+  ipcMain.handle(IPC.sandboxRead, (_e: IpcMainInvokeEvent, id: string) =>
+    readSandbox(agentPathOf(id))
+  );
+  ipcMain.handle(IPC.sandboxCreate, (_e: IpcMainInvokeEvent, id: string) =>
+    tryWrite(() => createSandbox(agentPathOf(id)))
+  );
+
+  // --- channels ---
+  ipcMain.handle(IPC.channelsList, (_e: IpcMainInvokeEvent, id: string) =>
+    listChannels(agentPathOf(id))
+  );
+  ipcMain.handle(
+    IPC.channelAdd,
+    (_e: IpcMainInvokeEvent, id: string, kind: "slack" | "web") =>
+      addChannel(agentPathOf(id), kind)
+  );
+
+  // --- vercel ---
+  ipcMain.handle(IPC.vercelStatus, (_e: IpcMainInvokeEvent, id: string) =>
+    vercelStatus(agentPathOf(id))
+  );
+  ipcMain.handle(IPC.vercelEnvLs, (_e: IpcMainInvokeEvent, id: string) =>
+    vercelEnvLs(agentPathOf(id))
+  );
+  ipcMain.handle(IPC.vercelEnvPull, (_e: IpcMainInvokeEvent, id: string) =>
+    vercelEnvPull(agentPathOf(id))
+  );
+  ipcMain.handle(
+    IPC.vercelEnvAdd,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      name: string,
+      value: string,
+      target: string
+    ) => vercelEnvAdd(agentPathOf(id), name, value, target)
+  );
 
   ipcMain.handle(
     IPC.agentReadInstructions,
