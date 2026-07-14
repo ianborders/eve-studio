@@ -11,6 +11,7 @@ import { AgentManager } from "./agentManager";
 import { ChatController } from "./chat";
 import { getAgentInfo } from "./eveSession";
 import * as store from "./store";
+import { readStructure } from "./structure";
 
 function broadcast(channel: string, payload: unknown): void {
   for (const w of BrowserWindow.getAllWindows()) {
@@ -137,6 +138,13 @@ export function registerIpc(): AgentManager {
       throw new Error("Agent is not running.");
     }
     return getAgentInfo(url);
+  });
+  ipcMain.handle(IPC.agentStructure, (_e: IpcMainInvokeEvent, id: string) => {
+    const a = store.getAgent(id);
+    if (!a) {
+      throw new Error("Unknown agent.");
+    }
+    return readStructure(a.path);
   });
 
   // --- chat ---

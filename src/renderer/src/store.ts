@@ -1,6 +1,7 @@
 import type {
   AgentRecord,
   AgentRuntimeState,
+  AgentStructure,
   ChatStatus,
   EveEvent,
   ThreadRecord,
@@ -27,6 +28,8 @@ interface State {
   activeThreadId: string | null;
   events: Record<string, EveEvent[]>;
   status: Record<string, ChatStatus>;
+  structure: Record<string, AgentStructure>;
+  structureLoading: Record<string, boolean>;
   booted: boolean;
 
   init: () => Promise<void>;
@@ -36,6 +39,8 @@ interface State {
   removeAgent: (id: string) => Promise<void>;
   startAgent: (id: string) => Promise<void>;
   stopAgent: (id: string) => Promise<void>;
+  setActiveAgent: (id: string) => void;
+  loadStructure: (id: string, force?: boolean) => Promise<void>;
   openAgentChat: (id: string) => Promise<void>;
   loadThreads: (agentId: string) => Promise<void>;
   newThread: (agentId: string) => Promise<void>;
@@ -54,6 +59,8 @@ export const useStore = create<State>((set, get) => ({
   activeThreadId: null,
   events: {},
   status: {},
+  structure: {},
+  structureLoading: {},
   booted: false,
 
   init: async () => {
@@ -118,6 +125,24 @@ export const useStore = create<State>((set, get) => ({
   stopAgent: async (id) => {
     const s = await window.studio.agents.stop(id);
     set((st) => ({ runtime: { ...st.runtime, [id]: s } }));
+  },
+
+  setActiveAgent: (id) => {
+    set({ activeAgentId: id });
+    void get().loadStructure(id);
+  },
+
+  loadStructure: async (id, force) => {
+    if (!force && (get().structure[id] || get().structureLoading[id])) {
+      return;
+    }
+    set((st) => ({ structureLoading: { ...st.structureLoading, [id]: true } }));
+    try {
+      const s = await window.studio.agents.structure(id);
+      set((st) => ({ structure: { ...st.structure, [id]: s } }));
+    } finally {
+      set((st) => ({ structureLoading: { ...st.structureLoading, [id]: false } }));
+    }
   },
 
   openAgentChat: async (id) => {

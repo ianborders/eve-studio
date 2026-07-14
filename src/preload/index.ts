@@ -4,6 +4,7 @@ import {
   type AddAgentResult,
   type AgentRecord,
   type AgentRuntimeState,
+  type AgentStructure,
   type AppInfo,
   type ChatEventMessage,
   type ChatStatusMessage,
@@ -35,6 +36,8 @@ const api = {
     status: (id: string): Promise<AgentRuntimeState> =>
       ipcRenderer.invoke(IPC.agentStatus, id),
     info: (id: string): Promise<unknown> => ipcRenderer.invoke(IPC.agentInfo, id),
+    structure: (id: string): Promise<AgentStructure> =>
+      ipcRenderer.invoke(IPC.agentStructure, id),
     onStatusChanged: (cb: (s: AgentRuntimeState) => void): (() => void) =>
       sub(IPC.agentStatusChanged, cb),
   },

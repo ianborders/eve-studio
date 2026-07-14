@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 import { type Section, useStore } from "./store";
 import { Chat } from "./views/Chat";
 import { Library } from "./views/Library";
+import { Structure } from "./views/Structure";
 
 const NAV: { id: Section; label: string; icon: string; phase: string }[] = [
   { id: "library", label: "Agents", icon: "▤", phase: "" },
   { id: "chat", label: "Chat", icon: "◇", phase: "" },
-  { id: "structure", label: "Structure", icon: "⚙", phase: "P2" },
+  { id: "structure", label: "Structure", icon: "⚙", phase: "" },
   { id: "memory", label: "Memory (Arcana)", icon: "◉", phase: "P3" },
   { id: "connections", label: "Connections", icon: "⇄", phase: "P6" },
   { id: "deploy", label: "Deploy & Logs", icon: "▲", phase: "P7" },
@@ -100,6 +101,8 @@ export function App(): JSX.Element {
             </div>
           ) : section === "chat" ? (
             <Chat />
+          ) : section === "structure" ? (
+            <Structure />
           ) : (
             <Placeholder title={current?.label ?? ""} phase={current?.phase ?? ""} />
           )}
