@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { CmdResult, VercelStatus } from "../shared/ipc";
+import type { CmdResult, ConnectorItem, VercelStatus } from "../shared/ipc";
 
 function vercelBin(): string {
   return process.platform === "win32" ? "vercel.cmd" : "vercel";
@@ -70,4 +70,69 @@ export function vercelEnvAdd(
   target: string
 ): CmdResult {
   return run(agentPath, ["env", "add", name, target], `${value}\n`);
+}
+
+// ---------------- Vercel Connect ----------------
+/** List Connect connectors for the linked project (optionally by service). */
+export function vercelConnectList(
+  agentPath: string,
+  service?: string
+): { ok: boolean; connectors: ConnectorItem[]; output?: string } {
+  const args = ["connect", "list", "--format", "json", "--non-interactive"];
+  if (service) {
+    args.push("--service", service);
+  }
+  const r = run(agentPath, args);
+  if (!r.ok) {
+    return { ok: false, connectors: [], output: r.output };
+  }
+  const start = r.output.indexOf("{");
+  if (start < 0) {
+    return { ok: true, connectors: [] };
+  }
+  try {
+    const parsed = JSON.parse(r.output.slice(start)) as {
+      connectors?: Array<Record<string, unknown>>;
+    };
+    const connectors = (parsed.connectors ?? []).map((c) => ({
+      uid: String(c.uid ?? ""),
+      id: String(c.id ?? ""),
+      name: String(c.name ?? c.uid ?? ""),
+      type: String(c.type ?? ""),
+    }));
+    return { ok: true, connectors };
+  } catch {
+    return { ok: true, connectors: [], output: r.output };
+  }
+}
+
+/**
+ * Create a Connect connector: `vercel connect create <type> --name <n> [--triggers]`.
+ * Managed services (slack/github/linear) may return an authorize URL to complete
+ * app installation in the browser.
+ */
+export function vercelConnectCreate(
+  agentPath: string,
+  type: string,
+  name: string,
+  triggers: boolean
+): CmdResult {
+  const args = ["connect", "create", type, "--name", name, "--format", "json"];
+  if (triggers) {
+    args.push("--triggers");
+  }
+  return run(agentPath, args);
+}
+
+/** Attach the current project to a connector (with an eve trigger path for channels). */
+export function vercelConnectAttach(
+  agentPath: string,
+  connector: string,
+  triggerPath?: string
+): CmdResult {
+  const args = ["connect", "attach", connector, "--yes"];
+  if (triggerPath) {
+    args.push("--triggers", "--trigger-path", triggerPath);
+  }
+  return run(agentPath, args);
 }

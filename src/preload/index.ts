@@ -11,11 +11,14 @@ import {
   type BrainInfo,
   type ChatEventMessage,
   type ChatStatusMessage,
+  type ChannelAddInput,
   type ChannelItem,
+  type ChannelWriteResult,
   type CliChunk,
   type CliExit,
   type CmdResult,
   type ConnectionInput,
+  type ConnectorItem,
   type CreateAgentInput,
   type DetectedBrain,
   type EnvState,
@@ -105,6 +108,11 @@ const api = {
       ipcRenderer.invoke(IPC.channelsList, id),
     channelAdd: (id: string, kind: "slack" | "web"): Promise<CmdResult> =>
       ipcRenderer.invoke(IPC.channelAdd, id, kind),
+    channelWrite: (
+      id: string,
+      input: ChannelAddInput
+    ): Promise<ChannelWriteResult> =>
+      ipcRenderer.invoke(IPC.channelWrite, id, input),
     onStatusChanged: (cb: (s: AgentRuntimeState) => void): (() => void) =>
       sub(IPC.agentStatusChanged, cb),
     onLog: (cb: (m: LogChunk) => void): (() => void) => sub(IPC.agentLog, cb),
@@ -123,6 +131,24 @@ const api = {
       target: string
     ): Promise<CmdResult> =>
       ipcRenderer.invoke(IPC.vercelEnvAdd, id, name, value, target),
+    connectorList: (
+      id: string,
+      service?: string
+    ): Promise<{ ok: boolean; connectors: ConnectorItem[]; output?: string }> =>
+      ipcRenderer.invoke(IPC.connectorList, id, service),
+    connectorCreate: (
+      id: string,
+      type: string,
+      name: string,
+      triggers: boolean
+    ): Promise<CmdResult> =>
+      ipcRenderer.invoke(IPC.connectorCreate, id, type, name, triggers),
+    connectorAttach: (
+      id: string,
+      connector: string,
+      kind?: string
+    ): Promise<CmdResult> =>
+      ipcRenderer.invoke(IPC.connectorAttach, id, connector, kind),
   },
 
   dialog: {

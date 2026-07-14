@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ConnectorPicker } from "../components/ConnectorPicker";
 import { useActiveStructure } from "../lib/useStructure";
 import { IconExternal, IconPlug, IconPlus, IconRefresh } from "../ui/icons";
 import {
@@ -192,8 +193,8 @@ function AddConnectionModal({
             </>
           ) : null}
           {authMode.startsWith("connect") ? (
-            <Field label="Connector UID" hint="from vercel connect create">
-              <Input value={connector} onChange={(e) => setConnector(e.target.value)} placeholder="linear/my-agent" className="font-mono" />
+            <Field label="Connector" hint="pick an existing Vercel Connect connector">
+              <ConnectorPicker agentId={agentId} value={connector} onChange={setConnector} />
             </Field>
           ) : null}
 

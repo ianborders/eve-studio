@@ -310,6 +310,37 @@ export interface ChannelItem {
   method?: string;
   urlPath?: string;
 }
+export type ChannelKind =
+  | "slack"
+  | "discord"
+  | "teams"
+  | "telegram"
+  | "twilio"
+  | "github"
+  | "linear"
+  | "custom";
+export interface ChannelAddInput {
+  kind: ChannelKind;
+  /** Vercel Connect connector UID (slack/github/linear). */
+  connector?: string;
+  /** File name for a custom channel. */
+  name?: string;
+}
+export interface ChannelWriteResult {
+  ok: boolean;
+  relPath?: string;
+  envVars?: string[];
+  connect?: boolean;
+  error?: string;
+}
+
+// --- vercel connect ---
+export interface ConnectorItem {
+  uid: string;
+  id: string;
+  name: string;
+  type: string;
+}
 
 export const IPC = {
   appInfo: "app:info",
@@ -344,11 +375,15 @@ export const IPC = {
   sandboxCreate: "agent:sandboxCreate",
   channelsList: "agent:channelsList",
   channelAdd: "agent:channelAdd",
+  channelWrite: "agent:channelWrite",
 
   vercelStatus: "vercel:status",
   vercelEnvLs: "vercel:envLs",
   vercelEnvPull: "vercel:envPull",
   vercelEnvAdd: "vercel:envAdd",
+  connectorList: "vercel:connectorList",
+  connectorCreate: "vercel:connectorCreate",
+  connectorAttach: "vercel:connectorAttach",
 
   cliRun: "cli:run",
   cliCancel: "cli:cancel",

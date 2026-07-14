@@ -42,7 +42,11 @@ import { addChannel, CliRunner, initAgent, listChannels, listEvals } from "./cli
 import { getAgentInfo } from "./eveSession";
 import * as store from "./store";
 import { readStructure } from "./structure";
+import { writeChannel } from "./agentChannels";
 import {
+  vercelConnectAttach,
+  vercelConnectCreate,
+  vercelConnectList,
   vercelEnvAdd,
   vercelEnvLs,
   vercelEnvPull,
@@ -326,6 +330,20 @@ export function registerIpc(): IpcHandles {
     (_e: IpcMainInvokeEvent, id: string, kind: "slack" | "web") =>
       addChannel(agentPathOf(id), kind)
   );
+  ipcMain.handle(
+    IPC.channelWrite,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      input: import("../shared/ipc").ChannelAddInput
+    ) => {
+      try {
+        return { ok: true, ...writeChannel(agentPathOf(id), input) };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
 
   // --- vercel ---
   ipcMain.handle(IPC.vercelStatus, (_e: IpcMainInvokeEvent, id: string) =>
@@ -346,6 +364,30 @@ export function registerIpc(): IpcHandles {
       value: string,
       target: string
     ) => vercelEnvAdd(agentPathOf(id), name, value, target)
+  );
+  ipcMain.handle(
+    IPC.connectorList,
+    (_e: IpcMainInvokeEvent, id: string, service?: string) =>
+      vercelConnectList(agentPathOf(id), service)
+  );
+  ipcMain.handle(
+    IPC.connectorCreate,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      type: string,
+      name: string,
+      triggers: boolean
+    ) => vercelConnectCreate(agentPathOf(id), type, name, triggers)
+  );
+  ipcMain.handle(
+    IPC.connectorAttach,
+    (_e: IpcMainInvokeEvent, id: string, connector: string, kind?: string) =>
+      vercelConnectAttach(
+        agentPathOf(id),
+        connector,
+        kind ? `/eve/v1/${kind}` : undefined
+      )
   );
 
   ipcMain.handle(
