@@ -14,6 +14,7 @@ import {
   type DetectedBrain,
   type EveEvent,
   IPC,
+  type InstructionsFile,
   type QueryHit,
   type ThreadRecord,
   type TimelineEvent,
@@ -46,6 +47,10 @@ const api = {
     info: (id: string): Promise<unknown> => ipcRenderer.invoke(IPC.agentInfo, id),
     structure: (id: string): Promise<AgentStructure> =>
       ipcRenderer.invoke(IPC.agentStructure, id),
+    readInstructions: (id: string): Promise<InstructionsFile> =>
+      ipcRenderer.invoke(IPC.agentReadInstructions, id),
+    writeInstructions: (id: string, content: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC.agentWriteInstructions, id, content),
     onStatusChanged: (cb: (s: AgentRuntimeState) => void): (() => void) =>
       sub(IPC.agentStatusChanged, cb),
   },

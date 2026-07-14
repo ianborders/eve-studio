@@ -187,6 +187,13 @@ export interface WireBrainResult {
   error?: string;
 }
 
+export interface InstructionsFile {
+  path: string;
+  relPath: string;
+  content: string;
+  exists: boolean;
+}
+
 export const IPC = {
   appInfo: "app:info",
 
@@ -199,6 +206,8 @@ export const IPC = {
   agentStatus: "agent:status",
   agentInfo: "agent:info",
   agentStructure: "agent:structure",
+  agentReadInstructions: "agent:readInstructions",
+  agentWriteInstructions: "agent:writeInstructions",
 
   arcanaDetect: "arcana:detect",
   arcanaSaveBrain: "arcana:saveBrain",

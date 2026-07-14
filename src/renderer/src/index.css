@@ -14,18 +14,67 @@ body,
 }
 
 body {
-  background: #0b0d10;
-  color: #e6e9ee;
+  background: #0a0a0c;
+  color: #ececee;
   font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
+    -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Drag region for the frameless macOS title bar */
-.titlebar-drag {
+/* Frameless macOS title bar drag regions */
+.titlebar-drag,
+.drag {
   -webkit-app-region: drag;
 }
 .no-drag {
   -webkit-app-region: no-drag;
+}
+
+/* Slim, unobtrusive scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2c33;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3d45;
+  background-clip: padding-box;
+}
+
+::selection {
+  background: rgba(62, 207, 142, 0.28);
+}
+
+/* Focus ring for keyboard users only */
+:focus-visible {
+  outline: 2px solid rgba(62, 207, 142, 0.55);
+  outline-offset: 1px;
+}
+button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Multiline clamp helpers */
+.line-clamp-2,
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-2 {
+  -webkit-line-clamp: 2;
+}
+.line-clamp-3 {
+  -webkit-line-clamp: 3;
 }

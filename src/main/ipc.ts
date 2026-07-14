@@ -12,6 +12,7 @@ import {
   type WireBrainResult,
 } from "../shared/ipc";
 import { AgentManager } from "./agentManager";
+import { readInstructions, writeInstructions } from "./agentFiles";
 import {
   arcanaQuery,
   arcanaStats,
@@ -171,6 +172,28 @@ export function registerIpc(): AgentManager {
     }
     return readStructure(a.path);
   });
+
+  ipcMain.handle(
+    IPC.agentReadInstructions,
+    (_e: IpcMainInvokeEvent, id: string) => {
+      const a = store.getAgent(id);
+      if (!a) {
+        throw new Error("Unknown agent.");
+      }
+      return readInstructions(a.path);
+    }
+  );
+  ipcMain.handle(
+    IPC.agentWriteInstructions,
+    (_e: IpcMainInvokeEvent, id: string, content: string) => {
+      const a = store.getAgent(id);
+      if (!a) {
+        throw new Error("Unknown agent.");
+      }
+      writeInstructions(a.path, content);
+      return true;
+    }
+  );
 
   // --- arcana (memory) ---
   ipcMain.handle(

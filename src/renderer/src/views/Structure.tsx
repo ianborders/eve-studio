@@ -1,149 +1,137 @@
 import type { AgentStructure } from "@shared/ipc";
-import { useEffect } from "react";
-import { useStore } from "../store";
+import type { ReactNode } from "react";
+import { useActiveStructure } from "../lib/useStructure";
+import {
+  IconBolt,
+  IconBot,
+  IconCalendar,
+  IconPlug,
+  IconRefresh,
+  IconServer,
+  IconWand,
+  IconWrench,
+} from "../ui/icons";
+import { Badge, Card, EmptyState, IconButton, Spinner } from "../ui/kit";
 
-function Section({
-  title,
-  count,
-  children,
-}: {
-  title: string;
-  count: number;
-  children: React.ReactNode;
-}): JSX.Element {
+function Meta({ label, value, tone }: { label: string; value: string; tone?: string }): JSX.Element {
   return (
-    <div className="rounded-lg border border-border bg-panel">
-      <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-        <span className="text-sm font-medium text-neutral-100">{title}</span>
-        <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-muted">
-          {count}
-        </span>
-      </div>
-      <div className="p-2">
-        {count === 0 ? (
-          <div className="px-2 py-1.5 text-xs text-muted">none</div>
-        ) : (
-          children
-        )}
-      </div>
+    <div className="flex flex-col">
+      <span className="text-2xs uppercase tracking-wide text-faint">{label}</span>
+      <span className={`font-mono text-[13px] ${tone ?? "text-text"}`}>{value}</span>
     </div>
   );
 }
 
-function Row({
-  name,
-  tag,
-  desc,
+function Group({
+  icon,
+  title,
+  count,
+  children,
 }: {
-  name: string;
-  tag?: string;
-  desc?: string;
+  icon: ReactNode;
+  title: string;
+  count: number;
+  children: ReactNode;
 }): JSX.Element {
   return (
-    <div className="rounded-md px-2 py-1.5 hover:bg-white/5">
+    <Card>
+      <div className="flex items-center gap-2 border-b border-border px-3.5 py-2.5">
+        <span className="text-muted">{icon}</span>
+        <span className="text-[13px] font-medium text-text">{title}</span>
+        <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-2xs text-muted">
+          {count}
+        </span>
+      </div>
+      {count === 0 ? (
+        <div className="px-3.5 py-3 text-xs text-faint">none</div>
+      ) : (
+        <div className="divide-y divide-border/60">{children}</div>
+      )}
+    </Card>
+  );
+}
+
+function Item({ name, tag, desc }: { name: string; tag?: string; desc?: string }): JSX.Element {
+  return (
+    <div className="px-3.5 py-2">
       <div className="flex items-center gap-2">
-        <span className="font-mono text-xs text-neutral-100">{name}</span>
-        {tag ? (
-          <span className="rounded bg-white/5 px-1.5 py-0.5 text-[10px] text-muted">
-            {tag}
-          </span>
-        ) : null}
+        <span className="font-mono text-xs text-text">{name}</span>
+        {tag ? <Badge>{tag}</Badge> : null}
       </div>
       {desc ? (
-        <div className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-muted">
-          {desc}
-        </div>
+        <div className="mt-0.5 line-clamp-2 text-2xs leading-snug text-muted">{desc}</div>
       ) : null}
     </div>
   );
 }
 
-function StructureBody({ s }: { s: AgentStructure }): JSX.Element {
+function Body({ s }: { s: AgentStructure }): JSX.Element {
   return (
-    <div className="space-y-4">
-      {/* header strip */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border bg-panel px-4 py-3 text-xs">
-        <span className="text-muted">
-          model{" "}
-          <span className="font-mono text-neutral-100">{s.model ?? "—"}</span>
-        </span>
-        <span className="text-muted">
-          sandbox{" "}
-          <span className="font-mono text-neutral-100">{s.sandbox ?? "none"}</span>
-        </span>
-        <span className="text-muted">
-          source <span className="text-neutral-300">{s.source}</span>
-        </span>
+    <div className="mx-auto max-w-4xl space-y-4">
+      <Card className="flex flex-wrap items-center gap-x-8 gap-y-3 px-4 py-3.5">
+        <Meta label="model" value={s.model ?? "—"} />
+        <Meta label="sandbox" value={s.sandbox ?? "none"} />
+        <Meta label="source" value={s.source} tone="text-muted" />
         <div className="flex-1" />
-        <span
-          className={
-            s.diagnostics.errors > 0
-              ? "text-red-400"
-              : s.diagnostics.warnings > 0
-                ? "text-yellow-400"
-                : "text-accent"
-          }
-        >
-          {s.diagnostics.errors} err · {s.diagnostics.warnings} warn
-        </span>
-      </div>
+        <div className="flex items-center gap-2">
+          <Badge tone={s.diagnostics.errors > 0 ? "danger" : "accent"}>
+            {s.diagnostics.errors} errors
+          </Badge>
+          <Badge tone={s.diagnostics.warnings > 0 ? "warn" : "default"}>
+            {s.diagnostics.warnings} warnings
+          </Badge>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <Section title="Tools" count={s.tools.length}>
+        <Group icon={<IconWrench className="h-4 w-4" />} title="Tools" count={s.tools.length}>
           {s.tools.map((t) => (
-            <Row key={t.name} name={t.name} desc={t.description} />
+            <Item key={t.name} name={t.name} desc={t.description} />
           ))}
-        </Section>
-
-        <Section title="Connections" count={s.connections.length}>
+        </Group>
+        <Group icon={<IconPlug className="h-4 w-4" />} title="Connections" count={s.connections.length}>
           {s.connections.map((c) => (
-            <Row key={c.name} name={c.name} tag={c.protocol} desc={c.description} />
+            <Item key={c.name} name={c.name} tag={c.protocol} desc={c.description} />
           ))}
-        </Section>
-
-        <Section title="Skills" count={s.skills.length}>
+        </Group>
+        <Group icon={<IconWand className="h-4 w-4" />} title="Skills" count={s.skills.length}>
           {s.skills.map((k) => (
-            <Row key={k.name} name={k.name} desc={k.description} />
+            <Item key={k.name} name={k.name} desc={k.description} />
           ))}
-        </Section>
-
-        <Section title="Subagents" count={s.subagents.length}>
+        </Group>
+        <Group icon={<IconBot className="h-4 w-4" />} title="Subagents" count={s.subagents.length}>
           {s.subagents.map((a) => (
-            <Row key={a.name} name={a.name} tag="subagent" desc={a.description} />
+            <Item key={a.name} name={a.name} tag="subagent" desc={a.description} />
           ))}
-        </Section>
-
-        <Section title="Channels" count={s.channels.length}>
+        </Group>
+        <Group icon={<IconServer className="h-4 w-4" />} title="Channels" count={s.channels.length}>
           {s.channels.map((c) => (
-            <Row
+            <Item
               key={c.name}
               name={c.name}
               tag={c.kind}
               desc={c.method && c.urlPath ? `${c.method} ${c.urlPath}` : undefined}
             />
           ))}
-        </Section>
-
-        <Section title="Schedules" count={s.schedules.length}>
+        </Group>
+        <Group icon={<IconCalendar className="h-4 w-4" />} title="Schedules" count={s.schedules.length}>
           {s.schedules.map((sch) => (
-            <Row key={sch.name} name={sch.name} tag={sch.cron} />
+            <Item key={sch.name} name={sch.name} tag={sch.cron} />
           ))}
-        </Section>
-
+        </Group>
         {s.remoteAgents.length > 0 ? (
-          <Section title="Remote agents" count={s.remoteAgents.length}>
+          <Group icon={<IconServer className="h-4 w-4" />} title="Remote agents" count={s.remoteAgents.length}>
             {s.remoteAgents.map((r) => (
-              <Row key={r.name} name={r.name} desc={r.url} />
+              <Item key={r.name} name={r.name} desc={r.url} />
             ))}
-          </Section>
+          </Group>
         ) : null}
-
         {s.hooks.length > 0 ? (
-          <Section title="Hooks" count={s.hooks.length}>
+          <Group icon={<IconBolt className="h-4 w-4" />} title="Hooks" count={s.hooks.length}>
             {s.hooks.map((h) => (
-              <Row key={h} name={h} />
+              <Item key={h} name={h} />
             ))}
-          </Section>
+          </Group>
         ) : null}
       </div>
     </div>
@@ -151,82 +139,28 @@ function StructureBody({ s }: { s: AgentStructure }): JSX.Element {
 }
 
 export function Structure(): JSX.Element {
-  const agents = useStore((s) => s.agents);
-  const activeAgentId = useStore((s) => s.activeAgentId);
-  const runtime = useStore((s) => s.runtime);
-  const structure = useStore((s) => s.structure);
-  const structureLoading = useStore((s) => s.structureLoading);
-  const setActiveAgent = useStore((s) => s.setActiveAgent);
-  const loadStructure = useStore((s) => s.loadStructure);
-
-  useEffect(() => {
-    if (activeAgentId) {
-      void loadStructure(activeAgentId);
-    }
-  }, [activeAgentId, loadStructure]);
-
-  if (agents.length === 0) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-muted">
-        Add an agent first (Agents tab).
-      </div>
-    );
-  }
-
-  const current = activeAgentId ?? agents[0]?.id ?? null;
-  const s = current ? structure[current] : undefined;
-  const loading = current ? structureLoading[current] : false;
+  const { structure, loading, reload } = useActiveStructure();
 
   return (
     <div className="flex h-full flex-col">
-      {/* agent picker */}
-      <div className="flex items-center gap-2 border-b border-border px-5 py-2.5">
-        <span className="text-xs text-muted">Agent</span>
-        <div className="flex flex-wrap gap-1.5">
-          {agents.map((a) => (
-            <button
-              key={a.id}
-              type="button"
-              onClick={() => setActiveAgent(a.id)}
-              className={`rounded-md px-2.5 py-1 text-xs ${
-                a.id === current
-                  ? "bg-white/10 text-neutral-100"
-                  : "text-neutral-400 hover:bg-white/5"
-              }`}
-            >
-              {a.name}
-            </button>
-          ))}
-        </div>
-        <div className="flex-1" />
-        {current ? (
-          <button
-            type="button"
-            onClick={() => loadStructure(current, true)}
-            disabled={runtime[current]?.status === "starting"}
-            className="rounded-md border border-border px-2.5 py-1 text-xs text-neutral-300 hover:bg-white/5"
-          >
-            Refresh
-          </button>
-        ) : null}
+      <div className="flex items-center justify-between border-b border-border px-5 py-2.5">
+        <div className="text-[13px] font-medium text-text">Structure</div>
+        <IconButton onClick={reload} title="Rebuild & reload">
+          <IconRefresh className="h-3.5 w-3.5" />
+        </IconButton>
       </div>
-
       <div className="flex-1 overflow-auto p-5">
-        {loading && !s ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted">
-            Reading manifest… (builds the agent if needed)
+        {loading && !structure ? (
+          <div className="flex h-full items-center justify-center gap-2 text-sm text-muted">
+            <Spinner /> Reading manifest…
           </div>
-        ) : s?.error ? (
-          <div className="mx-auto max-w-lg rounded-lg border border-border bg-panel p-5 text-center text-sm text-muted">
-            {s.error}
-          </div>
-        ) : s ? (
-          <StructureBody s={s} />
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted">
-            Pick an agent to inspect.
-          </div>
-        )}
+        ) : structure?.error ? (
+          <EmptyState icon={<IconServer className="h-5 w-5" />} title="Can't read structure">
+            {structure.error}
+          </EmptyState>
+        ) : structure ? (
+          <Body s={structure} />
+        ) : null}
       </div>
     </div>
   );

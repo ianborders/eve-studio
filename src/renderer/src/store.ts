@@ -8,15 +8,17 @@ import type {
 } from "@shared/ipc";
 import { create } from "zustand";
 
+/** Per-agent workspace tabs (plus the global "settings"). */
 export type Section =
-  | "library"
   | "chat"
   | "structure"
   | "memory"
   | "connections"
+  | "schedules"
+  | "skills"
+  | "instructions"
   | "deploy"
   | "evals"
-  | "updates"
   | "settings";
 
 interface State {
@@ -39,7 +41,7 @@ interface State {
   removeAgent: (id: string) => Promise<void>;
   startAgent: (id: string) => Promise<void>;
   stopAgent: (id: string) => Promise<void>;
-  setActiveAgent: (id: string) => void;
+  setActiveAgent: (id: string) => Promise<void>;
   loadStructure: (id: string, force?: boolean) => Promise<void>;
   openAgentChat: (id: string) => Promise<void>;
   loadThreads: (agentId: string) => Promise<void>;
@@ -51,7 +53,7 @@ interface State {
 }
 
 export const useStore = create<State>((set, get) => ({
-  section: "library",
+  section: "chat",
   agents: [],
   runtime: {},
   activeAgentId: null,
@@ -96,6 +98,10 @@ export const useStore = create<State>((set, get) => ({
       runtime[a.id] = await window.studio.agents.status(a.id);
     }
     set({ agents, runtime });
+    // Auto-select the first agent so the workspace is never empty-with-agents.
+    if (!get().activeAgentId && agents[0]) {
+      void get().setActiveAgent(agents[0].id);
+    }
   },
 
   addAgent: async () => {
@@ -127,9 +133,17 @@ export const useStore = create<State>((set, get) => ({
     set((st) => ({ runtime: { ...st.runtime, [id]: s } }));
   },
 
-  setActiveAgent: (id) => {
-    set({ activeAgentId: id });
+  setActiveAgent: async (id) => {
+    if (get().activeAgentId === id) {
+      return;
+    }
+    set({ activeAgentId: id, activeThreadId: null });
     void get().loadStructure(id);
+    await get().loadThreads(id);
+    const threads = get().threads[id] ?? [];
+    if (threads[0]) {
+      await get().selectThread(threads[0].id);
+    }
   },
 
   loadStructure: async (id, force) => {
