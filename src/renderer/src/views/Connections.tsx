@@ -1,9 +1,99 @@
+import { useState } from "react";
 import { useActiveStructure } from "../lib/useStructure";
-import { IconExternal, IconPlug, IconRefresh } from "../ui/icons";
-import { Badge, Card, EmptyState, IconButton, Spinner } from "../ui/kit";
+import { IconExternal, IconPlug, IconPlus, IconRefresh } from "../ui/icons";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  IconButton,
+  Input,
+  Modal,
+  Spinner,
+} from "../ui/kit";
+
+function AddConnectionModal({
+  agentId,
+  onClose,
+}: {
+  agentId: string;
+  onClose: () => void;
+}): JSX.Element {
+  const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
+  const [description, setDescription] = useState("");
+  const [envVar, setEnvVar] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = async (): Promise<void> => {
+    setBusy(true);
+    setErr(null);
+    const r = await window.studio.agents.addConnection(agentId, {
+      name,
+      url,
+      description,
+      envVar: envVar || undefined,
+    });
+    setBusy(false);
+    if (r.ok) {
+      setDone(r.relPath ?? "connection");
+    } else {
+      setErr(r.error ?? "Failed.");
+    }
+  };
+
+  return (
+    <Modal title="Add MCP connection" onClose={onClose}>
+      {done ? (
+        <div className="space-y-3 p-4">
+          <div className="rounded-lg bg-accent/10 px-3 py-2 text-[13px] text-accent">
+            Wrote <span className="font-mono">{done}</span>.
+          </div>
+          <p className="text-2xs leading-relaxed text-muted">
+            Set <span className="font-mono text-text">{envVar || "the token env var"}</span>{" "}
+            in the agent's .env, then restart it to load the connection.
+          </p>
+          <div className="flex justify-end">
+            <Button variant="primary" onClick={onClose}>
+              Done
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3 p-4">
+          <Field label="Name" hint="becomes connections/<name>.ts">
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="linear" className="font-mono" />
+          </Field>
+          <Field label="MCP URL">
+            <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://mcp.example.com/mcp" className="font-mono" />
+          </Field>
+          <Field label="Description">
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this connection is for" />
+          </Field>
+          <Field label="Token env var" hint="optional — defaults to <NAME>_TOKEN">
+            <Input value={envVar} onChange={(e) => setEnvVar(e.target.value)} placeholder="LINEAR_TOKEN" className="font-mono" />
+          </Field>
+          {err ? <div className="text-xs text-danger">{err}</div> : null}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={submit} disabled={busy || !name || !url}>
+              {busy ? "Writing…" : "Add connection"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
 
 export function Connections(): JSX.Element {
-  const { structure, loading, reload } = useActiveStructure();
+  const { id, structure, loading, reload } = useActiveStructure();
+  const [addOpen, setAddOpen] = useState(false);
 
   if (loading && !structure) {
     return (
@@ -20,19 +110,30 @@ export function Connections(): JSX.Element {
         <div className="text-[13px] font-medium text-text">
           Connections <span className="text-faint">· {conns.length}</span>
         </div>
-        <IconButton onClick={reload} title="Reload">
-          <IconRefresh className="h-3.5 w-3.5" />
-        </IconButton>
+        <div className="flex items-center gap-1.5">
+          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+            <IconPlus className="h-3.5 w-3.5" />
+            Add
+          </Button>
+          <IconButton onClick={reload} title="Reload">
+            <IconRefresh className="h-3.5 w-3.5" />
+          </IconButton>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-5">
         {conns.length === 0 ? (
-          <EmptyState icon={<IconPlug className="h-5 w-5" />} title="No connections">
-            This agent has no MCP connections. Add one by dropping a
-            <code className="mx-1 rounded bg-white/5 px-1 font-mono text-xs">
-              connections/*.ts
-            </code>
-            file in its project — the Memory tab wires Arcana for you.
+          <EmptyState
+            icon={<IconPlug className="h-5 w-5" />}
+            title="No connections"
+            action={
+              <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+                <IconPlus className="h-3.5 w-3.5" />
+                Add connection
+              </Button>
+            }
+          >
+            MCP connections give the agent programmatic access to external systems.
           </EmptyState>
         ) : (
           <div className="mx-auto max-w-3xl space-y-2.5">
@@ -65,6 +166,10 @@ export function Connections(): JSX.Element {
           </div>
         )}
       </div>
+
+      {addOpen && id ? (
+        <AddConnectionModal agentId={id} onClose={() => setAddOpen(false)} />
+      ) : null}
     </div>
   );
 }

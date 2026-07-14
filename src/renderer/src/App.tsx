@@ -2,7 +2,6 @@ import type { AppInfo } from "@shared/ipc";
 import { useEffect, useState } from "react";
 import { type Section, useStore } from "./store";
 import {
-  IconBolt,
   IconBot,
   IconBrain,
   IconCalendar,
@@ -10,6 +9,7 @@ import {
   IconCheck,
   IconExternal,
   IconFile,
+  IconFolder,
   IconLayers,
   IconPlay,
   IconPlus,
@@ -23,6 +23,9 @@ import {
 import { Badge, Button, StatusDot, type TabItem, Tabs } from "./ui/kit";
 import { Chat } from "./views/Chat";
 import { Connections } from "./views/Connections";
+import { CreateAgent } from "./views/CreateAgent";
+import { Deploy } from "./views/Deploy";
+import { Evals } from "./views/Evals";
 import { Instructions } from "./views/Instructions";
 import { Memory } from "./views/Memory";
 import { Schedules } from "./views/Schedules";
@@ -42,18 +45,6 @@ const TABS: TabItem[] = [
   { id: "deploy", label: "Deploy", icon: IconRocket },
   { id: "evals", label: "Evals", icon: IconCheck },
 ];
-
-function ComingSoon({ label }: { label: string }): JSX.Element {
-  return (
-    <div className="flex h-full flex-col items-center justify-center text-center">
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-panel text-muted">
-        <IconBolt className="h-5 w-5" />
-      </div>
-      <div className="text-[15px] font-medium text-text">{label}</div>
-      <div className="mt-1.5 text-[13px] text-muted">Lands in the next build pass.</div>
-    </div>
-  );
-}
 
 function AgentWorkspace(): JSX.Element {
   const section = useStore((s) => s.section);
@@ -166,9 +157,9 @@ function AgentWorkspace(): JSX.Element {
         ) : section === "instructions" ? (
           <Instructions />
         ) : section === "deploy" ? (
-          <ComingSoon label="Deploy & Logs" />
+          <Deploy />
         ) : section === "evals" ? (
-          <ComingSoon label="Eval runner" />
+          <Evals />
         ) : null}
       </div>
     </div>
@@ -185,6 +176,7 @@ export function App(): JSX.Element {
   const addAgent = useStore((s) => s.addAgent);
   const init = useStore((s) => s.init);
   const [info, setInfo] = useState<AppInfo | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     void init();
@@ -194,8 +186,21 @@ export function App(): JSX.Element {
       .catch(() => setInfo(null));
   }, [init]);
 
+  const createModal = createOpen ? (
+    <CreateAgent onClose={() => setCreateOpen(false)} />
+  ) : null;
+
   if (agents.length === 0) {
-    return <Welcome onAdd={addAgent} info={info} />;
+    return (
+      <>
+        <Welcome
+          onAdd={addAgent}
+          onCreate={() => setCreateOpen(true)}
+          info={info}
+        />
+        {createModal}
+      </>
+    );
   }
 
   const inSettings = section === "settings";
@@ -216,10 +221,23 @@ export function App(): JSX.Element {
           </div>
         </div>
 
-        <div className="no-drag px-2.5 pb-2">
-          <Button variant="secondary" size="sm" className="w-full" onClick={addAgent}>
+        <div className="no-drag flex gap-1.5 px-2.5 pb-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-1"
+            onClick={addAgent}
+          >
+            <IconFolder className="h-3.5 w-3.5" />
+            Add existing
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setCreateOpen(true)}
+            title="Create a new agent"
+          >
             <IconPlus className="h-3.5 w-3.5" />
-            Add agent
           </Button>
         </div>
 
@@ -301,6 +319,8 @@ export function App(): JSX.Element {
           </div>
         </div>
       )}
+
+      {createModal}
     </div>
   );
 }

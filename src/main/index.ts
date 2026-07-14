@@ -1,11 +1,10 @@
 import { join } from "node:path";
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import { BrowserWindow, app, shell } from "electron";
-import type { AgentManager } from "./agentManager";
-import { registerIpc } from "./ipc";
+import { type IpcHandles, registerIpc } from "./ipc";
 import { initStore } from "./store";
 
-let agentManager: AgentManager | null = null;
+let handles: IpcHandles | null = null;
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -14,7 +13,7 @@ function createWindow(): void {
     minWidth: 980,
     minHeight: 640,
     show: false,
-    backgroundColor: "#0b0d10",
+    backgroundColor: "#0a0a0c",
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
@@ -46,7 +45,7 @@ app.whenReady().then(() => {
   });
 
   initStore();
-  agentManager = registerIpc();
+  handles = registerIpc();
 
   createWindow();
 
@@ -58,7 +57,8 @@ app.whenReady().then(() => {
 });
 
 app.on("before-quit", () => {
-  agentManager?.stopAll();
+  handles?.cli.cancelAll();
+  handles?.agents.stopAll();
 });
 
 app.on("window-all-closed", () => {

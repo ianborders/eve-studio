@@ -11,11 +11,19 @@ import {
   type BrainInfo,
   type ChatEventMessage,
   type ChatStatusMessage,
+  type CliChunk,
+  type CliExit,
+  type ConnectionInput,
+  type CreateAgentInput,
   type DetectedBrain,
+  type EvalItem,
   type EveEvent,
+  type FileWriteResult,
   IPC,
   type InstructionsFile,
+  type LogChunk,
   type QueryHit,
+  type SkillInput,
   type ThreadRecord,
   type TimelineEvent,
   type WireBrainInput,
@@ -51,8 +59,38 @@ const api = {
       ipcRenderer.invoke(IPC.agentReadInstructions, id),
     writeInstructions: (id: string, content: string): Promise<boolean> =>
       ipcRenderer.invoke(IPC.agentWriteInstructions, id, content),
+    logs: (id: string): Promise<string> => ipcRenderer.invoke(IPC.agentLogs, id),
+    create: (input: CreateAgentInput): Promise<string> =>
+      ipcRenderer.invoke(IPC.agentCreate, input),
+    register: (dir: string): Promise<AddAgentResult> =>
+      ipcRenderer.invoke(IPC.agentRegister, dir),
+    createSkill: (id: string, input: SkillInput): Promise<FileWriteResult> =>
+      ipcRenderer.invoke(IPC.skillCreate, id, input),
+    addConnection: (id: string, input: ConnectionInput): Promise<FileWriteResult> =>
+      ipcRenderer.invoke(IPC.connectionAdd, id, input),
     onStatusChanged: (cb: (s: AgentRuntimeState) => void): (() => void) =>
       sub(IPC.agentStatusChanged, cb),
+    onLog: (cb: (m: LogChunk) => void): (() => void) => sub(IPC.agentLog, cb),
+  },
+
+  dialog: {
+    pickDir: (): Promise<string | null> => ipcRenderer.invoke(IPC.dialogPickDir),
+  },
+
+  cli: {
+    run: (
+      id: string,
+      kind: "build" | "deploy" | "evalRun",
+      extra?: { ids?: string[] }
+    ): Promise<string> => ipcRenderer.invoke(IPC.cliRun, id, kind, extra),
+    cancel: (runId: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC.cliCancel, runId),
+    onChunk: (cb: (c: CliChunk) => void): (() => void) => sub(IPC.cliChunk, cb),
+    onExit: (cb: (c: CliExit) => void): (() => void) => sub(IPC.cliExit, cb),
+  },
+
+  evals: {
+    list: (id: string): Promise<EvalItem[]> => ipcRenderer.invoke(IPC.evalList, id),
   },
 
   arcana: {

@@ -4,9 +4,11 @@ import { Button } from "../ui/kit";
 
 export function Welcome({
   onAdd,
+  onCreate,
   info,
 }: {
   onAdd: () => void;
+  onCreate: () => void;
   info: AppInfo | null;
 }): JSX.Element {
   return (
@@ -28,9 +30,9 @@ export function Welcome({
             <IconFolder className="h-4 w-4" />
             Add an existing agent
           </Button>
-          <Button variant="ghost" size="md" disabled className="px-4">
+          <Button variant="ghost" size="md" onClick={onCreate} className="px-4">
             <IconPlus className="h-4 w-4" />
-            Create a new agent — soon
+            Create a new agent
           </Button>
         </div>
 

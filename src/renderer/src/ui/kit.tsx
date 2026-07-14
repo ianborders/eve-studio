@@ -297,6 +297,50 @@ export function Tabs({
   );
 }
 
+// --- Modal ---
+export function Modal({
+  title,
+  onClose,
+  children,
+  width = "max-w-lg",
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  width?: string;
+}): JSX.Element {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-black/60 backdrop-blur-sm"
+      />
+      <div
+        className={cx(
+          "relative w-full animate-slide-up rounded-xl border border-border bg-elevated shadow-pop",
+          width
+        )}
+      >
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <span className="text-[14px] font-semibold text-text">{title}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-muted hover:bg-white/10 hover:text-text"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // --- SectionHeader (for panels) ---
 export function PanelHeader({
   title,

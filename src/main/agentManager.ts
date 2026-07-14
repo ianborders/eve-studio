@@ -16,6 +16,7 @@ interface Running {
 }
 
 type StatusListener = (state: AgentRuntimeState) => void;
+type LogListener = (agentId: string, data: string) => void;
 
 const DETACHED = process.platform !== "win32";
 
@@ -53,9 +54,19 @@ function killPort(port: number): void {
 export class AgentManager {
   private readonly running = new Map<string, Running>();
   private readonly listeners = new Set<StatusListener>();
+  private readonly logListeners = new Set<LogListener>();
 
   onStatus(cb: StatusListener): void {
     this.listeners.add(cb);
+  }
+
+  onLog(cb: LogListener): void {
+    this.logListeners.add(cb);
+  }
+
+  /** The captured dev-server output for an agent (most recent lines). */
+  logs(agentId: string): string {
+    return this.running.get(agentId)?.logs.join("") ?? "";
   }
 
   private emit(agentId: string): void {
@@ -124,9 +135,13 @@ export class AgentManager {
     });
 
     const capture = (buf: Buffer): void => {
-      rec.logs.push(buf.toString());
-      if (rec.logs.length > 200) {
+      const text = buf.toString();
+      rec.logs.push(text);
+      if (rec.logs.length > 400) {
         rec.logs.shift();
+      }
+      for (const cb of this.logListeners) {
+        cb(agentId, text);
       }
     };
     proc.stdout?.on("data", capture);

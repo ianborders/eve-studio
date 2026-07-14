@@ -12,7 +12,12 @@ import {
   type WireBrainResult,
 } from "../shared/ipc";
 import { AgentManager } from "./agentManager";
-import { readInstructions, writeInstructions } from "./agentFiles";
+import {
+  addConnection,
+  createSkill,
+  readInstructions,
+  writeInstructions,
+} from "./agentFiles";
 import {
   arcanaQuery,
   arcanaStats,
@@ -21,9 +26,16 @@ import {
 } from "./arcana";
 import { detectBrain, keyFromEnv, wireBrain } from "./arcanaWire";
 import { ChatController } from "./chat";
+import { CliRunner, initAgent, listEvals } from "./cli";
 import { getAgentInfo } from "./eveSession";
 import * as store from "./store";
 import { readStructure } from "./structure";
+
+/** What registerIpc hands back for lifecycle cleanup on quit. */
+export interface IpcHandles {
+  agents: AgentManager;
+  cli: CliRunner;
+}
 
 function brainInfo(cred: store.BrainCred | undefined): BrainInfo | null {
   return cred
@@ -96,10 +108,16 @@ function addAgentFromPath(dir: string): AddAgentResult {
   return { ok: true, agent };
 }
 
-/** Registers every ipcMain handler. Returns the AgentManager so callers can stop it on quit. */
-export function registerIpc(): AgentManager {
+/** Registers every ipcMain handler. Returns handles so callers can clean up on quit. */
+export function registerIpc(): IpcHandles {
   const agents = new AgentManager();
   agents.onStatus((state) => broadcast(IPC.agentStatusChanged, state));
+  agents.onLog((agentId, data) => broadcast(IPC.agentLog, { agentId, data }));
+
+  const cli = new CliRunner(
+    (runId, data) => broadcast(IPC.cliChunk, { runId, data }),
+    (runId, code) => broadcast(IPC.cliExit, { runId, code })
+  );
 
   const chat = new ChatController(
     (threadId, event) => broadcast(IPC.chatEvent, { threadId, event }),
@@ -142,6 +160,33 @@ export function registerIpc(): AgentManager {
     store.removeAgent(id);
     return store.listAgents();
   });
+
+  ipcMain.handle(IPC.dialogPickDir, async (): Promise<string | null> => {
+    const win = BrowserWindow.getFocusedWindow() ?? undefined;
+    const opts = {
+      properties: ["openDirectory", "createDirectory"] as Array<
+        "openDirectory" | "createDirectory"
+      >,
+      title: "Choose a folder",
+    };
+    const picked = win
+      ? await dialog.showOpenDialog(win, opts)
+      : await dialog.showOpenDialog(opts);
+    return picked.canceled ? null : (picked.filePaths[0] ?? null);
+  });
+
+  ipcMain.handle(
+    IPC.agentCreate,
+    (_e: IpcMainInvokeEvent, input: import("../shared/ipc").CreateAgentInput) => {
+      const runId = store.rid();
+      initAgent(cli, runId, input.parentDir, input.name, Boolean(input.webChat));
+      return runId;
+    }
+  );
+
+  ipcMain.handle(IPC.agentRegister, (_e: IpcMainInvokeEvent, dir: string) =>
+    addAgentFromPath(dir)
+  );
 
   // --- runtime ---
   ipcMain.handle(IPC.agentStart, (_e: IpcMainInvokeEvent, id: string) => {
@@ -192,6 +237,82 @@ export function registerIpc(): AgentManager {
       }
       writeInstructions(a.path, content);
       return true;
+    }
+  );
+
+  // --- CLI (build / deploy / eval), logs, scaffolding ---
+  ipcMain.handle(
+    IPC.cliRun,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      kind: "build" | "deploy" | "evalRun",
+      extra?: { ids?: string[] }
+    ) => {
+      const a = store.getAgent(id);
+      if (!a) {
+        throw new Error("Unknown agent.");
+      }
+      const runId = store.rid();
+      const args =
+        kind === "build"
+          ? ["build"]
+          : kind === "deploy"
+            ? ["deploy"]
+            : ["eval", ...(extra?.ids ?? []), "--json"];
+      cli.run(runId, a.path, args);
+      return runId;
+    }
+  );
+  ipcMain.handle(IPC.cliCancel, (_e: IpcMainInvokeEvent, runId: string) => {
+    cli.cancel(runId);
+    return true;
+  });
+  ipcMain.handle(IPC.evalList, (_e: IpcMainInvokeEvent, id: string) => {
+    const a = store.getAgent(id);
+    if (!a) {
+      throw new Error("Unknown agent.");
+    }
+    return listEvals(a.path);
+  });
+  ipcMain.handle(IPC.agentLogs, (_e: IpcMainInvokeEvent, id: string) =>
+    agents.logs(id)
+  );
+
+  ipcMain.handle(
+    IPC.skillCreate,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      input: import("../shared/ipc").SkillInput
+    ) => {
+      const a = store.getAgent(id);
+      if (!a) {
+        throw new Error("Unknown agent.");
+      }
+      try {
+        return { ok: true, ...createSkill(a.path, input) };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
+  ipcMain.handle(
+    IPC.connectionAdd,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      input: import("../shared/ipc").ConnectionInput
+    ) => {
+      const a = store.getAgent(id);
+      if (!a) {
+        throw new Error("Unknown agent.");
+      }
+      try {
+        return { ok: true, ...addConnection(a.path, input) };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
     }
   );
 
@@ -359,5 +480,5 @@ export function registerIpc(): AgentManager {
     }
   );
 
-  return agents;
+  return { agents, cli };
 }

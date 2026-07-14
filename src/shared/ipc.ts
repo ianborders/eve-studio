@@ -194,6 +194,52 @@ export interface InstructionsFile {
   exists: boolean;
 }
 
+// --- CLI runner (build / deploy / eval / init) ---
+export type CliKind = "build" | "deploy" | "evalRun";
+export interface CliChunk {
+  runId: string;
+  data: string;
+}
+export interface CliExit {
+  runId: string;
+  code: number | null;
+}
+export interface LogChunk {
+  agentId: string;
+  data: string;
+}
+export interface EvalItem {
+  id: string;
+  description?: string;
+}
+export interface CreateAgentInput {
+  parentDir: string;
+  name: string;
+  webChat?: boolean;
+}
+export interface CreateAgentResult {
+  ok: boolean;
+  agent?: AgentRecord;
+  error?: string;
+  runId?: string;
+}
+export interface SkillInput {
+  name: string;
+  description: string;
+  body?: string;
+}
+export interface ConnectionInput {
+  name: string;
+  url: string;
+  description?: string;
+  envVar?: string;
+}
+export interface FileWriteResult {
+  ok: boolean;
+  relPath?: string;
+  error?: string;
+}
+
 export const IPC = {
   appInfo: "app:info",
 
@@ -208,6 +254,21 @@ export const IPC = {
   agentStructure: "agent:structure",
   agentReadInstructions: "agent:readInstructions",
   agentWriteInstructions: "agent:writeInstructions",
+  agentLogs: "agent:logs",
+  agentCreate: "agent:create",
+  agentRegister: "agent:register",
+  skillCreate: "agent:skillCreate",
+  connectionAdd: "agent:connectionAdd",
+  dialogPickDir: "dialog:pickDir",
+
+  cliRun: "cli:run",
+  cliCancel: "cli:cancel",
+  evalList: "eval:list",
+
+  // push channels
+  cliChunk: "cli:chunk",
+  cliExit: "cli:exit",
+  agentLog: "agent:log",
 
   arcanaDetect: "arcana:detect",
   arcanaSaveBrain: "arcana:saveBrain",
