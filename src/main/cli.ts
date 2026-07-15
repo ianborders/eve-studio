@@ -106,19 +106,23 @@ export function listChannels(cwd: string): ChannelItem[] {
       env: { ...process.env, ...CLEAN_ENV },
     });
     const out = res.stdout ?? "";
-    const start = out.indexOf("[");
-    if (start < 0) {
+    // `eve channels list --json` prints { "channels": ["slack", ...] } (names).
+    const s = out.indexOf("{");
+    const e = out.lastIndexOf("}");
+    if (s < 0 || e < s) {
       return [];
     }
-    const parsed = JSON.parse(out.slice(start)) as unknown;
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed.map((c) => {
+    const parsed = JSON.parse(out.slice(s, e + 1)) as { channels?: unknown };
+    const list = Array.isArray(parsed.channels) ? parsed.channels : [];
+    return list.map((c) => {
+      if (typeof c === "string") {
+        return { name: c, kind: c };
+      }
       const o = c as Record<string, unknown>;
+      const name = String(o.name ?? "");
       return {
-        name: String(o.name ?? ""),
-        kind: o.kind as string | undefined,
+        name,
+        kind: (o.kind as string | undefined) ?? name,
         method: o.method as string | undefined,
         urlPath: o.urlPath as string | undefined,
       };

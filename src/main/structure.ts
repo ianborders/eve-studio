@@ -30,6 +30,19 @@ function arr(v: any): any[] {
   return Array.isArray(v) ? v : [];
 }
 
+function dedupeBy<T>(items: T[], key: (t: T) => string): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const it of items) {
+    const k = key(it);
+    if (!seen.has(k)) {
+      seen.add(k);
+      out.push(it);
+    }
+  }
+  return out;
+}
+
 /**
  * Normalize the compiled-agent-manifest.json produced by `eve build`/`eve dev`.
  *
@@ -68,13 +81,17 @@ function normalizeCompiled(m: any): AgentStructure {
           .replace(/\/SKILL\.md$/i, ""),
       description: s.description,
     })),
-    // biome-ignore lint/suspicious/noExplicitAny: manifest entry
-    channels: arr(m.channels).map((c: any) => ({
-      name: c.name,
-      method: c.method,
-      urlPath: c.urlPath,
-      kind: c.adapterKind ?? c.kind,
-    })),
+    // Dedupe: the manifest lists the default eve channel once per route.
+    channels: dedupeBy(
+      // biome-ignore lint/suspicious/noExplicitAny: manifest entry
+      arr(m.channels).map((c: any) => ({
+        name: c.name,
+        method: c.method,
+        urlPath: c.urlPath,
+        kind: c.adapterKind ?? c.kind,
+      })),
+      (c) => `${c.name}:${c.kind}`
+    ),
     // biome-ignore lint/suspicious/noExplicitAny: manifest entry
     schedules: arr(m.schedules).map((s: any) => ({
       name: s.name,

@@ -4,7 +4,7 @@ import { ConnectorPicker } from "../components/ConnectorPicker";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
 import { IconPlus, IconRefresh, IconServer } from "../ui/icons";
-import { Badge, Button, Card, Modal, Spinner } from "../ui/kit";
+import { Badge, Button, Card, Modal, Spinner, StatusDot } from "../ui/kit";
 
 type Auth = "connect" | "env" | "web" | "custom";
 interface Cat {
@@ -240,13 +240,15 @@ export function Channels(): JSX.Element {
     return <div className="flex h-full items-center justify-center"><Spinner /></div>;
   }
   const list = channels ?? [];
-  const present = new Set(list.map((c) => c.kind ?? c.name));
+  // The default eve HTTP channel is always-on and shown separately.
+  const authored = list.filter((c) => (c.kind ?? c.name) !== "eve");
+  const present = new Set(authored.map((c) => c.kind ?? c.name));
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-5 py-2.5">
         <div className="text-[13px] font-medium text-text">
-          Channels <span className="text-faint">· {list.length}</span>
+          Channels <span className="text-faint">· {authored.length + 1}</span>
         </div>
         <button type="button" onClick={() => void load()} className="text-faint hover:text-text" title="Reload">
           <IconRefresh className="h-3.5 w-3.5" />
@@ -270,19 +272,24 @@ export function Channels(): JSX.Element {
                 <div className="font-mono text-2xs text-faint">/eve/v1/session*</div>
               </div>
             </Card>
-            {list.map((c) => {
+            {authored.map((c) => {
               const cat = CATALOG.find((x) => x.kind === (c.kind ?? c.name));
               return (
                 <Card key={c.name} className="flex items-center gap-3 p-3.5">
                   <Logo label={cat?.label ?? c.name} color={cat?.color ?? "#666"} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-[13px] text-text">{c.name}</span>
-                      {c.kind ? <Badge tone="info">{c.kind}</Badge> : null}
+                      <span className="text-[13px] font-medium text-text">
+                        {cat?.label ?? c.name}
+                      </span>
+                      <Badge tone="success">
+                        <StatusDot status="running" />
+                        connected
+                      </Badge>
                     </div>
-                    {c.method && c.urlPath ? (
-                      <div className="font-mono text-2xs text-faint">{c.method} {c.urlPath}</div>
-                    ) : null}
+                    <div className="font-mono text-2xs text-faint">
+                      channels/{c.name}.ts{c.urlPath ? ` · ${c.method ?? "POST"} ${c.urlPath}` : ""}
+                    </div>
                   </div>
                 </Card>
               );
@@ -306,14 +313,21 @@ export function Channels(): JSX.Element {
                       </div>
                       <div className="text-2xs leading-snug text-muted">{cat.desc}</div>
                     </div>
-                    <Button
-                      variant={added ? "ghost" : "secondary"}
-                      size="sm"
-                      disabled={!id || added}
-                      onClick={() => setAdd(cat)}
-                    >
-                      {added ? "Added" : <><IconPlus className="h-3.5 w-3.5" /> Add</>}
-                    </Button>
+                    {added ? (
+                      <Badge tone="success">
+                        <StatusDot status="running" />
+                        connected
+                      </Badge>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={!id}
+                        onClick={() => setAdd(cat)}
+                      >
+                        <IconPlus className="h-3.5 w-3.5" /> Add
+                      </Button>
+                    )}
                   </Card>
                 );
               })}
