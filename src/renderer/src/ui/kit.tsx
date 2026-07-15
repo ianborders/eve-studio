@@ -273,7 +273,7 @@ export function Tabs({
   onChange: (id: string) => void;
 }): JSX.Element {
   return (
-    <div className="no-drag flex items-center gap-0.5 overflow-x-auto">
+    <div className="no-drag no-scrollbar flex items-stretch gap-1 overflow-x-auto">
       {items.map((t) => {
         const on = t.id === active;
         const Ico = t.icon;
@@ -283,19 +283,26 @@ export function Tabs({
             type="button"
             onClick={() => onChange(t.id)}
             className={cx(
-              "relative flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
-              on ? "text-text" : "text-muted hover:bg-black/[0.04] hover:text-text"
+              "relative flex shrink-0 items-center gap-2 px-3 pb-2.5 pt-2 text-[13px] font-medium transition-colors",
+              on ? "text-text" : "text-muted hover:text-text"
             )}
           >
-            {Ico ? <Ico className="h-3.5 w-3.5" /> : null}
+            {Ico ? (
+              <Ico className={cx("h-4 w-4", on ? "opacity-100" : "opacity-70")} />
+            ) : null}
             {t.label}
             {typeof t.count === "number" ? (
-              <span className="rounded bg-black/[0.05] px-1 text-2xs text-muted">
+              <span
+                className={cx(
+                  "rounded px-1 text-2xs",
+                  on ? "bg-black/[0.06] text-muted" : "text-faint"
+                )}
+              >
                 {t.count}
               </span>
             ) : null}
             {on ? (
-              <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-text" />
+              <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-text" />
             ) : null}
           </button>
         );
@@ -365,7 +372,7 @@ export function SubNav({
   onChange: (id: string) => void;
 }): JSX.Element {
   return (
-    <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-3 py-1.5">
+    <div className="no-scrollbar flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-subtle px-4 py-2">
       {items.map((t) => {
         const on = t.id === active;
         return (
@@ -374,8 +381,10 @@ export function SubNav({
             type="button"
             onClick={() => onChange(t.id)}
             className={cx(
-              "shrink-0 rounded-md px-2.5 py-1 text-[13px] transition-colors",
-              on ? "bg-text text-white" : "text-muted hover:bg-hover"
+              "shrink-0 rounded-md px-3 py-1 text-[13px] font-medium transition-colors",
+              on
+                ? "bg-text text-white shadow-sm"
+                : "text-muted hover:bg-black/[0.04] hover:text-text"
             )}
           >
             {t.label}

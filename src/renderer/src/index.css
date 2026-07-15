@@ -65,6 +65,15 @@ button:focus:not(:focus-visible) {
   outline: none;
 }
 
+/* Hide scrollbars on nav strips (still scrollable) */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Multiline clamp helpers */
 .line-clamp-2,
 .line-clamp-3 {
