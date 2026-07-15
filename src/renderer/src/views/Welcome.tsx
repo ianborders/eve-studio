@@ -1,5 +1,6 @@
 import type { AppInfo } from "@shared/ipc";
-import { IconEve, IconFolder, IconPlus } from "../ui/icons";
+import { EveLogo } from "../ui/EveLogo";
+import { IconFolder, IconPlus } from "../ui/icons";
 import { Button } from "../ui/kit";
 
 export function Welcome({
@@ -15,10 +16,8 @@ export function Welcome({
     <div className="relative flex h-full flex-col bg-bg text-text">
       <div className="titlebar-drag h-11 shrink-0" />
       <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-white text-text shadow-card">
-          <IconEve className="h-8 w-8" />
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Eve Studio</h1>
+        <EveLogo className="mb-4 h-10 w-auto" />
+        <h1 className="text-2xl font-semibold tracking-tight text-muted">Studio</h1>
         <p className="mt-2 max-w-md text-[14px] leading-relaxed text-muted">
           A control center for your Eve agents — chat, inspect structure, wire
           Arcana memory, manage connections and schedules, and deploy. All local,

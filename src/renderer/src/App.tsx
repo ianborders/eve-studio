@@ -9,7 +9,6 @@ import {
   IconChat,
   IconCheck,
   IconCpu,
-  IconEve,
   IconExternal,
   IconFile,
   IconFolder,
@@ -26,6 +25,7 @@ import {
   IconWebhook,
   IconWrench,
 } from "./ui/icons";
+import { EveLogo } from "./ui/EveLogo";
 import { Badge, Button, StatusDot, type TabItem, Tabs } from "./ui/kit";
 import { Channels } from "./views/Channels";
 import { Chat } from "./views/Chat";
@@ -272,9 +272,9 @@ export function App(): JSX.Element {
         <div className="titlebar-drag h-11 shrink-0" />
         <div className="no-drag flex items-center justify-between px-3.5 pb-2.5">
           <div className="flex items-center gap-2 text-text">
-            <IconEve className="h-4 w-4" />
-            <span className="text-[14px] font-semibold tracking-tight">
-              Eve Studio
+            <EveLogo className="h-3.5 w-auto" />
+            <span className="text-[14px] font-semibold tracking-tight text-muted">
+              Studio
             </span>
           </div>
         </div>

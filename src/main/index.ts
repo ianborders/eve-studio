@@ -1,6 +1,7 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
-import { BrowserWindow, app, shell } from "electron";
+import { BrowserWindow, app, nativeImage, shell } from "electron";
 import { hydratePath } from "./env";
 import { type IpcHandles, registerIpc } from "./ipc";
 import { initStore } from "./store";
@@ -14,7 +15,8 @@ function createWindow(): void {
     minWidth: 980,
     minHeight: 640,
     show: false,
-    backgroundColor: "#0a0a0c",
+    backgroundColor: "#ffffff",
+    icon: join(app.getAppPath(), "build", "icon.png"),
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
@@ -44,6 +46,19 @@ app.whenReady().then(() => {
   app.on("browser-window-created", (_event, window) => {
     optimizer.watchWindowShortcuts(window);
   });
+
+  // Dock icon (macOS, dev — packaged builds use build/icon.icns).
+  if (process.platform === "darwin" && app.dock) {
+    for (const p of [
+      join(app.getAppPath(), "build", "icon.png"),
+      join(app.getAppPath(), "resources", "brand", "icon-1024.png"),
+    ]) {
+      if (existsSync(p)) {
+        app.dock.setIcon(nativeImage.createFromPath(p));
+        break;
+      }
+    }
+  }
 
   hydratePath();
   initStore();
