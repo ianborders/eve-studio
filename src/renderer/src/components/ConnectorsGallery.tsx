@@ -1,4 +1,4 @@
-import type { ConnectorItem } from "@shared/ipc";
+import type { ConnectorItem, ConnectorUsage } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
 import { Console } from "../ui/Console";
 import { IconExternal, IconRefresh } from "../ui/icons";
@@ -233,12 +233,18 @@ function Logo({ name, type }: { name: string; type: string }): JSX.Element {
 
 export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element {
   const [list, setList] = useState<ConnectorItem[] | null>(null);
+  const [usage, setUsage] = useState<ConnectorUsage[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
   const [use, setUse] = useState<ConnectorItem | null>(null);
 
+  const loadUsage = useCallback(async () => {
+    setUsage(await window.studio.agents.connectorUsage(agentId));
+  }, [agentId]);
+
   const load = useCallback(async () => {
     setErr(null);
+    void loadUsage();
     const r = await window.studio.vercel.connectorList(agentId);
     if (r.ok) {
       setList(r.connectors);
@@ -246,7 +252,7 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
       setErr(r.output ?? "Couldn't list connectors.");
       setList([]);
     }
-  }, [agentId]);
+  }, [agentId, loadUsage]);
 
   useEffect(() => {
     void load();
@@ -311,29 +317,36 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-          {list.map((c) => (
-            <Card key={c.uid} className="flex items-center gap-3 p-3.5">
-              <Logo name={c.name} type={c.type} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-[13px] font-medium text-text">{c.name}</span>
-                  <Badge tone="accent">{c.type}</Badge>
+          {list.map((c) => {
+            const used = usage.filter((u) => u.uid === c.uid);
+            const asConnection = used.some((u) => u.kind === "connection");
+            const asChannel = used.some((u) => u.kind === "channel");
+            return (
+              <Card key={c.uid} className="flex items-center gap-3 p-3.5">
+                <Logo name={c.name} type={c.type} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="truncate text-[13px] font-medium text-text">{c.name}</span>
+                    <Badge tone="accent">{c.type}</Badge>
+                    {asConnection ? <Badge tone="success">✓ connection</Badge> : null}
+                    {asChannel ? <Badge tone="success">✓ channel</Badge> : null}
+                  </div>
+                  <div className="truncate font-mono text-2xs text-faint">{c.uid}</div>
                 </div>
-                <div className="truncate font-mono text-2xs text-faint">{c.uid}</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => window.studio.vercel.openConnectorPage(agentId, c.uid)}
-                title="Open in Vercel (authorize / manage)"
-                className="rounded-md p-1.5 text-faint hover:bg-hover hover:text-text"
-              >
-                <IconExternal className="h-3.5 w-3.5" />
-              </button>
-              <Button variant="secondary" size="sm" onClick={() => setUse(c)}>
-                Use in agent
-              </Button>
-            </Card>
-          ))}
+                <button
+                  type="button"
+                  onClick={() => window.studio.vercel.openConnectorPage(agentId, c.uid)}
+                  title="Open in Vercel (authorize / manage)"
+                  className="rounded-md p-1.5 text-faint hover:bg-hover hover:text-text"
+                >
+                  <IconExternal className="h-3.5 w-3.5" />
+                </button>
+                <Button variant="secondary" size="sm" onClick={() => setUse(c)}>
+                  {used.length > 0 ? "Manage" : "Use in agent"}
+                </Button>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -341,7 +354,10 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
         <UseConnectorModal
           agentId={agentId}
           connector={use}
-          onClose={() => setUse(null)}
+          onClose={() => {
+            setUse(null);
+            void loadUsage();
+          }}
         />
       ) : null}
     </div>

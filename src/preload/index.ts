@@ -19,6 +19,7 @@ import {
   type CmdResult,
   type ConnectionInput,
   type ConnectorItem,
+  type ConnectorUsage,
   type CreateAgentInput,
   type DetectedBrain,
   type EnvState,
@@ -95,6 +96,8 @@ const api = {
       ipcRenderer.invoke(IPC.connectionWrite, id, name, content),
     deleteConnection: (id: string, name: string): Promise<WriteResult> =>
       ipcRenderer.invoke(IPC.connectionDelete, id, name),
+    connectorUsage: (id: string): Promise<ConnectorUsage[]> =>
+      ipcRenderer.invoke(IPC.connectorUsage, id),
     modelRead: (id: string): Promise<ModelConfig> =>
       ipcRenderer.invoke(IPC.modelRead, id),
     modelWrite: (

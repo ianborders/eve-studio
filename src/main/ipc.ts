@@ -30,6 +30,7 @@ import {
   deleteConnectionFile,
   readConnectionFile,
   readInstructions,
+  scanConnectorUsage,
   writeConnectionFile,
   writeInstructions,
 } from "./agentFiles";
@@ -532,6 +533,9 @@ export function registerIpc(): IpcHandles {
         return { ok: false, error: err instanceof Error ? err.message : String(err) };
       }
     }
+  );
+  ipcMain.handle(IPC.connectorUsage, (_e: IpcMainInvokeEvent, id: string) =>
+    scanConnectorUsage(agentPathOf(id))
   );
 
   // --- arcana (memory) ---

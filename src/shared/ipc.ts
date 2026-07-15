@@ -341,6 +341,12 @@ export interface ConnectorItem {
   name: string;
   type: string;
 }
+/** Where a connector UID is referenced in the agent's files. */
+export interface ConnectorUsage {
+  uid: string;
+  kind: "connection" | "channel";
+  name: string;
+}
 
 export const IPC = {
   appInfo: "app:info",
@@ -364,6 +370,7 @@ export const IPC = {
   connectionRead: "agent:connectionRead",
   connectionWrite: "agent:connectionWrite",
   connectionDelete: "agent:connectionDelete",
+  connectorUsage: "agent:connectorUsage",
   dialogPickDir: "dialog:pickDir",
 
   modelRead: "agent:modelRead",

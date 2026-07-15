@@ -1,12 +1,17 @@
 import {
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import type { ConnectionInput, SkillInput } from "../shared/ipc";
+import type {
+  ConnectionInput,
+  ConnectorUsage,
+  SkillInput,
+} from "../shared/ipc";
 
 /** The instructions.md path for an agent (nested `agent/` or flat). */
 function instructionsPath(agentPath: string): string {
@@ -197,4 +202,41 @@ export function deleteConnectionFile(agentPath: string, name: string): void {
   if (existsSync(file)) {
     rmSync(file);
   }
+}
+
+/**
+ * Scan the agent's connection + channel files for referenced Vercel Connect
+ * connector UIDs, so the UI can show which connectors are wired in and how.
+ */
+export function scanConnectorUsage(agentPath: string): ConnectorUsage[] {
+  const root = agentRoot(agentPath);
+  const out: ConnectorUsage[] = [];
+  // connect("uid") | connect({ connector: "uid" }) | connect<X>Credentials("uid")
+  const re =
+    /connect(?:[A-Za-z]*Credentials)?\(\s*(?:\{[^}]*?connector:\s*)?["']([^"']+)["']/g;
+
+  const scan = (dir: string, kind: "connection" | "channel"): void => {
+    if (!existsSync(dir)) {
+      return;
+    }
+    for (const f of readdirSync(dir)) {
+      if (!f.endsWith(".ts")) {
+        continue;
+      }
+      const src = readFileSync(join(dir, f), "utf8");
+      const seen = new Set<string>();
+      let m: RegExpExecArray | null;
+      re.lastIndex = 0;
+      // biome-ignore lint/suspicious/noAssignInExpressions: standard regex loop
+      while ((m = re.exec(src)) !== null) {
+        seen.add(m[1]);
+      }
+      for (const uid of seen) {
+        out.push({ uid, kind, name: f.replace(/\.ts$/, "") });
+      }
+    }
+  };
+  scan(join(root, "connections"), "connection");
+  scan(join(root, "channels"), "channel");
+  return out;
 }
