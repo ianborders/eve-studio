@@ -36,6 +36,8 @@ export interface ThreadRecord {
   title: string;
   createdAt: number;
   updatedAt: number;
+  /** Archived threads are hidden from the sidebar but kept for later reopen. */
+  archived?: boolean;
 }
 
 /**
@@ -312,6 +314,23 @@ export interface ToolInput {
   description: string;
   approval?: "never" | "once" | "always";
 }
+
+/** A path-based capability whose source files can be opened, edited, deleted. */
+export type CapabilityKind = "tool" | "skill" | "subagent" | "hook" | "schedule";
+export interface CapabilityFile {
+  relPath: string;
+  content: string;
+  language: "ts" | "md" | "text";
+}
+export interface CapabilityFilesResult {
+  kind: CapabilityKind;
+  name: string;
+  /** Editable source files (single file for tools/hooks; SKILL.md for skills; agent.ts + instructions.md for subagents). */
+  files: CapabilityFile[];
+  /** Extra files that exist under the capability but aren't opened for editing (e.g. skill references). */
+  otherPaths: string[];
+  missing: boolean;
+}
 export interface SubagentInput {
   name: string;
   description: string;
@@ -407,6 +426,9 @@ export const IPC = {
   subagentCreate: "agent:subagentCreate",
   hookCreate: "agent:hookCreate",
   scheduleCreate: "agent:scheduleCreate",
+  capabilityFiles: "agent:capabilityFiles",
+  capabilityWrite: "agent:capabilityWrite",
+  capabilityDelete: "agent:capabilityDelete",
   sandboxRead: "agent:sandboxRead",
   sandboxCreate: "agent:sandboxCreate",
   channelsList: "agent:channelsList",
@@ -452,6 +474,7 @@ export const IPC = {
   chatCreateThread: "chat:createThread",
   chatGetThread: "chat:getThread",
   chatDeleteThread: "chat:deleteThread",
+  chatArchiveThread: "chat:archiveThread",
   chatSend: "chat:send",
   chatRespond: "chat:respond",
 

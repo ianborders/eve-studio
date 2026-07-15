@@ -1,17 +1,20 @@
 import { useState } from "react";
+import { CapabilityEditor } from "../components/CapabilityEditor";
 import { useActiveStructure } from "../lib/useStructure";
-import { IconBot, IconPlus, IconRefresh } from "../ui/icons";
+import { IconBot, IconChevronRight, IconPlus, IconRefresh } from "../ui/icons";
 import {
   Badge,
   Button,
-  Card,
   EmptyState,
   Field,
   IconButton,
   Input,
+  List,
+  ListRow,
   Modal,
   Spinner,
   Textarea,
+  ViewHeader,
 } from "../ui/kit";
 
 function NewSubagentModal({
@@ -101,6 +104,7 @@ function NewSubagentModal({
 export function Subagents(): JSX.Element {
   const { id, structure, loading, reload } = useActiveStructure();
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
 
   if (loading && !structure) {
     return (
@@ -113,26 +117,29 @@ export function Subagents(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-5 py-2.5">
-        <div className="text-[13px] font-medium text-text">
-          Subagents <span className="text-faint">· {subagents.length}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
-            <IconPlus className="h-3.5 w-3.5" />
-            New
-          </Button>
-          <IconButton onClick={reload} title="Reload">
-            <IconRefresh className="h-3.5 w-3.5" />
-          </IconButton>
-        </div>
-      </div>
+      <ViewHeader
+        kicker="Capabilities"
+        title="Subagents"
+        count={subagents.length}
+        right={
+          <>
+            <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+              <IconPlus className="h-3.5 w-3.5" />
+              New
+            </Button>
+            <IconButton onClick={reload} title="Reload">
+              <IconRefresh className="h-3.5 w-3.5" />
+            </IconButton>
+          </>
+        }
+      />
 
-      <div className="flex-1 overflow-auto p-5">
+      <div className="flex-1 overflow-auto">
         {subagents.length === 0 ? (
           <EmptyState
-            icon={<IconBot className="h-5 w-5" />}
-            title="No subagents"
+            icon={<IconBot className="h-6 w-6" />}
+            kicker="Subagents"
+            title="No subagents yet"
             action={
               <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
                 <IconPlus className="h-3.5 w-3.5" />
@@ -144,29 +151,37 @@ export function Subagents(): JSX.Element {
             isolated agent with its own tools, skills, and memory.
           </EmptyState>
         ) : (
-          <div className="mx-auto max-w-3xl space-y-2.5">
-            {subagents.map((a) => (
-              <Card key={a.name} className="p-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet/10 text-violet">
-                    <IconBot className="h-4 w-4" />
-                  </div>
-                  <span className="font-mono text-[13px] text-text">{a.name}</span>
-                  <Badge tone="violet">subagent</Badge>
-                </div>
-                {a.description ? (
-                  <p className="mt-2.5 text-[13px] leading-relaxed text-muted">
-                    {a.description}
-                  </p>
-                ) : null}
-              </Card>
-            ))}
+          <div className="mx-auto max-w-2xl px-4 py-4">
+            <List>
+              {subagents.map((a) => (
+                <ListRow
+                  key={a.name}
+                  icon={<IconBot className="h-4 w-4" />}
+                  title={a.name}
+                  badge={<Badge tone="violet">subagent</Badge>}
+                  desc={a.description || undefined}
+                  onClick={() => setEditing(a.name)}
+                  right={
+                    <IconChevronRight className="mt-1.5 h-4 w-4 text-faint opacity-0 transition-opacity group-hover:opacity-100" />
+                  }
+                />
+              ))}
+            </List>
           </div>
         )}
       </div>
 
       {addOpen && id ? (
         <NewSubagentModal agentId={id} onClose={() => setAddOpen(false)} />
+      ) : null}
+      {editing && id ? (
+        <CapabilityEditor
+          agentId={id}
+          kind="subagent"
+          name={editing}
+          onClose={() => setEditing(null)}
+          onChanged={reload}
+        />
       ) : null}
     </div>
   );

@@ -1,15 +1,19 @@
 import { useState } from "react";
+import { CapabilityEditor } from "../components/CapabilityEditor";
 import { useActiveStructure } from "../lib/useStructure";
-import { IconBolt, IconPlus, IconRefresh } from "../ui/icons";
+import { IconBolt, IconChevronRight, IconPlus, IconRefresh } from "../ui/icons";
 import {
+  Badge,
   Button,
-  Card,
   EmptyState,
   Field,
   IconButton,
   Input,
+  List,
+  ListRow,
   Modal,
   Spinner,
+  ViewHeader,
 } from "../ui/kit";
 
 function NewHookModal({
@@ -76,6 +80,7 @@ function NewHookModal({
 export function Hooks(): JSX.Element {
   const { id, structure, loading, reload } = useActiveStructure();
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
 
   if (loading && !structure) {
     return (
@@ -88,26 +93,29 @@ export function Hooks(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-5 py-2.5">
-        <div className="text-[13px] font-medium text-text">
-          Hooks <span className="text-faint">· {hooks.length}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
-            <IconPlus className="h-3.5 w-3.5" />
-            New
-          </Button>
-          <IconButton onClick={reload} title="Reload">
-            <IconRefresh className="h-3.5 w-3.5" />
-          </IconButton>
-        </div>
-      </div>
+      <ViewHeader
+        kicker="Capabilities"
+        title="Hooks"
+        count={hooks.length}
+        right={
+          <>
+            <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+              <IconPlus className="h-3.5 w-3.5" />
+              New
+            </Button>
+            <IconButton onClick={reload} title="Reload">
+              <IconRefresh className="h-3.5 w-3.5" />
+            </IconButton>
+          </>
+        }
+      />
 
-      <div className="flex-1 overflow-auto p-5">
+      <div className="flex-1 overflow-auto">
         {hooks.length === 0 ? (
           <EmptyState
-            icon={<IconBolt className="h-5 w-5" />}
-            title="No hooks"
+            icon={<IconBolt className="h-6 w-6" />}
+            kicker="Hooks"
+            title="No hooks yet"
             action={
               <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
                 <IconPlus className="h-3.5 w-3.5" />
@@ -119,21 +127,36 @@ export function Hooks(): JSX.Element {
             metrics, alerting, persistence.
           </EmptyState>
         ) : (
-          <div className="mx-auto max-w-3xl space-y-2.5">
-            {hooks.map((h) => (
-              <Card key={h} className="flex items-center gap-3 p-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.04] text-muted">
-                  <IconBolt className="h-4 w-4" />
-                </div>
-                <span className="font-mono text-[13px] text-text">{h}</span>
-              </Card>
-            ))}
+          <div className="mx-auto max-w-2xl px-4 py-4">
+            <List>
+              {hooks.map((h) => (
+                <ListRow
+                  key={h}
+                  icon={<IconBolt className="h-4 w-4" />}
+                  title={h}
+                  badge={<Badge>hook</Badge>}
+                  onClick={() => setEditing(h)}
+                  right={
+                    <IconChevronRight className="mt-1.5 h-4 w-4 text-faint opacity-0 transition-opacity group-hover:opacity-100" />
+                  }
+                />
+              ))}
+            </List>
           </div>
         )}
       </div>
 
       {addOpen && id ? (
         <NewHookModal agentId={id} onClose={() => setAddOpen(false)} />
+      ) : null}
+      {editing && id ? (
+        <CapabilityEditor
+          agentId={id}
+          kind="hook"
+          name={editing}
+          onClose={() => setEditing(null)}
+          onChanged={reload}
+        />
       ) : null}
     </div>
   );

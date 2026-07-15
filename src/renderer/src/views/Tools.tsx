@@ -1,17 +1,20 @@
 import { useState } from "react";
+import { CapabilityEditor } from "../components/CapabilityEditor";
 import { useActiveStructure } from "../lib/useStructure";
-import { IconPlus, IconRefresh, IconWrench } from "../ui/icons";
+import { IconChevronRight, IconPlus, IconRefresh, IconWrench } from "../ui/icons";
 import {
   Badge,
   Button,
-  Card,
   EmptyState,
   Field,
   IconButton,
   Input,
+  List,
+  ListRow,
   Modal,
   Spinner,
   Textarea,
+  ViewHeader,
 } from "../ui/kit";
 
 function NewToolModal({
@@ -76,16 +79,16 @@ function NewToolModal({
             />
           </Field>
           <Field label="Approval gate" hint="human-in-the-loop for destructive tools">
-            <div className="flex gap-1.5">
+            <div className="inline-flex rounded-lg border border-border p-0.5">
               {(["never", "once", "always"] as const).map((a) => (
                 <button
                   key={a}
                   type="button"
                   onClick={() => setApproval(a)}
-                  className={`rounded-lg border px-3 py-1.5 text-[13px] ${
+                  className={`rounded-[6px] px-3 py-1 text-[12.5px] capitalize transition-colors ${
                     approval === a
-                      ? "border-text bg-text text-white"
-                      : "border-border text-muted hover:bg-hover"
+                      ? "bg-text text-white"
+                      : "text-muted hover:text-text"
                   }`}
                 >
                   {a}
@@ -111,6 +114,7 @@ function NewToolModal({
 export function Tools(): JSX.Element {
   const { id, structure, loading, reload } = useActiveStructure();
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
 
   if (loading && !structure) {
     return (
@@ -123,26 +127,29 @@ export function Tools(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-5 py-2.5">
-        <div className="text-[13px] font-medium text-text">
-          Tools <span className="text-faint">· {tools.length}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
-            <IconPlus className="h-3.5 w-3.5" />
-            New
-          </Button>
-          <IconButton onClick={reload} title="Reload">
-            <IconRefresh className="h-3.5 w-3.5" />
-          </IconButton>
-        </div>
-      </div>
+      <ViewHeader
+        kicker="Capabilities"
+        title="Tools"
+        count={tools.length}
+        right={
+          <>
+            <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+              <IconPlus className="h-3.5 w-3.5" />
+              New
+            </Button>
+            <IconButton onClick={reload} title="Reload">
+              <IconRefresh className="h-3.5 w-3.5" />
+            </IconButton>
+          </>
+        }
+      />
 
-      <div className="flex-1 overflow-auto p-5">
+      <div className="flex-1 overflow-auto">
         {tools.length === 0 ? (
           <EmptyState
-            icon={<IconWrench className="h-5 w-5" />}
-            title="No tools"
+            icon={<IconWrench className="h-6 w-6" />}
+            kicker="Tools"
+            title="No tools yet"
             action={
               <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
                 <IconPlus className="h-3.5 w-3.5" />
@@ -154,29 +161,37 @@ export function Tools(): JSX.Element {
             with full env access.
           </EmptyState>
         ) : (
-          <div className="mx-auto max-w-3xl space-y-2.5">
-            {tools.map((t) => (
-              <Card key={t.name} className="p-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.04] text-muted">
-                    <IconWrench className="h-4 w-4" />
-                  </div>
-                  <span className="font-mono text-[13px] text-text">{t.name}</span>
-                  <Badge>tool</Badge>
-                </div>
-                {t.description ? (
-                  <p className="mt-2.5 text-[13px] leading-relaxed text-muted">
-                    {t.description}
-                  </p>
-                ) : null}
-              </Card>
-            ))}
+          <div className="mx-auto max-w-2xl px-4 py-4">
+            <List>
+              {tools.map((t) => (
+                <ListRow
+                  key={t.name}
+                  icon={<IconWrench className="h-4 w-4" />}
+                  title={t.name}
+                  badge={<Badge>tool</Badge>}
+                  desc={t.description || undefined}
+                  onClick={() => setEditing(t.name)}
+                  right={
+                    <IconChevronRight className="mt-1.5 h-4 w-4 text-faint opacity-0 transition-opacity group-hover:opacity-100" />
+                  }
+                />
+              ))}
+            </List>
           </div>
         )}
       </div>
 
       {addOpen && id ? (
         <NewToolModal agentId={id} onClose={() => setAddOpen(false)} />
+      ) : null}
+      {editing && id ? (
+        <CapabilityEditor
+          agentId={id}
+          kind="tool"
+          name={editing}
+          onClose={() => setEditing(null)}
+          onChanged={reload}
+        />
       ) : null}
     </div>
   );

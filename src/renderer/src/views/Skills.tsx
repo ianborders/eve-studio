@@ -1,16 +1,20 @@
 import { useState } from "react";
+import { CapabilityEditor } from "../components/CapabilityEditor";
 import { useActiveStructure } from "../lib/useStructure";
-import { IconPlus, IconRefresh, IconWand } from "../ui/icons";
+import { IconChevronRight, IconPlus, IconRefresh, IconWand } from "../ui/icons";
 import {
+  Badge,
   Button,
-  Card,
   EmptyState,
   Field,
   IconButton,
   Input,
+  List,
+  ListRow,
   Modal,
   Spinner,
   Textarea,
+  ViewHeader,
 } from "../ui/kit";
 
 function NewSkillModal({
@@ -99,6 +103,7 @@ function NewSkillModal({
 export function Skills(): JSX.Element {
   const { id, structure, loading, reload } = useActiveStructure();
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
 
   if (loading && !structure) {
     return (
@@ -111,26 +116,29 @@ export function Skills(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-5 py-2.5">
-        <div className="text-[13px] font-medium text-text">
-          Skills <span className="text-faint">· {skills.length}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
-            <IconPlus className="h-3.5 w-3.5" />
-            New
-          </Button>
-          <IconButton onClick={reload} title="Reload">
-            <IconRefresh className="h-3.5 w-3.5" />
-          </IconButton>
-        </div>
-      </div>
+      <ViewHeader
+        kicker="Capabilities"
+        title="Skills"
+        count={skills.length}
+        right={
+          <>
+            <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+              <IconPlus className="h-3.5 w-3.5" />
+              New
+            </Button>
+            <IconButton onClick={reload} title="Reload">
+              <IconRefresh className="h-3.5 w-3.5" />
+            </IconButton>
+          </>
+        }
+      />
 
-      <div className="flex-1 overflow-auto p-5">
+      <div className="flex-1 overflow-auto">
         {skills.length === 0 ? (
           <EmptyState
-            icon={<IconWand className="h-5 w-5" />}
-            title="No skills"
+            icon={<IconWand className="h-6 w-6" />}
+            kicker="Skills"
+            title="No skills yet"
             action={
               <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
                 <IconPlus className="h-3.5 w-3.5" />
@@ -139,30 +147,40 @@ export function Skills(): JSX.Element {
             }
           >
             Skills are load-on-demand instructions the agent pulls in when relevant.
+            The description is the routing hint that decides when a skill loads.
           </EmptyState>
         ) : (
-          <div className="mx-auto max-w-3xl space-y-2.5">
-            {skills.map((s) => (
-              <Card key={s.name} className="p-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet/10 text-violet">
-                    <IconWand className="h-4 w-4" />
-                  </div>
-                  <span className="text-[13px] font-medium text-text">{s.name}</span>
-                </div>
-                {s.description ? (
-                  <p className="mt-2.5 text-[13px] leading-relaxed text-muted">
-                    {s.description}
-                  </p>
-                ) : null}
-              </Card>
-            ))}
+          <div className="mx-auto max-w-2xl px-4 py-4">
+            <List>
+              {skills.map((s) => (
+                <ListRow
+                  key={s.name}
+                  icon={<IconWand className="h-4 w-4" />}
+                  title={s.name}
+                  badge={<Badge>skill</Badge>}
+                  desc={s.description || undefined}
+                  onClick={() => setEditing(s.name)}
+                  right={
+                    <IconChevronRight className="mt-1.5 h-4 w-4 text-faint opacity-0 transition-opacity group-hover:opacity-100" />
+                  }
+                />
+              ))}
+            </List>
           </div>
         )}
       </div>
 
       {addOpen && id ? (
         <NewSkillModal agentId={id} onClose={() => setAddOpen(false)} />
+      ) : null}
+      {editing && id ? (
+        <CapabilityEditor
+          agentId={id}
+          kind="skill"
+          name={editing}
+          onClose={() => setEditing(null)}
+          onChanged={reload}
+        />
       ) : null}
     </div>
   );

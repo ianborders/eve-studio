@@ -108,7 +108,15 @@ function normalizeCompiled(m: any): AgentStructure {
       url: r.url,
     })),
     // biome-ignore lint/suspicious/noExplicitAny: manifest entry
-    hooks: arr(m.hooks).map((h: any) => h.name ?? h.logicalPath ?? "hook"),
+    hooks: arr(m.hooks).map(
+      // biome-ignore lint/suspicious/noExplicitAny: manifest entry
+      (h: any) =>
+        h.name ??
+        h.slug ??
+        String(h.logicalPath ?? "hook")
+          .replace(/^hooks\//, "")
+          .replace(/\.tsx?$/, "")
+    ),
     sandbox: m?.sandbox?.backendName ?? null,
     diagnostics: {
       errors: m?.diagnosticsSummary?.errors ?? 0,

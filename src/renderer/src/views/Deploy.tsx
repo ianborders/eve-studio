@@ -3,7 +3,7 @@ import { useCliRun } from "../lib/useCli";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
 import { IconRefresh, IconRocket, IconTerminal, IconWrench } from "../ui/icons";
-import { Badge, Button } from "../ui/kit";
+import { Badge, Button, IconButton, Kicker, ViewHeader } from "../ui/kit";
 
 export function Deploy(): JSX.Element {
   const activeAgentId = useStore((s) => s.activeAgentId);
@@ -46,41 +46,43 @@ export function Deploy(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-border px-5 py-2.5">
-        <div className="text-[13px] font-medium text-text">Deploy &amp; Logs</div>
-        <div className="flex-1" />
-        {running ? (
-          <>
-            <Badge tone="warn">running {action}…</Badge>
-            <Button variant="secondary" size="sm" onClick={cancel}>
-              Cancel
-            </Button>
-          </>
-        ) : (
-          <>
-            {exitCode !== undefined ? (
-              <Badge tone={exitCode === 0 ? "accent" : "danger"}>
-                {action} {exitCode === 0 ? "ok" : `exit ${exitCode}`}
-              </Badge>
-            ) : null}
-            <Button variant="secondary" size="sm" onClick={() => run("build")}>
-              <IconWrench className="h-3.5 w-3.5" />
-              Build
-            </Button>
-            <Button variant="primary" size="sm" onClick={() => run("deploy")}>
-              <IconRocket className="h-3.5 w-3.5" />
-              Deploy
-            </Button>
-          </>
-        )}
-      </div>
+      <ViewHeader
+        kicker="Deploy"
+        title="Deploy & Logs"
+        right={
+          running ? (
+            <>
+              <Badge tone="warn">running {action}…</Badge>
+              <Button variant="secondary" size="sm" onClick={cancel}>
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              {exitCode !== undefined ? (
+                <Badge tone={exitCode === 0 ? "success" : "danger"}>
+                  {action} {exitCode === 0 ? "ok" : `exit ${exitCode}`}
+                </Badge>
+              ) : null}
+              <Button variant="secondary" size="sm" onClick={() => run("build")}>
+                <IconWrench className="h-3.5 w-3.5" />
+                Build
+              </Button>
+              <Button variant="primary" size="sm" onClick={() => run("deploy")}>
+                <IconRocket className="h-3.5 w-3.5" />
+                Deploy
+              </Button>
+            </>
+          )
+        }
+      />
 
       <div className="grid min-h-0 flex-1 grid-rows-2 gap-3 p-4">
         <div className="flex min-h-0 flex-col">
-          <div className="mb-1.5 flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-faint">
+          <Kicker className="mb-2 flex items-center gap-1.5">
             <IconTerminal className="h-3.5 w-3.5" />
             Command output
-          </div>
+          </Kicker>
           <Console
             text={output}
             placeholder="Run Build or Deploy to see output. Deploy links to Vercel and may open a browser for the first run."
@@ -89,22 +91,17 @@ export function Deploy(): JSX.Element {
         </div>
 
         <div className="flex min-h-0 flex-col">
-          <div className="mb-1.5 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-faint">
+          <div className="mb-2 flex items-center justify-between">
+            <Kicker className="flex items-center gap-1.5">
               <IconTerminal className="h-3.5 w-3.5" />
               Dev server logs
               {runtime?.status === "running" ? (
-                <span className="text-accent">· live</span>
+                <span className="text-success">· live</span>
               ) : null}
-            </div>
-            <button
-              type="button"
-              onClick={() => void seedLogs()}
-              className="text-faint hover:text-text"
-              title="Refresh"
-            >
+            </Kicker>
+            <IconButton onClick={() => void seedLogs()} title="Refresh">
               <IconRefresh className="h-3.5 w-3.5" />
-            </button>
+            </IconButton>
           </div>
           <Console
             text={devLogs}

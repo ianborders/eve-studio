@@ -2,7 +2,7 @@ import type { ConnectorItem } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
 import { Console } from "../ui/Console";
 import { IconExternal, IconPlus, IconRefresh } from "../ui/icons";
-import { Badge, Button, Input, Spinner } from "../ui/kit";
+import { Badge, Button, IconButton, Input, Spinner } from "../ui/kit";
 
 /**
  * Pick an existing Vercel Connect connector or create a new one — so the user
@@ -85,7 +85,7 @@ export function ConnectorPicker({
           <select
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="no-drag flex-1 rounded-lg border border-border bg-bg px-2.5 py-1.5 text-[13px] text-text"
+            className="no-drag flex-1 rounded-lg border border-border bg-bg px-2.5 py-1.5 font-mono text-[13px] text-text transition-colors focus:border-border-strong"
           >
             {list.map((c) => (
               <option key={c.uid} value={c.uid}>
@@ -93,12 +93,14 @@ export function ConnectorPicker({
               </option>
             ))}
           </select>
-          <button type="button" onClick={() => void load()} className="text-faint hover:text-text" title="Refresh">
+          <IconButton onClick={() => void load()} title="Refresh">
             <IconRefresh className="h-3.5 w-3.5" />
-          </button>
+          </IconButton>
         </div>
       ) : (
-        <div className="text-2xs text-muted">No connectors yet.</div>
+        <div className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-faint">
+          No connectors yet
+        </div>
       )}
 
       {service ? (

@@ -4,7 +4,17 @@ import { useCliRun } from "../lib/useCli";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
 import { IconCheck, IconPlay, IconRefresh } from "../ui/icons";
-import { Badge, Button, Card, EmptyState, Spinner } from "../ui/kit";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  IconButton,
+  Kicker,
+  List,
+  ListRow,
+  Spinner,
+  ViewHeader,
+} from "../ui/kit";
 
 export function Evals(): JSX.Element {
   const activeAgentId = useStore((s) => s.activeAgentId);
@@ -48,50 +58,50 @@ export function Evals(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-border px-5 py-2.5">
-        <div className="text-[13px] font-medium text-text">
-          Evals <span className="text-faint">· {items?.length ?? 0}</span>
-        </div>
-        <div className="flex-1" />
-        {running ? (
-          <>
-            <Badge tone="warn">running {target}…</Badge>
-            <Button variant="secondary" size="sm" onClick={cancel}>
-              Cancel
-            </Button>
-          </>
-        ) : (
-          <>
-            {exitCode !== undefined ? (
-              <Badge tone={exitCode === 0 ? "accent" : "danger"}>
-                {exitCode === 0 ? "all passed" : "failures"}
-              </Badge>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => void load()}
-              className="text-faint hover:text-text"
-              title="Reload"
-            >
-              <IconRefresh className="h-3.5 w-3.5" />
-            </button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => runEvals()}
-              disabled={!items || items.length === 0}
-            >
-              <IconPlay className="h-3.5 w-3.5" />
-              Run all
-            </Button>
-          </>
-        )}
-      </div>
+      <ViewHeader
+        kicker="Evals"
+        title="Evals"
+        count={items?.length ?? 0}
+        right={
+          running ? (
+            <>
+              <Badge tone="warn">running {target}…</Badge>
+              <Button variant="secondary" size="sm" onClick={cancel}>
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              {exitCode !== undefined ? (
+                <Badge tone={exitCode === 0 ? "accent" : "danger"}>
+                  {exitCode === 0 ? "all passed" : "failures"}
+                </Badge>
+              ) : null}
+              <IconButton onClick={() => void load()} title="Reload">
+                <IconRefresh className="h-3.5 w-3.5" />
+              </IconButton>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => runEvals()}
+                disabled={!items || items.length === 0}
+              >
+                <IconPlay className="h-3.5 w-3.5" />
+                Run all
+              </Button>
+            </>
+          )
+        }
+      />
 
       <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 p-4">
         <div className="min-h-0 overflow-auto">
           {!items || items.length === 0 ? (
-            <EmptyState icon={<IconCheck className="h-5 w-5" />} title="No evals">
+            <EmptyState
+              icon={<IconCheck className="h-6 w-6" />}
+              kicker="Evals"
+              title="No evals yet"
+            >
               Add scored checks as
               <code className="mx-1 rounded bg-black/[0.05] px-1 font-mono text-xs">
                 evals/*.eval.ts
@@ -99,39 +109,32 @@ export function Evals(): JSX.Element {
               with defineEval.
             </EmptyState>
           ) : (
-            <div className="space-y-2">
+            <List>
               {items.map((e) => (
-                <Card key={e.id} className="flex items-start gap-3 p-3">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-black/[0.04] text-muted">
-                    <IconCheck className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-mono text-[13px] text-text">{e.id}</div>
-                    {e.description ? (
-                      <div className="mt-0.5 text-2xs leading-snug text-muted">
-                        {e.description}
-                      </div>
-                    ) : null}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={running}
-                    onClick={() => runEvals([e.id])}
-                  >
-                    <IconPlay className="h-3.5 w-3.5" />
-                    Run
-                  </Button>
-                </Card>
+                <ListRow
+                  key={e.id}
+                  icon={<IconCheck className="h-4 w-4" />}
+                  title={e.id}
+                  desc={e.description || undefined}
+                  right={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={running}
+                      onClick={() => runEvals([e.id])}
+                    >
+                      <IconPlay className="h-3.5 w-3.5" />
+                      Run
+                    </Button>
+                  }
+                />
               ))}
-            </div>
+            </List>
           )}
         </div>
 
         <div className="flex min-h-0 flex-col">
-          <div className="mb-1.5 text-2xs font-medium uppercase tracking-wide text-faint">
-            Output
-          </div>
+          <Kicker className="mb-1.5">Output</Kicker>
           <Console
             text={output}
             placeholder="Run evals to see results. They execute against a live model, so a run can take a while."

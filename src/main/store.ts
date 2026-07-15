@@ -131,6 +131,14 @@ export function touchThread(id: string, title?: string): void {
   }
   persist();
 }
+export function setThreadArchived(id: string, archived: boolean): void {
+  const t = getThread(id);
+  if (!t) {
+    return;
+  }
+  t.archived = archived;
+  persist();
+}
 export function deleteThread(id: string): void {
   db.threads = db.threads.filter((t) => t.id !== id);
   delete db.cursors[id];

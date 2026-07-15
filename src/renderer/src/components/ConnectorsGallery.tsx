@@ -2,7 +2,16 @@ import type { ConnectorItem, ConnectorUsage } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
 import { Console } from "../ui/Console";
 import { IconExternal, IconRefresh } from "../ui/icons";
-import { Badge, Button, Card, Field, Input, Modal, Spinner } from "../ui/kit";
+import {
+  Badge,
+  Button,
+  Field,
+  IconButton,
+  Input,
+  Kicker,
+  Modal,
+  Spinner,
+} from "../ui/kit";
 
 const CHANNEL_TYPES = new Set(["slack", "github", "linear"]);
 const MCP_URL: Record<string, string> = {
@@ -223,7 +232,7 @@ function color(type: string): string {
 function Logo({ name, type }: { name: string; type: string }): JSX.Element {
   return (
     <div
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold text-white"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[13px] font-semibold text-white"
       style={{ background: color(type) }}
     >
       {(name || type || "?")[0]?.toUpperCase()}
@@ -278,12 +287,12 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
   };
 
   return (
-    <div className="space-y-2.5">
-      <div className="flex items-center justify-between">
+    <div className="space-y-3">
+      <div className="flex items-end justify-between gap-3">
         <div>
-          <div className="text-[13px] font-medium text-text">Connections</div>
-          <div className="text-2xs text-muted">
-            Vercel Connect — the providers your agent can connect to (managed OAuth &amp; API keys).
+          <Kicker className="mb-1.5">Vercel Connect</Kicker>
+          <div className="text-[13px] leading-relaxed text-muted">
+            The providers your agent can connect to (managed OAuth &amp; API keys).
           </div>
         </div>
         <div className="flex items-center gap-1.5">
@@ -291,27 +300,27 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
             <IconExternal className="h-3.5 w-3.5" />
             {opening ? "Opening…" : "Add connection"}
           </Button>
-          <button type="button" onClick={() => void load()} className="text-faint hover:text-text" title="Refresh">
+          <IconButton onClick={() => void load()} title="Refresh">
             <IconRefresh className="h-3.5 w-3.5" />
-          </button>
+          </IconButton>
         </div>
       </div>
 
       {list === null ? (
-        <Card className="flex items-center gap-2 p-4 text-2xs text-muted">
+        <div className="flex items-center gap-2 px-3 py-4 text-2xs text-muted">
           <Spinner className="h-3.5 w-3.5" /> Loading connectors…
-        </Card>
+        </div>
       ) : err ? (
-        <Card className="bg-subtle p-4 text-2xs leading-relaxed text-muted">
+        <div className="rounded-lg border border-border bg-subtle px-3 py-3 text-2xs leading-relaxed text-muted">
           {err.toLowerCase().includes("link") || err.toLowerCase().includes("project")
             ? "Link this project to Vercel first (Environment tab), then reload."
             : err.toLowerCase().includes("enoent")
               ? "The Vercel CLI isn't installed. Install it: npm i -g vercel"
               : err}
-        </Card>
+        </div>
       ) : list.length === 0 ? (
-        <Card className="flex flex-col items-center gap-3 p-8 text-center">
-          <div className="text-[13px] text-muted">
+        <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+          <div className="max-w-sm text-[13px] leading-relaxed text-muted">
             No connections yet. Browse the full provider catalog — Slack, GitHub,
             Notion, Figma, Shopify, and hundreds more — and add one.
           </div>
@@ -319,15 +328,18 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
             <IconExternal className="h-3.5 w-3.5" />
             Add connection
           </Button>
-        </Card>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {list.map((c) => {
             const used = usage.filter((u) => u.uid === c.uid);
             const asConnection = used.some((u) => u.kind === "connection");
             const asChannel = used.some((u) => u.kind === "channel");
             return (
-              <Card key={c.uid} className="flex items-center gap-3 p-3.5">
+              <div
+                key={c.uid}
+                className="flex items-center gap-3 rounded-lg border border-border/70 px-3 py-3 transition-colors hover:border-border-strong hover:bg-black/[0.02]"
+              >
                 <Logo name={c.name} type={c.type} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -336,20 +348,18 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
                     {asConnection ? <Badge tone="success">✓ connection</Badge> : null}
                     {asChannel ? <Badge tone="success">✓ channel</Badge> : null}
                   </div>
-                  <div className="truncate font-mono text-2xs text-faint">{c.uid}</div>
+                  <div className="mt-0.5 truncate font-mono text-2xs text-faint">{c.uid}</div>
                 </div>
-                <button
-                  type="button"
+                <IconButton
                   onClick={() => window.studio.vercel.openConnectorPage(agentId, c.uid)}
                   title="Open in Vercel (authorize / manage)"
-                  className="rounded-md p-1.5 text-faint hover:bg-hover hover:text-text"
                 >
                   <IconExternal className="h-3.5 w-3.5" />
-                </button>
+                </IconButton>
                 <Button variant="secondary" size="sm" onClick={() => setUse(c)}>
                   {used.length > 0 ? "Manage" : "Use in agent"}
                 </Button>
-              </Card>
+              </div>
             );
           })}
         </div>

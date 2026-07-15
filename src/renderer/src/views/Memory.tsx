@@ -14,7 +14,12 @@ import {
   Field,
   IconButton,
   Input,
+  Kicker,
+  List,
+  ListRow,
   Spinner,
+  StatusDot,
+  ViewHeader,
 } from "../ui/kit";
 
 function timeAgo(iso: string): string {
@@ -43,7 +48,9 @@ function Stat({ label, value }: { label: string; value: number }): JSX.Element {
       <div className="text-2xl font-semibold tracking-tight text-text">
         {value.toLocaleString()}
       </div>
-      <div className="text-2xs uppercase tracking-wide text-faint">{label}</div>
+      <div className="mt-1 font-spacemono text-[10px] uppercase tracking-[0.14em] text-faint">
+        {label}
+      </div>
     </Card>
   );
 }
@@ -93,7 +100,7 @@ function Browse({ agentId }: { agentId: string }): JSX.Element {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="space-y-5">
       {err ? (
         <div className="rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">{err}</div>
       ) : null}
@@ -107,7 +114,7 @@ function Browse({ agentId }: { agentId: string }): JSX.Element {
         </div>
       ) : null}
 
-      <div className="flex items-center gap-2 rounded-xl border border-border bg-panel px-3 py-2 shadow-card">
+      <div className="flex items-center gap-2 rounded-xl border border-border bg-panel px-3 py-2">
         <IconSearch className="h-4 w-4 text-faint" />
         <input
           value={q}
@@ -118,7 +125,7 @@ function Browse({ agentId }: { agentId: string }): JSX.Element {
             }
           }}
           placeholder="Ask the brain — hybrid semantic + graph search…"
-          className="flex-1 bg-transparent text-[13px] text-text outline-none placeholder:text-faint"
+          className="no-drag flex-1 bg-transparent text-[13px] text-text outline-none placeholder:text-faint"
         />
         <Button size="sm" variant="primary" onClick={() => void runQuery()} disabled={busy || !q.trim()}>
           {busy ? "…" : "Search"}
@@ -126,30 +133,34 @@ function Browse({ agentId }: { agentId: string }): JSX.Element {
       </div>
 
       {hits ? (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted">
+            <Kicker>
               {hits.length} result{hits.length === 1 ? "" : "s"}
-            </span>
+            </Kicker>
             <button
               type="button"
               onClick={() => setHits(null)}
-              className="text-xs text-muted hover:text-text"
+              className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-faint transition-colors hover:text-text"
             >
               back to timeline
             </button>
           </div>
           {hits.map((h) => (
             <Card key={h.id} className="p-3">
-              <div className="flex items-center gap-2 text-2xs text-faint">
+              <div className="flex items-center gap-2">
                 <Badge>{h.type}</Badge>
-                <span>{timeAgo(h.timestamp)}</span>
+                <span className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-faint">
+                  {timeAgo(h.timestamp)}
+                </span>
                 {typeof h.hybridScore === "number" ? (
-                  <span className="ml-auto font-mono">{h.hybridScore.toFixed(3)}</span>
+                  <span className="ml-auto font-mono text-2xs text-faint">
+                    {h.hybridScore.toFixed(3)}
+                  </span>
                 ) : null}
               </div>
               {h.title && h.title !== "Untitled" ? (
-                <div className="mt-1 text-[13px] text-text">{h.title}</div>
+                <div className="mt-1.5 text-[13px] text-text">{h.title}</div>
               ) : null}
               {h.content ? (
                 <div className="mt-1 line-clamp-3 text-xs leading-snug text-muted">
@@ -160,21 +171,23 @@ function Browse({ agentId }: { agentId: string }): JSX.Element {
           ))}
         </div>
       ) : (
-        <div className="space-y-2">
-          <span className="text-xs font-medium text-muted">Recent timeline</span>
+        <div className="space-y-2.5">
+          <Kicker>Recent timeline</Kicker>
           {timeline.map((e) => (
             <Card key={String(e.id)} className="p-3">
-              <div className="flex items-center gap-2 text-2xs text-faint">
+              <div className="flex items-center gap-2">
                 <Badge>{e.type}</Badge>
-                <span>{timeAgo(e.timestamp)}</span>
+                <span className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-faint">
+                  {timeAgo(e.timestamp)}
+                </span>
               </div>
-              <div className="mt-1 text-[13px] leading-snug text-text">{e.title}</div>
+              <div className="mt-1.5 text-[13px] leading-snug text-text">{e.title}</div>
               {e.entities && e.entities.length > 0 ? (
-                <div className="mt-1.5 flex flex-wrap gap-1">
+                <div className="mt-2 flex flex-wrap gap-1">
                   {e.entities.slice(0, 8).map((ent) => (
                     <span
                       key={ent}
-                      className="rounded bg-black/[0.04] px-1.5 py-0.5 text-2xs text-muted"
+                      className="rounded bg-black/[0.04] px-1.5 py-0.5 font-mono text-2xs text-muted"
                     >
                       {ent}
                     </span>
@@ -223,23 +236,21 @@ function Setup({
   };
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
-      <Card className="p-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-accent">
-            <IconBrain className="h-4 w-4" />
+    <div className="space-y-4">
+      <Card className="flex items-start gap-3 p-4">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-subtle text-faint">
+          <IconBrain className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <div className="text-[13px] font-medium text-text">
+            {detected.connections.length > 0
+              ? "This agent already has an Arcana connection"
+              : "Give this agent an Arcana brain"}
           </div>
-          <div>
-            <div className="text-[13px] font-medium text-text">
-              {detected.connections.length > 0
-                ? "This agent already has an Arcana connection"
-                : "Give this agent an Arcana brain"}
-            </div>
-            <div className="text-2xs text-muted">
-              {detected.connections.length > 0
-                ? "Connect Studio to browse and query its memory."
-                : "Writes connections/arcana.ts + sets the key in .env, like eve-gtm."}
-            </div>
+          <div className="mt-0.5 text-[13px] leading-relaxed text-muted">
+            {detected.connections.length > 0
+              ? "Connect Studio to browse and query its memory."
+              : "Writes connections/arcana.ts + sets the key in .env, like eve-gtm."}
           </div>
         </div>
       </Card>
@@ -349,27 +360,27 @@ const NATIVE = [
 
 function NativeMemory(): JSX.Element {
   return (
-    <Card>
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-        <IconBrain className="h-4 w-4 text-muted" />
-        <span className="text-[13px] font-medium text-text">Native memory</span>
+    <section className="space-y-2.5">
+      <div className="flex items-center gap-2">
+        <Kicker>Native memory</Kicker>
         <Badge tone="success">built in</Badge>
-        <span className="text-2xs text-faint">every Eve agent, no setup</span>
+        <span className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-faint">
+          every agent · no setup
+        </span>
       </div>
-      <div className="divide-y divide-border/60">
-        {NATIVE.map((n) => (
-          <div key={n.title} className="px-4 py-2.5">
-            <div className="font-mono text-xs text-text">{n.title}</div>
-            <div className="mt-0.5 text-2xs leading-relaxed text-muted">{n.body}</div>
-          </div>
-        ))}
-      </div>
-      <div className="border-t border-border px-4 py-2.5 text-2xs leading-relaxed text-muted">
-        What Eve does <b className="text-text">not</b> do natively is
-        cross-conversation semantic recall (facts, timeline, search). That's the
-        one thing <b className="text-text">Arcana</b> adds — optional, below.
-      </div>
-    </Card>
+      <Card>
+        <List>
+          {NATIVE.map((n) => (
+            <ListRow key={n.title} title={n.title} desc={n.body} />
+          ))}
+        </List>
+        <div className="border-t border-border px-4 py-3 text-[13px] leading-relaxed text-muted">
+          What Eve does <b className="text-text">not</b> do natively is
+          cross-conversation semantic recall (facts, timeline, search). That's the
+          one thing <b className="text-text">Arcana</b> adds — optional, below.
+        </div>
+      </Card>
+    </section>
   );
 }
 
@@ -414,10 +425,13 @@ function MemoryInstructions({ agentId }: { agentId: string }): JSX.Element {
   return (
     <Card className="p-4">
       <div className="flex items-center gap-2">
-        <IconBrain className="h-4 w-4 text-muted" />
         <span className="text-[13px] font-medium text-text">Teach it to use memory</span>
         <div className="flex-1" />
-        {status ? <span className="text-2xs text-success">{status}</span> : null}
+        {status ? (
+          <span className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-success">
+            {status}
+          </span>
+        ) : null}
         <Button variant="secondary" size="sm" onClick={copy}>
           Copy
         </Button>
@@ -429,7 +443,7 @@ function MemoryInstructions({ agentId }: { agentId: string }): JSX.Element {
         The tools load automatically — this tells the agent <b className="text-text">when</b>{" "}
         to recall and remember. Add it once (idempotent), then restart the agent.
       </p>
-      <pre className="mt-2 overflow-auto rounded-lg border border-border bg-subtle p-3 text-2xs leading-relaxed text-muted">
+      <pre className="mt-2 overflow-auto rounded-lg border border-border bg-subtle p-3 font-mono text-2xs leading-relaxed text-muted">
         {MEMORY_SNIPPET}
       </pre>
     </Card>
@@ -469,39 +483,35 @@ export function Memory(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-5 py-2.5">
-        <div className="flex items-center gap-2 text-[13px] font-medium text-text">
-          Memory
-          {connected ? (
-            <Badge tone="success">
-              <IconBrain className="h-3 w-3" />
-              active · {connected.workspace}
-            </Badge>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-1">
-          {connected ? (
-            <Button variant="ghost" size="sm" onClick={() => void forget()}>
-              Disconnect
-            </Button>
-          ) : null}
-          <IconButton onClick={() => void refresh()} title="Reload">
-            <IconRefresh className="h-3.5 w-3.5" />
-          </IconButton>
-        </div>
-      </div>
+      <ViewHeader
+        kicker="Brain"
+        title="Memory"
+        right={
+          <>
+            {connected ? (
+              <Badge tone="success">active · {connected.workspace}</Badge>
+            ) : null}
+            {connected ? (
+              <Button variant="ghost" size="sm" onClick={() => void forget()}>
+                Disconnect
+              </Button>
+            ) : null}
+            <IconButton onClick={() => void refresh()} title="Reload">
+              <IconRefresh className="h-3.5 w-3.5" />
+            </IconButton>
+          </>
+        }
+      />
 
-      <div className="flex-1 overflow-auto p-5">
-        <div className="mx-auto max-w-3xl space-y-5">
+      <div className="flex-1 overflow-auto">
+        <div className="mx-auto max-w-3xl space-y-8 px-4 py-6">
           <NativeMemory />
 
-          <div className="space-y-3">
+          <section className="space-y-3">
             <div className="flex items-center gap-2">
-              <span className="text-2xs font-medium uppercase tracking-wide text-faint">
-                Long-term memory · Arcana
-              </span>
+              <Kicker>Long-term memory · Arcana</Kicker>
               {connected ? (
-                <Badge tone="success">✓ active</Badge>
+                <Badge tone="success">active</Badge>
               ) : (
                 <Badge>optional add-on</Badge>
               )}
@@ -511,25 +521,23 @@ export function Memory(): JSX.Element {
                 <Spinner /> Inspecting…
               </div>
             ) : connected && activeAgentId ? (
-              <div className="space-y-3">
-                <Card className="border-accent/30 bg-success/[0.06] p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/15 text-success">
-                      <IconBrain className="h-4 w-4" />
+              <div className="space-y-4">
+                <Card className="flex items-start gap-3 p-4">
+                  <StatusDot status="running" className="mt-1" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[14px] font-semibold tracking-tight text-text">
+                        Long-term memory active
+                      </span>
+                      <Badge tone="success">on</Badge>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 text-[13px] font-medium text-text">
-                        Long-term memory is active
-                        <Badge tone="success">ON</Badge>
-                      </div>
-                      <div className="text-2xs text-muted">
-                        Arcana workspace{" "}
-                        <span className="font-mono text-text">{connected.workspace}</span>
-                        {detected?.connections.length
-                          ? " — wired into the agent."
-                          : " — browsing only (not wired into the agent)."}
-                      </div>
-                    </div>
+                    <p className="mt-1 text-[13px] leading-relaxed text-muted">
+                      Arcana workspace{" "}
+                      <span className="font-mono text-text">{connected.workspace}</span>
+                      {detected?.connections.length
+                        ? " — wired into the agent."
+                        : " — browsing only (not wired into the agent)."}
+                    </p>
                   </div>
                 </Card>
                 <MemoryInstructions agentId={activeAgentId} />
@@ -538,7 +546,7 @@ export function Memory(): JSX.Element {
             ) : detected && activeAgentId ? (
               <Setup agentId={activeAgentId} detected={detected} onConnected={refresh} />
             ) : null}
-          </div>
+          </section>
         </div>
       </div>
     </div>

@@ -50,6 +50,7 @@ interface State {
   newThread: (agentId: string) => Promise<void>;
   selectThread: (threadId: string) => Promise<void>;
   deleteThread: (threadId: string) => Promise<void>;
+  archiveThread: (threadId: string, archived: boolean) => Promise<void>;
   send: (text: string) => Promise<void>;
   respond: (requestId: string, optionId?: string, text?: string) => Promise<void>;
   setChatTarget: (agentId: string, target: ChatTarget) => void;
@@ -206,6 +207,18 @@ export const useStore = create<State>((set, get) => ({
       await get().loadThreads(aid);
     }
     if (get().activeThreadId === threadId) {
+      set({ activeThreadId: null });
+    }
+  },
+
+  archiveThread: async (threadId, archived) => {
+    await window.studio.chat.archiveThread(threadId, archived);
+    const aid = get().activeAgentId;
+    if (aid) {
+      await get().loadThreads(aid);
+    }
+    // Leaving the conversation when its thread is archived.
+    if (archived && get().activeThreadId === threadId) {
       set({ activeThreadId: null });
     }
   },

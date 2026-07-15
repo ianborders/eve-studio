@@ -12,13 +12,16 @@ import {
 import {
   Badge,
   Button,
-  Card,
   Field,
   IconButton,
   Input,
+  Kicker,
+  List,
+  ListRow,
   Modal,
   Spinner,
   Textarea,
+  ViewHeader,
 } from "../ui/kit";
 
 type Kind = "mcp" | "openapi";
@@ -255,24 +258,26 @@ export function Connections(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-5 py-2.5">
-        <div className="text-[13px] font-medium text-text">Connections</div>
-        <IconButton onClick={reload} title="Reload">
-          <IconRefresh className="h-3.5 w-3.5" />
-        </IconButton>
-      </div>
+      <ViewHeader
+        kicker="Integrations"
+        title="Connections"
+        count={visibleConns.length}
+        right={
+          <IconButton onClick={reload} title="Reload">
+            <IconRefresh className="h-3.5 w-3.5" />
+          </IconButton>
+        }
+      />
 
-      <div className="flex-1 overflow-auto p-5">
-        <div className="mx-auto max-w-3xl space-y-6">
+      <div className="flex-1 overflow-auto px-4 py-4">
+        <div className="mx-auto max-w-2xl space-y-8">
           {id ? <ConnectorsGallery agentId={id} /> : null}
 
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between border-t border-border pt-5">
+          <div className="space-y-2.5 border-t border-border pt-6">
+            <div className="flex items-end justify-between gap-3">
               <div>
-                <div className="text-2xs font-medium uppercase tracking-wide text-faint">
-                  Custom connections · MCP / OpenAPI
-                </div>
-                <div className="text-2xs text-muted">
+                <Kicker className="mb-1.5">Custom connections · MCP / OpenAPI</Kicker>
+                <div className="text-[13px] leading-relaxed text-muted">
                   Connection files the agent authors under
                   <span className="font-mono"> connections/</span> (like Arcana).
                 </div>
@@ -283,11 +288,11 @@ export function Connections(): JSX.Element {
               </Button>
             </div>
             {visibleConns.length === 0 ? (
-              <Card className="flex flex-col items-center gap-3 p-8 text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted">
-                  <IconPlug className="h-4 w-4" />
+              <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+                <div className="text-border-strong">
+                  <IconPlug className="h-6 w-6" />
                 </div>
-                <div className="text-[13px] text-muted">
+                <div className="max-w-sm text-[13px] leading-relaxed text-muted">
                   No custom connections yet — wire an MCP server or OpenAPI API
                   directly.
                 </div>
@@ -295,45 +300,41 @@ export function Connections(): JSX.Element {
                   <IconPlus className="h-3.5 w-3.5" />
                   Add connection
                 </Button>
-              </Card>
+              </div>
             ) : (
-              visibleConns.map((c) => (
-                <Card key={c.name} className="p-4">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.04] text-muted">
-                      <IconPlug className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[13px] text-text">{c.name}</span>
-                        {c.protocol ? <Badge tone="info">{c.protocol}</Badge> : null}
-                      </div>
-                      {c.url ? (
-                        <div className="mt-0.5 flex items-center gap-1 truncate font-mono text-2xs text-faint">
+              <List>
+                {visibleConns.map((c) => (
+                  <ListRow
+                    key={c.name}
+                    icon={<IconPlug className="h-4 w-4" />}
+                    title={c.name}
+                    badge={c.protocol ? <Badge tone="info">{c.protocol}</Badge> : undefined}
+                    desc={c.description || undefined}
+                    meta={
+                      c.url ? (
+                        <div className="flex items-center gap-1 truncate font-mono text-2xs text-faint">
                           <IconExternal className="h-3 w-3 shrink-0" />
                           {c.url}
                         </div>
-                      ) : null}
-                    </div>
-                    <Button variant="secondary" size="sm" onClick={() => setEditName(c.name)}>
-                      Open
-                    </Button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDelete(c.name)}
-                      className="rounded-md p-1.5 text-faint hover:bg-danger/10 hover:text-danger"
-                      title="Delete"
-                    >
-                      <IconTrash className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  {c.description ? (
-                    <p className="mt-2.5 text-[13px] leading-relaxed text-muted">
-                      {c.description}
-                    </p>
-                  ) : null}
-                </Card>
-              ))
+                      ) : undefined
+                    }
+                    right={
+                      <div className="flex items-center gap-1">
+                        <Button variant="secondary" size="sm" onClick={() => setEditName(c.name)}>
+                          Open
+                        </Button>
+                        <IconButton
+                          onClick={() => setConfirmDelete(c.name)}
+                          title="Delete"
+                          className="hover:bg-danger/10 hover:text-danger"
+                        >
+                          <IconTrash className="h-3.5 w-3.5" />
+                        </IconButton>
+                      </div>
+                    }
+                  />
+                ))}
+              </List>
             )}
           </div>
         </div>

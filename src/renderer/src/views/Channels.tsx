@@ -4,7 +4,18 @@ import { ConnectorPicker } from "../components/ConnectorPicker";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
 import { IconPlus, IconRefresh, IconServer } from "../ui/icons";
-import { Badge, Button, Card, Modal, Spinner, StatusDot } from "../ui/kit";
+import {
+  Badge,
+  Button,
+  IconButton,
+  Kicker,
+  List,
+  Modal,
+  Spinner,
+  StatusDot,
+  ViewHeader,
+  cx,
+} from "../ui/kit";
 
 type Auth = "connect" | "env" | "web" | "custom";
 interface Cat {
@@ -29,10 +40,21 @@ const CATALOG: Cat[] = [
   { kind: "custom", label: "Custom", desc: "Your own webhook / WebSocket.", auth: "custom", color: "#666666" },
 ];
 
-function Logo({ label, color }: { label: string; color: string }): JSX.Element {
+function Logo({
+  label,
+  color,
+  className,
+}: {
+  label: string;
+  color: string;
+  className?: string;
+}): JSX.Element {
   return (
     <div
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold text-white"
+      className={cx(
+        "flex shrink-0 items-center justify-center rounded-lg font-semibold text-white",
+        className ?? "h-9 w-9 text-sm"
+      )}
       style={{ background: color }}
     >
       {label[0]}
@@ -246,72 +268,83 @@ export function Channels(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-5 py-2.5">
-        <div className="text-[13px] font-medium text-text">
-          Channels <span className="text-faint">· {authored.length + 1}</span>
-        </div>
-        <button type="button" onClick={() => void load()} className="text-faint hover:text-text" title="Reload">
-          <IconRefresh className="h-3.5 w-3.5" />
-        </button>
-      </div>
+      <ViewHeader
+        kicker="Integrations"
+        title="Channels"
+        count={authored.length + 1}
+        right={
+          <IconButton onClick={() => void load()} title="Reload">
+            <IconRefresh className="h-3.5 w-3.5" />
+          </IconButton>
+        }
+      />
 
-      <div className="flex-1 overflow-auto p-5">
-        <div className="mx-auto max-w-3xl space-y-5">
+      <div className="flex-1 overflow-auto px-4 py-4">
+        <div className="mx-auto max-w-2xl space-y-7">
           {/* Configured */}
-          <div className="space-y-2">
-            <div className="text-2xs font-medium uppercase tracking-wide text-faint">Configured</div>
-            <Card className="flex items-center gap-3 p-3.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-black/[0.04] text-muted">
-                <IconServer className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[13px] text-text">eve HTTP channel</span>
-                  <Badge tone="success">always on</Badge>
+          <div className="space-y-2.5">
+            <Kicker>Configured</Kicker>
+            <List>
+              <div className="flex items-center gap-3 px-3 py-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-subtle text-faint">
+                  <IconServer className="h-4 w-4" />
                 </div>
-                <div className="font-mono text-2xs text-faint">/eve/v1/session*</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] text-text">eve HTTP channel</span>
+                    <Badge tone="success">always on</Badge>
+                  </div>
+                  <div className="mt-0.5 font-mono text-2xs text-faint">/eve/v1/session*</div>
+                </div>
               </div>
-            </Card>
-            {authored.map((c) => {
-              const cat = CATALOG.find((x) => x.kind === (c.kind ?? c.name));
-              return (
-                <Card key={c.name} className="flex items-center gap-3 p-3.5">
-                  <Logo label={cat?.label ?? c.name} color={cat?.color ?? "#666"} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-medium text-text">
-                        {cat?.label ?? c.name}
-                      </span>
-                      <Badge tone="success">
-                        <StatusDot status="running" />
-                        connected
-                      </Badge>
-                    </div>
-                    <div className="font-mono text-2xs text-faint">
-                      channels/{c.name}.ts{c.urlPath ? ` · ${c.method ?? "POST"} ${c.urlPath}` : ""}
+              {authored.map((c) => {
+                const cat = CATALOG.find((x) => x.kind === (c.kind ?? c.name));
+                return (
+                  <div key={c.name} className="flex items-center gap-3 px-3 py-3">
+                    <Logo
+                      label={cat?.label ?? c.name}
+                      color={cat?.color ?? "#666"}
+                      className="h-8 w-8 text-[13px]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] font-medium text-text">
+                          {cat?.label ?? c.name}
+                        </span>
+                        <Badge tone="success">
+                          <StatusDot status="running" />
+                          connected
+                        </Badge>
+                      </div>
+                      <div className="mt-0.5 font-mono text-2xs text-faint">
+                        channels/{c.name}.ts{c.urlPath ? ` · ${c.method ?? "POST"} ${c.urlPath}` : ""}
+                      </div>
                     </div>
                   </div>
-                </Card>
-              );
-            })}
+                );
+              })}
+            </List>
           </div>
 
           {/* Gallery */}
-          <div className="space-y-2">
-            <div className="text-2xs font-medium uppercase tracking-wide text-faint">Add a channel</div>
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <div className="space-y-2.5">
+            <Kicker>Add a channel</Kicker>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {CATALOG.map((cat) => {
                 const added = present.has(cat.kind);
                 return (
-                  <Card key={cat.kind} className="flex items-center gap-3 p-3.5">
-                    <Logo label={cat.label} color={cat.color} />
+                  <div
+                    key={cat.kind}
+                    className="flex items-center gap-3 rounded-lg border border-border/70 px-3 py-3 transition-colors hover:border-border-strong hover:bg-black/[0.02]"
+                  >
+                    <Logo label={cat.label} color={cat.color} className="h-8 w-8 text-[13px]" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-[13px] font-medium text-text">{cat.label}</span>
                         {cat.auth === "connect" ? <Badge tone="accent">Connect</Badge> : null}
                         {cat.auth === "env" ? <Badge>env</Badge> : null}
                       </div>
-                      <div className="text-2xs leading-snug text-muted">{cat.desc}</div>
+                      <div className="mt-0.5 text-2xs leading-snug text-muted">{cat.desc}</div>
                     </div>
                     {added ? (
                       <Badge tone="success">
@@ -328,7 +361,7 @@ export function Channels(): JSX.Element {
                         <IconPlus className="h-3.5 w-3.5" /> Add
                       </Button>
                     )}
-                  </Card>
+                  </div>
                 );
               })}
             </div>

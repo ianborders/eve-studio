@@ -3,7 +3,7 @@ import { useCliRun } from "../lib/useCli";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
 import { IconFolder } from "../ui/icons";
-import { Button, Field, Input, Modal } from "../ui/kit";
+import { Button, Field, Input, Kicker, Modal } from "../ui/kit";
 
 const NAME_RE = /^[a-z0-9][a-z0-9._-]*$/;
 
@@ -99,9 +99,13 @@ export function CreateAgent({ onClose }: { onClose: () => void }): JSX.Element {
           </label>
 
           {parentDir && validName ? (
-            <div className="rounded-lg bg-black/[0.03] px-3 py-2 font-mono text-2xs text-faint">
-              eve init {name}
-              {webChat ? " --channel-web-nextjs" : ""} · in {parentDir}
+            <div className="rounded-lg border border-border bg-subtle px-3 py-2.5">
+              <Kicker className="mb-1.5">Command</Kicker>
+              <div className="font-mono text-2xs text-muted">
+                eve init {name}
+                {webChat ? " --channel-web-nextjs" : ""}
+                <span className="text-faint"> · in {parentDir}</span>
+              </div>
             </div>
           ) : null}
 
@@ -122,8 +126,9 @@ export function CreateAgent({ onClose }: { onClose: () => void }): JSX.Element {
         </div>
       ) : (
         <div className="space-y-3 p-4">
+          <Kicker>Scaffolding</Kicker>
           <div className="text-[13px] text-muted">
-            Scaffolding <span className="font-mono text-text">{name}</span> and
+            Creating <span className="font-mono text-text">{name}</span> and
             installing dependencies…
           </div>
           <Console text={output} className="h-64" placeholder="Starting eve init…" />

@@ -3,7 +3,17 @@ import { useCallback, useEffect, useState } from "react";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
 import { IconRefresh } from "../ui/icons";
-import { Badge, Button, Card, Input, Spinner, Textarea } from "../ui/kit";
+import {
+  Badge,
+  Button,
+  Card,
+  IconButton,
+  Input,
+  Kicker,
+  Spinner,
+  Textarea,
+  ViewHeader,
+} from "../ui/kit";
 
 function EnvEditor({ agentId }: { agentId: string }): JSX.Element {
   const [env, setEnv] = useState<EnvState | null>(null);
@@ -53,21 +63,33 @@ function EnvEditor({ agentId }: { agentId: string }): JSX.Element {
   return (
     <Card className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        {[".env", ".env.local"].map((name) => (
-          <button
-            key={name}
-            type="button"
-            onClick={() => pick(name)}
-            className={`rounded-md px-2 py-1 font-mono text-2xs ${
-              active === name ? "bg-text text-white" : "text-muted hover:bg-hover"
-            }`}
-          >
-            {name}
-          </button>
-        ))}
+        <div className="inline-flex rounded-lg border border-border p-0.5">
+          {[".env", ".env.local"].map((name) => (
+            <button
+              key={name}
+              type="button"
+              onClick={() => pick(name)}
+              className={`rounded-[6px] px-3 py-1 font-mono text-[12px] transition-colors ${
+                active === name
+                  ? "bg-text text-white"
+                  : "text-muted hover:text-text"
+              }`}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
         <div className="flex-1" />
-        {dirty ? <span className="text-2xs text-warn">unsaved</span> : null}
-        {saved ? <span className="text-2xs text-success">saved ✓</span> : null}
+        {dirty ? (
+          <span className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-warn">
+            unsaved
+          </span>
+        ) : null}
+        {saved ? (
+          <span className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-success">
+            saved
+          </span>
+        ) : null}
         <Button variant="primary" size="sm" onClick={save} disabled={!dirty}>
           Save
         </Button>
@@ -110,16 +132,18 @@ function VercelPanel({ agentId }: { agentId: string }): JSX.Element {
   return (
     <Card className="p-4">
       <div className="mb-3 flex items-center gap-2">
-        <span className="text-[13px] font-medium text-text">Vercel</span>
+        <span className="text-[13px] font-semibold tracking-tight text-text">
+          Vercel
+        </span>
         {status?.linked ? (
           <Badge tone="success">linked · {status.projectName}</Badge>
         ) : (
           <Badge tone="warn">not linked</Badge>
         )}
         <div className="flex-1" />
-        <button type="button" onClick={() => void load()} className="text-faint hover:text-text" title="Refresh">
+        <IconButton onClick={() => void load()} title="Refresh">
           <IconRefresh className="h-3.5 w-3.5" />
-        </button>
+        </IconButton>
       </div>
 
       {status?.linked ? (
@@ -144,9 +168,7 @@ function VercelPanel({ agentId }: { agentId: string }): JSX.Element {
           </div>
 
           <div className="mt-3 rounded-lg border border-border p-3">
-            <div className="mb-2 text-2xs font-medium uppercase tracking-wide text-faint">
-              Add production env var
-            </div>
+            <Kicker className="mb-2">Add production env var</Kicker>
             <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="NAME" className="font-mono" />
               <Input value={value} onChange={(e) => setValue(e.target.value)} type="password" placeholder="value" className="font-mono" />
@@ -200,14 +222,12 @@ export function Environment(): JSX.Element {
   }
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-border px-5 py-2.5 text-[13px] font-medium text-text">
-        Environment &amp; secrets
-      </div>
+      <ViewHeader kicker="Deploy" title="Environment & secrets" />
       <div className="grid min-h-0 flex-1 grid-rows-[1fr_auto] gap-4 overflow-auto p-4">
         <div className="flex min-h-[220px] flex-col">
-          <div className="mb-1.5 text-2xs font-medium uppercase tracking-wide text-faint">
+          <Kicker className="mb-2">
             Local env files (gitignored, auto-reloaded by eve dev)
-          </div>
+          </Kicker>
           <EnvEditor agentId={id} />
         </div>
         <VercelPanel agentId={id} />

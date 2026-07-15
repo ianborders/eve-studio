@@ -93,6 +93,20 @@ export const IconSettings = make(
   </>
 );
 export const IconPlus = make(<path d="M12 5v14M5 12h14" />);
+export const IconArrowUp = make(<path d="M12 20V5M5 12l7-7 7 7" />);
+export const IconArchive = make(
+  <>
+    <rect x="3" y="4" width="18" height="4" rx="1" />
+    <path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" />
+    <path d="M10 12h4" />
+  </>
+);
+export const IconInbox = make(
+  <>
+    <path d="M3 12h5l1.5 3h5L16 12h5" />
+    <path d="M5 6h14l2 6v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6l2-6Z" />
+  </>
+);
 export const IconPlay = make(<path d="M7 4.5v15l13-7.5-13-7.5Z" />);
 export const IconStop = make(<rect x="6" y="6" width="12" height="12" rx="2" />);
 export const IconTrash = make(

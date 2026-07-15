@@ -1,8 +1,16 @@
 import type { ModelConfig } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "../store";
-import { IconBolt } from "../ui/icons";
-import { Badge, Button, Card, Field, Input, Spinner } from "../ui/kit";
+import {
+  Badge,
+  Button,
+  Card,
+  Field,
+  Input,
+  Spinner,
+  ViewHeader,
+  cx,
+} from "../ui/kit";
 
 const MODELS = [
   "anthropic/claude-opus-4.8",
@@ -83,86 +91,99 @@ export function Model(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-border px-5 py-2.5">
-        <IconBolt className="h-4 w-4 text-muted" />
-        <div className="text-[13px] font-medium text-text">Model &amp; reasoning</div>
-        <div className="flex-1" />
-        {dirty ? <span className="text-2xs text-warn">unsaved</span> : null}
-        {saved ? <span className="text-2xs text-success">saved ✓</span> : null}
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={save}
-          disabled={!dirty || saving || !cfg?.editable}
-        >
-          {saving ? "Saving…" : "Save"}
-        </Button>
-      </div>
+      <ViewHeader
+        kicker="Instructions"
+        title="Model"
+        right={
+          <>
+            {dirty ? (
+              <span className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-warn">
+                unsaved
+              </span>
+            ) : null}
+            {saved ? (
+              <span className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-success">
+                saved
+              </span>
+            ) : null}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={save}
+              disabled={!dirty || saving || !cfg?.editable}
+            >
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </>
+        }
+      />
 
-      <div className="flex-1 overflow-auto p-5">
-        <div className="mx-auto max-w-2xl space-y-4">
+      <div className="flex-1 overflow-auto">
+        <div className="mx-auto max-w-2xl space-y-6 px-4 py-6">
           {cfg && !cfg.editable ? (
-            <Card className="bg-warn/[0.06] p-3 text-[13px] text-muted">
+            <Card className="bg-warn/[0.06] px-3 py-2.5 text-[13px] leading-relaxed text-muted">
               {cfg.note}
             </Card>
           ) : null}
 
-          <Card className="space-y-4 p-4">
-            <Field label="Model" hint="Vercel AI Gateway id — provider/model">
-              <Input
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
+          <Field label="Model" hint="Vercel AI Gateway id — provider/model">
+            <Input
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              disabled={!cfg?.editable}
+              placeholder="anthropic/claude-opus-4.8"
+              className="font-mono"
+            />
+          </Field>
+          <div className="-mt-2 flex flex-wrap gap-1.5">
+            {MODELS.map((m) => (
+              <button
+                key={m}
+                type="button"
                 disabled={!cfg?.editable}
-                placeholder="anthropic/claude-opus-4.8"
-                className="font-mono"
-              />
-            </Field>
+                onClick={() => setModel(m)}
+                className={cx(
+                  "rounded-md border px-2.5 py-1 font-mono text-2xs transition-colors disabled:opacity-40",
+                  model === m
+                    ? "border-text bg-text text-white"
+                    : "border-border text-muted hover:border-border-strong hover:text-text"
+                )}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+
+          <Field label="Reasoning effort" hint="provider-agnostic">
             <div className="flex flex-wrap gap-1.5">
-              {MODELS.map((m) => (
+              {REASONING.map((r) => (
                 <button
-                  key={m}
+                  key={r}
                   type="button"
                   disabled={!cfg?.editable}
-                  onClick={() => setModel(m)}
-                  className={`rounded-lg border px-2.5 py-1 font-mono text-2xs transition-colors ${
-                    model === m
+                  onClick={() => setReasoning(r)}
+                  className={cx(
+                    "rounded-md border px-2.5 py-1 text-2xs transition-colors disabled:opacity-40",
+                    reasoning === r
                       ? "border-text bg-text text-white"
-                      : "border-border text-muted hover:bg-hover"
-                  }`}
+                      : "border-border text-muted hover:border-border-strong hover:text-text"
+                  )}
                 >
-                  {m}
+                  {r}
                 </button>
               ))}
             </div>
+          </Field>
 
-            <Field label="Reasoning effort" hint="provider-agnostic">
-              <div className="flex flex-wrap gap-1.5">
-                {REASONING.map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    disabled={!cfg?.editable}
-                    onClick={() => setReasoning(r)}
-                    className={`rounded-lg border px-2.5 py-1 text-2xs transition-colors ${
-                      reasoning === r
-                        ? "border-text bg-text text-white"
-                        : "border-border text-muted hover:bg-hover"
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            </Field>
+          {err ? <div className="text-xs text-danger">{err}</div> : null}
 
-            {err ? <div className="text-xs text-danger">{err}</div> : null}
-          </Card>
-
-          <div className="flex items-center gap-2 text-2xs text-faint">
+          <div className="flex items-start gap-2 border-t border-border pt-4 text-2xs leading-relaxed text-faint">
             <Badge>gateway</Badge>
-            Routed through the Vercel AI Gateway. Any{" "}
-            <span className="font-mono">provider/model</span> from the catalog works —
-            type it above. Full catalog at vercel.com/ai-gateway/models.
+            <span>
+              Routed through the Vercel AI Gateway. Any{" "}
+              <span className="font-mono">provider/model</span> from the catalog works —
+              type it above. Full catalog at vercel.com/ai-gateway/models.
+            </span>
           </div>
         </div>
       </div>

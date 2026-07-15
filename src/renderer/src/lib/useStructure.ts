@@ -14,9 +14,11 @@ export function useActiveStructure(): {
   const loading = useStore((s) => (id ? Boolean(s.structureLoading[id]) : false));
   const load = useStore((s) => s.loadStructure);
 
+  // Force a fresh read on open — capability files change on disk (edits,
+  // scaffolds, external tooling), so the cached structure can be stale.
   useEffect(() => {
     if (id) {
-      void load(id);
+      void load(id, true);
     }
   }, [id, load]);
 

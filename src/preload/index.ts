@@ -25,6 +25,8 @@ import {
   type DeployHealth,
   type DeploySettings,
   type DetectedBrain,
+  type CapabilityFilesResult,
+  type CapabilityKind,
   type EnvState,
   type EvalItem,
   type EveEvent,
@@ -127,6 +129,24 @@ const api = {
       ipcRenderer.invoke(IPC.hookCreate, id, name),
     createSchedule: (id: string, input: ScheduleInput): Promise<FileWriteResult> =>
       ipcRenderer.invoke(IPC.scheduleCreate, id, input),
+    capabilityFiles: (
+      id: string,
+      kind: CapabilityKind,
+      name: string
+    ): Promise<CapabilityFilesResult> =>
+      ipcRenderer.invoke(IPC.capabilityFiles, id, kind, name),
+    capabilityWrite: (
+      id: string,
+      relPath: string,
+      content: string
+    ): Promise<FileWriteResult> =>
+      ipcRenderer.invoke(IPC.capabilityWrite, id, relPath, content),
+    capabilityDelete: (
+      id: string,
+      kind: CapabilityKind,
+      name: string
+    ): Promise<FileWriteResult> =>
+      ipcRenderer.invoke(IPC.capabilityDelete, id, kind, name),
     sandboxRead: (id: string): Promise<SandboxInfo> =>
       ipcRenderer.invoke(IPC.sandboxRead, id),
     sandboxCreate: (id: string): Promise<FileWriteResult> =>
@@ -246,6 +266,8 @@ const api = {
       ipcRenderer.invoke(IPC.chatGetThread, threadId),
     deleteThread: (threadId: string): Promise<boolean> =>
       ipcRenderer.invoke(IPC.chatDeleteThread, threadId),
+    archiveThread: (threadId: string, archived: boolean): Promise<boolean> =>
+      ipcRenderer.invoke(IPC.chatArchiveThread, threadId, archived),
     send: (
       threadId: string,
       text: string,

@@ -35,6 +35,11 @@ import {
   writeInstructions,
 } from "./agentFiles";
 import {
+  capabilityFiles,
+  deleteCapability,
+  writeCapabilityFile,
+} from "./agentCapabilities";
+import {
   arcanaQuery,
   arcanaStats,
   arcanaTimeline,
@@ -335,6 +340,31 @@ export function registerIpc(): IpcHandles {
     IPC.scheduleCreate,
     (_e: IpcMainInvokeEvent, id: string, input: import("../shared/ipc").ScheduleInput) =>
       tryWrite(() => createSchedule(agentPathOf(id), input))
+  );
+
+  // --- capability read / edit / delete (tools, skills, subagents, hooks, schedules) ---
+  ipcMain.handle(
+    IPC.capabilityFiles,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      kind: import("../shared/ipc").CapabilityKind,
+      name: string
+    ) => capabilityFiles(agentPathOf(id), kind, name)
+  );
+  ipcMain.handle(
+    IPC.capabilityWrite,
+    (_e: IpcMainInvokeEvent, id: string, relPath: string, content: string) =>
+      tryWrite(() => writeCapabilityFile(agentPathOf(id), relPath, content))
+  );
+  ipcMain.handle(
+    IPC.capabilityDelete,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      kind: import("../shared/ipc").CapabilityKind,
+      name: string
+    ) => tryWrite(() => deleteCapability(agentPathOf(id), kind, name))
   );
 
   // --- sandbox ---
@@ -682,6 +712,13 @@ export function registerIpc(): IpcHandles {
     IPC.chatDeleteThread,
     (_e: IpcMainInvokeEvent, threadId: string) => {
       store.deleteThread(threadId);
+      return true;
+    }
+  );
+  ipcMain.handle(
+    IPC.chatArchiveThread,
+    (_e: IpcMainInvokeEvent, threadId: string, archived: boolean) => {
+      store.setThreadArchived(threadId, archived);
       return true;
     }
   );

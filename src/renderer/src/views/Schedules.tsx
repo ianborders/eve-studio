@@ -1,16 +1,20 @@
 import { useState } from "react";
+import { CapabilityEditor } from "../components/CapabilityEditor";
 import { useActiveStructure } from "../lib/useStructure";
-import { IconCalendar, IconPlus, IconRefresh } from "../ui/icons";
+import { IconCalendar, IconChevronRight, IconPlus, IconRefresh } from "../ui/icons";
 import {
+  Badge,
   Button,
-  Card,
   EmptyState,
   Field,
   IconButton,
   Input,
+  List,
+  ListRow,
   Modal,
   Spinner,
   Textarea,
+  ViewHeader,
 } from "../ui/kit";
 
 function NewScheduleModal({
@@ -126,6 +130,7 @@ function describeCron(cron?: string): string | null {
 export function Schedules(): JSX.Element {
   const { id, structure, loading, reload } = useActiveStructure();
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
 
   if (loading && !structure) {
     return (
@@ -138,25 +143,28 @@ export function Schedules(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-5 py-2.5">
-        <div className="text-[13px] font-medium text-text">
-          Schedules <span className="text-faint">· {schedules.length}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
-            <IconPlus className="h-3.5 w-3.5" />
-            New
-          </Button>
-          <IconButton onClick={reload} title="Reload">
-            <IconRefresh className="h-3.5 w-3.5" />
-          </IconButton>
-        </div>
-      </div>
+      <ViewHeader
+        kicker="Schedules"
+        title="Schedules"
+        count={schedules.length}
+        right={
+          <>
+            <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+              <IconPlus className="h-3.5 w-3.5" />
+              New
+            </Button>
+            <IconButton onClick={reload} title="Reload">
+              <IconRefresh className="h-3.5 w-3.5" />
+            </IconButton>
+          </>
+        }
+      />
 
-      <div className="flex-1 overflow-auto p-5">
+      <div className="flex-1 overflow-auto">
         {schedules.length === 0 ? (
           <EmptyState
-            icon={<IconCalendar className="h-5 w-5" />}
+            icon={<IconCalendar className="h-6 w-6" />}
+            kicker="Schedules"
             title="No schedules"
             action={
               <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
@@ -168,34 +176,42 @@ export function Schedules(): JSX.Element {
             Scheduled jobs wake the agent on a cron (root agent only).
           </EmptyState>
         ) : (
-          <div className="mx-auto max-w-3xl space-y-2.5">
-            {schedules.map((s) => {
-              const human = describeCron(s.cron);
-              return (
-                <Card key={s.name} className="flex items-center gap-3 p-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.04] text-muted">
-                    <IconCalendar className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[13px] text-text">{s.name}</div>
-                    {human ? (
-                      <div className="text-2xs text-muted">{human}</div>
-                    ) : null}
-                  </div>
-                  {s.cron ? (
-                    <code className="rounded bg-black/[0.04] px-2 py-1 font-mono text-2xs text-muted">
-                      {s.cron}
-                    </code>
-                  ) : null}
-                </Card>
-              );
-            })}
+          <div className="mx-auto max-w-2xl px-4 py-4">
+            <List>
+              {schedules.map((s) => {
+                const human = describeCron(s.cron);
+                return (
+                  <ListRow
+                    key={s.name}
+                    icon={<IconCalendar className="h-4 w-4" />}
+                    title={s.name}
+                    desc={human || undefined}
+                    onClick={() => setEditing(s.name)}
+                    right={
+                      <div className="flex items-center gap-2">
+                        {s.cron ? <Badge>{s.cron}</Badge> : null}
+                        <IconChevronRight className="h-4 w-4 text-faint opacity-0 transition-opacity group-hover:opacity-100" />
+                      </div>
+                    }
+                  />
+                );
+              })}
+            </List>
           </div>
         )}
       </div>
 
       {addOpen && id ? (
         <NewScheduleModal agentId={id} onClose={() => setAddOpen(false)} />
+      ) : null}
+      {editing && id ? (
+        <CapabilityEditor
+          agentId={id}
+          kind="schedule"
+          name={editing}
+          onClose={() => setEditing(null)}
+          onChanged={reload}
+        />
       ) : null}
     </div>
   );

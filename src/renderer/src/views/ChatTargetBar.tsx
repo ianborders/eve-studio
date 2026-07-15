@@ -54,16 +54,18 @@ export function ChatTargetBar({ agentId }: { agentId: string }): JSX.Element {
 
   return (
     <div className="border-b border-border">
-      <div className="flex items-center gap-2 px-5 py-1.5">
-        <span className="text-2xs text-faint">Chatting with</span>
-        <div className="flex rounded-md border border-border p-0.5">
+      <div className="flex items-center gap-2.5 px-6 py-2">
+        <span className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-faint">
+          Target
+        </span>
+        <div className="flex rounded-lg border border-border p-0.5">
           {(["local", "deployed"] as ChatTarget[]).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setChatTarget(agentId, t)}
-              className={`rounded px-2 py-0.5 text-2xs transition-colors ${
-                target === t ? "bg-text text-white" : "text-muted hover:bg-hover"
+              className={`rounded-[6px] px-2.5 py-0.5 text-[11px] transition-colors ${
+                target === t ? "bg-text text-white" : "text-muted hover:text-text"
               }`}
             >
               {t === "local" ? "Local" : "Deployed"}

@@ -2,7 +2,8 @@ import type { ModelReadiness } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
-import { Button } from "../ui/kit";
+import { IconPlug } from "../ui/icons";
+import { Button, Kicker } from "../ui/kit";
 
 /**
  * Shown in Chat when an agent has no model credential (not linked to Vercel).
@@ -56,21 +57,32 @@ export function NeedsLink({ agentId }: { agentId: string }): JSX.Element | null 
 
   if (linked && ready.hasCredential) {
     return (
-      <div className="border-b border-accent/40 bg-success/[0.08] px-5 py-2.5 text-[13px] text-text">
-        Connected to Vercel ✓ — the model can run now.{" "}
-        {runtime?.status === "running" ? "Restarted." : "Hit Start (top right), then chat."}
+      <div className="flex items-center gap-2.5 border-b border-border bg-success/[0.06] px-5 py-2.5">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
+        <span className="text-[13px] text-text">
+          Connected to Vercel — the model can run now.{" "}
+          <span className="text-muted">
+            {runtime?.status === "running"
+              ? "Restarted."
+              : "Hit Start (top right), then chat."}
+          </span>
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="border-b border-warn/40 bg-warn/[0.07] px-5 py-3">
+    <div className="border-b border-border bg-subtle px-5 py-3">
       <div className="flex items-center gap-3">
-        <span className="text-base text-warn">⚠</span>
-        <div className="flex-1 text-[13px] leading-snug text-text">
-          <b>Not connected to Vercel.</b> This agent's model runs through the Vercel
-          AI Gateway, so it can't respond until it's linked. One click sets it up —
-          no terminal.
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border bg-panel text-faint">
+          <IconPlug className="h-3.5 w-3.5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <Kicker className="mb-1">Not connected to Vercel</Kicker>
+          <div className="text-[13px] leading-snug text-muted">
+            This agent's model runs through the Vercel AI Gateway, so it can't
+            respond until it's linked. One click sets it up — no terminal.
+          </div>
         </div>
         <Button variant="primary" size="sm" onClick={connect} disabled={busy}>
           {busy ? "Connecting…" : "Connect to Vercel"}

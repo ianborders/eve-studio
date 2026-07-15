@@ -56,13 +56,26 @@ body {
   background: rgba(0, 112, 243, 0.18);
 }
 
-/* Focus ring for keyboard users only */
+/* Focus ring for keyboard users only — never on text fields (their
+   container is the affordance; a blue ring on the composer looks wrong). */
 :focus-visible {
   outline: 2px solid rgba(0, 112, 243, 0.5);
   outline-offset: 1px;
 }
-button:focus:not(:focus-visible) {
+button:focus:not(:focus-visible),
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+[contenteditable]:focus,
+[contenteditable]:focus-visible {
   outline: none;
+}
+
+/* Native content-driven auto-sizing for textareas (Chromium 123+).
+   Grows with content from one row up to the element's max-height. */
+.field-auto {
+  field-sizing: content;
 }
 
 /* Hide scrollbars on nav strips (still scrollable) */

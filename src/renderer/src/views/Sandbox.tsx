@@ -2,7 +2,14 @@ import type { SandboxInfo } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "../store";
 import { IconServer } from "../ui/icons";
-import { Badge, Button, Card, EmptyState, Spinner } from "../ui/kit";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Spinner,
+  ViewHeader,
+} from "../ui/kit";
 
 export function Sandbox(): JSX.Element {
   const id = useStore((s) => s.activeAgentId);
@@ -44,15 +51,13 @@ export function Sandbox(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-border px-5 py-2.5 text-[13px] font-medium text-text">
-        Sandbox
-      </div>
+      <ViewHeader kicker="Deploy" title="Sandbox" />
       <div className="flex-1 overflow-auto p-5">
         <div className="mx-auto max-w-3xl">
           {info?.exists ? (
             <Card>
               <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
-                <IconServer className="h-4 w-4 text-muted" />
+                <IconServer className="h-4 w-4 text-faint" />
                 <span className="font-mono text-[13px] text-text">{info.relPath}</span>
                 <Badge tone="success">configured</Badge>
               </div>
@@ -62,7 +67,8 @@ export function Sandbox(): JSX.Element {
             </Card>
           ) : (
             <EmptyState
-              icon={<IconServer className="h-5 w-5" />}
+              icon={<IconServer className="h-6 w-6" />}
+              kicker="Sandbox"
               title="Default sandbox"
               action={
                 <Button variant="primary" size="sm" onClick={create} disabled={busy || !id}>

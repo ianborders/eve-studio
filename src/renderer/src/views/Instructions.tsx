@@ -1,8 +1,8 @@
 import type { InstructionsFile } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
 import { useActiveStructure } from "../lib/useStructure";
-import { IconBolt, IconFile } from "../ui/icons";
-import { Badge, Button, Spinner, Textarea } from "../ui/kit";
+import { IconBolt } from "../ui/icons";
+import { Badge, Button, Spinner, ViewHeader } from "../ui/kit";
 
 export function Instructions(): JSX.Element {
   const { id, structure } = useActiveStructure();
@@ -57,39 +57,57 @@ export function Instructions(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 border-b border-border px-5 py-2.5">
-        <IconFile className="h-4 w-4 text-muted" />
-        <div className="min-w-0">
-          <div className="text-[13px] font-medium text-text">System prompt</div>
-          <div className="truncate font-mono text-2xs text-faint">
-            {file?.relPath ?? "instructions.md"}
-          </div>
-        </div>
+      <ViewHeader
+        kicker="Instructions"
+        title="Prompt"
+        right={
+          <>
+            {dirty ? (
+              <span className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-warn">
+                unsaved
+              </span>
+            ) : null}
+            {saved ? (
+              <span className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-success">
+                saved
+              </span>
+            ) : null}
+            <Button variant="ghost" size="sm" onClick={load} disabled={saving}>
+              Revert
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={save}
+              disabled={!dirty || saving}
+            >
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </>
+        }
+      />
+
+      <div className="min-h-0 flex-1">
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          spellCheck={false}
+          placeholder="# You are…"
+          className="no-drag h-full w-full resize-none border-0 bg-transparent px-6 py-5 font-mono text-[13px] leading-relaxed text-text outline-none placeholder:text-faint"
+        />
+      </div>
+
+      <div className="flex items-center gap-2 border-t border-border px-6 py-2.5">
+        <span className="font-mono text-2xs text-faint">
+          {file?.relPath ?? "instructions.md"}
+        </span>
+        <div className="flex-1" />
         {structure?.model ? (
           <Badge tone="violet">
             <IconBolt className="h-3 w-3" />
             {structure.model}
           </Badge>
         ) : null}
-        <div className="flex-1" />
-        {dirty ? <span className="text-2xs text-warn">unsaved</span> : null}
-        {saved ? <span className="text-2xs text-accent">saved ✓</span> : null}
-        <Button variant="ghost" size="sm" onClick={load} disabled={saving}>
-          Revert
-        </Button>
-        <Button variant="primary" size="sm" onClick={save} disabled={!dirty || saving}>
-          {saving ? "Saving…" : "Save"}
-        </Button>
-      </div>
-
-      <div className="min-h-0 flex-1 p-4">
-        <Textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          spellCheck={false}
-          placeholder="# You are…"
-          className="h-full resize-none font-mono text-[13px] leading-relaxed"
-        />
       </div>
     </div>
   );

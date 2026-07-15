@@ -14,12 +14,15 @@ import {
   IconPlus,
   IconPlug,
   IconRocket,
+  IconArchive,
+  IconInbox,
   IconSettings,
   IconStop,
+  IconTrash,
   IconWrench,
 } from "./ui/icons";
 import { EveLogo } from "./ui/EveLogo";
-import { Badge, Button, StatusDot, type TabItem, Tabs } from "./ui/kit";
+import { Button, Modal, StatusDot, type TabItem, Tabs } from "./ui/kit";
 import { Chat } from "./views/Chat";
 import { CreateAgent } from "./views/CreateAgent";
 import { Evals } from "./views/Evals";
@@ -88,34 +91,31 @@ function AgentWorkspace(): JSX.Element {
   return (
     <div className="flex min-w-0 flex-1 flex-col">
       {/* Agent header */}
-      <header className="titlebar-drag flex items-center gap-3 border-b border-border px-5 pb-2.5 pt-3">
+      <header className="titlebar-drag flex items-center gap-4 border-b border-border px-6 pb-3.5 pt-3.5">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="truncate text-[15px] font-semibold text-text">{agent.name}</h1>
-            <span className="text-2xs text-faint">local</span>
-            <Badge tone={status === "running" ? "accent" : status === "error" ? "danger" : "default"}>
+          <div className="flex items-center gap-2.5">
+            <h1 className="truncate text-[17px] font-semibold tracking-tight text-text">
+              {agent.name}
+            </h1>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-[3px] font-spacemono text-[10px] uppercase leading-none tracking-wider text-muted">
               <StatusDot status={status} />
               {status}
-            </Badge>
-            {rt?.port ? (
-              <span className="font-mono text-2xs text-faint">:{rt.port}</span>
-            ) : null}
-            {prod?.url ? (
-              <Badge tone="success">
-                <IconRocket className="h-3 w-3" />
-                deployed{prod.age ? ` · ${prod.age}` : ""}
-              </Badge>
-            ) : prod && !prod.url ? (
-              <Badge>not deployed</Badge>
-            ) : null}
-            {ready && !ready.hasCredential ? (
-              <Badge tone="warn">⚠ not linked</Badge>
-            ) : null}
+            </span>
           </div>
-          <div className="mt-0.5 flex items-center gap-2 text-2xs text-faint">
-            <span className="truncate">{agent.path}</span>
-            <span>·</span>
+          <div className="mt-1.5 flex items-center gap-2 font-spacemono text-[10px] uppercase tracking-[0.12em] text-faint">
+            <span>local{rt?.port ? ` :${rt.port}` : ""}</span>
+            <span className="text-border-strong">/</span>
+            <span className={prod?.url ? "text-success/80" : undefined}>
+              {prod?.url ? `deployed${prod.age ? ` · ${prod.age}` : ""}` : "not deployed"}
+            </span>
+            <span className="text-border-strong">/</span>
             <span>eve {agent.eveVersion ?? "?"}</span>
+            {ready && !ready.hasCredential ? (
+              <>
+                <span className="text-border-strong">/</span>
+                <span className="text-warn">not linked</span>
+              </>
+            ) : null}
           </div>
         </div>
         <div className="flex-1" />
@@ -154,7 +154,7 @@ function AgentWorkspace(): JSX.Element {
       </header>
 
       {/* Tabs */}
-      <div className="border-b border-border px-3">
+      <div className="border-b border-border px-5">
         <Tabs items={tabs} active={section} onChange={(id) => setSection(id as Section)} />
       </div>
 
@@ -182,6 +182,63 @@ function AgentWorkspace(): JSX.Element {
   );
 }
 
+function ArchivedModal({
+  agentId,
+  onClose,
+}: {
+  agentId: string;
+  onClose: () => void;
+}): JSX.Element {
+  const threads = useStore((s) => s.threads[agentId] ?? []);
+  const archiveThread = useStore((s) => s.archiveThread);
+  const deleteThread = useStore((s) => s.deleteThread);
+  const selectThread = useStore((s) => s.selectThread);
+  const setSection = useStore((s) => s.setSection);
+  const archived = threads.filter((t) => t.archived);
+
+  return (
+    <Modal title="Archived sessions" onClose={onClose} width="max-w-lg">
+      <div className="max-h-[60vh] overflow-auto px-2 pb-3">
+        {archived.length === 0 ? (
+          <div className="px-4 py-12 text-center text-[13px] text-muted">
+            No archived sessions.
+          </div>
+        ) : (
+          <div className="divide-y divide-border/70">
+            {archived.map((t) => (
+              <div key={t.id} className="group flex items-center gap-3 px-3 py-2.5">
+                <IconInbox className="h-4 w-4 shrink-0 text-faint" />
+                <span className="min-w-0 flex-1 truncate text-[13px] text-text">
+                  {t.title}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void archiveThread(t.id, false).then(() => selectThread(t.id));
+                    setSection("chat");
+                    onClose();
+                  }}
+                  className="rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-black/[0.05] hover:text-text"
+                >
+                  Reopen
+                </button>
+                <button
+                  type="button"
+                  title="Delete permanently"
+                  onClick={() => void deleteThread(t.id)}
+                  className="rounded-md p-1 text-faint transition-colors hover:bg-danger/10 hover:text-danger"
+                >
+                  <IconTrash className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 export function App(): JSX.Element {
   const section = useStore((s) => s.section);
   const setSection = useStore((s) => s.setSection);
@@ -191,8 +248,15 @@ export function App(): JSX.Element {
   const setActiveAgent = useStore((s) => s.setActiveAgent);
   const addAgent = useStore((s) => s.addAgent);
   const init = useStore((s) => s.init);
+  const threads = useStore((s) => s.threads);
+  const activeThreadId = useStore((s) => s.activeThreadId);
+  const statusMap = useStore((s) => s.status);
+  const newThread = useStore((s) => s.newThread);
+  const selectThread = useStore((s) => s.selectThread);
+  const archiveThread = useStore((s) => s.archiveThread);
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [archivedFor, setArchivedFor] = useState<string | null>(null);
 
   useEffect(() => {
     void init();
@@ -255,43 +319,117 @@ export function App(): JSX.Element {
           </Button>
         </div>
 
-        <div className="mb-1 px-3 text-2xs font-medium uppercase tracking-wide text-faint">
+        <div className="mb-1.5 px-3 font-spacemono text-2xs uppercase tracking-widest text-faint">
           Agents
         </div>
-        <nav className="no-drag flex-1 space-y-0.5 overflow-auto px-2">
+        <nav className="no-drag flex-1 overflow-auto pb-2">
           {agents.map((a) => {
             const st = runtime[a.id]?.status ?? "stopped";
-            const on = a.id === activeAgentId && !inSettings;
+            const expanded = a.id === activeAgentId;
+            const on = expanded && !inSettings;
+            const agentThreads = threads[a.id] ?? [];
+            const activeThreads = agentThreads.filter((t) => !t.archived);
+            const archivedCount = agentThreads.length - activeThreads.length;
             return (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => {
-                  if (inSettings) {
-                    setSection("chat");
-                  }
-                  void setActiveAgent(a.id);
-                }}
-                className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors ${
-                  on
-                    ? "border border-border bg-white shadow-card"
-                    : "border border-transparent hover:bg-black/[0.03]"
-                }`}
-              >
-                <StatusDot status={st} />
-                <div className="min-w-0 flex-1">
-                  <div
-                    className={`truncate text-[13px] ${on ? "text-text" : "text-muted"}`}
-                  >
-                    {a.name}
+              <div key={a.id} className="pb-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (inSettings) {
+                      setSection("chat");
+                    }
+                    void setActiveAgent(a.id);
+                  }}
+                  className={`flex w-full items-center gap-2.5 px-4 py-2 text-left transition-colors ${
+                    on ? "bg-black/[0.03]" : "hover:bg-black/[0.02]"
+                  }`}
+                >
+                  <StatusDot status={st} />
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className={`truncate text-[13px] ${expanded ? "font-semibold text-text" : "text-muted"}`}
+                    >
+                      {a.name}
+                    </div>
                   </div>
-                </div>
-                {runtime[a.id]?.port ? (
-                  <span className="font-mono text-2xs text-faint">
-                    :{runtime[a.id]?.port}
-                  </span>
+                  {runtime[a.id]?.port ? (
+                    <span className="font-mono text-2xs text-faint">
+                      :{runtime[a.id]?.port}
+                    </span>
+                  ) : null}
+                </button>
+
+                {expanded ? (
+                  <div className="relative ml-[26px] mt-0.5 pl-3">
+                    <span className="absolute inset-y-1 left-0 w-px bg-border" />
+                    {activeThreads.map((t) => {
+                      const ts = statusMap[t.id];
+                      const activeT =
+                        t.id === activeThreadId && section === "chat";
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            void selectThread(t.id);
+                            setSection("chat");
+                          }}
+                          className={`group flex w-full items-center gap-2.5 py-[7px] pr-2 text-left text-[13px] transition-colors ${
+                            activeT
+                              ? "text-text"
+                              : "text-muted hover:text-text"
+                          }`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 shrink-0 rounded-full transition-colors ${
+                              ts === "streaming"
+                                ? "animate-pulse bg-accent"
+                                : ts === "error"
+                                  ? "bg-danger"
+                                  : activeT
+                                    ? "bg-text"
+                                    : "bg-border-strong"
+                            }`}
+                          />
+                          <span className="flex-1 truncate">{t.title}</span>
+                          <span
+                            role="button"
+                            title="Archive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void archiveThread(t.id, true);
+                            }}
+                            className="hidden shrink-0 text-faint hover:text-text group-hover:inline"
+                          >
+                            <IconArchive className="h-3.5 w-3.5" />
+                          </span>
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void newThread(a.id);
+                        setSection("chat");
+                      }}
+                      className="flex w-full items-center gap-2.5 py-[7px] pr-2 text-left text-[13px] text-faint transition-colors hover:text-muted"
+                    >
+                      <IconPlus className="h-3.5 w-3.5 shrink-0" />
+                      New chat
+                    </button>
+                    {archivedCount > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setArchivedFor(a.id)}
+                        className="flex w-full items-center gap-2.5 py-[7px] pr-2 text-left font-spacemono text-[10px] uppercase tracking-[0.12em] text-faint transition-colors hover:text-muted"
+                      >
+                        <IconArchive className="h-3 w-3 shrink-0" />
+                        Archived · {archivedCount}
+                      </button>
+                    ) : null}
+                  </div>
                 ) : null}
-              </button>
+              </div>
             );
           })}
         </nav>
@@ -307,15 +445,6 @@ export function App(): JSX.Element {
             <IconSettings className="h-4 w-4" />
             Settings
           </button>
-          <div className="px-2.5 pt-2 text-2xs leading-relaxed text-faint">
-            {info ? (
-              <>
-                v{info.appVersion} · electron {info.electron}
-              </>
-            ) : (
-              "connecting…"
-            )}
-          </div>
         </div>
       </aside>
 
@@ -337,6 +466,9 @@ export function App(): JSX.Element {
       )}
 
       {createModal}
+      {archivedFor ? (
+        <ArchivedModal agentId={archivedFor} onClose={() => setArchivedFor(null)} />
+      ) : null}
     </div>
   );
 }
