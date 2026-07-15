@@ -149,6 +149,10 @@ const api = {
       kind?: string
     ): Promise<CmdResult> =>
       ipcRenderer.invoke(IPC.connectorAttach, id, connector, kind),
+    openConnect: (id: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC.connectOpen, id),
+    openConnectExternal: (id: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC.connectOpenExternal, id),
   },
 
   dialog: {

@@ -233,18 +233,10 @@ export function Connections(): JSX.Element {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-5 py-2.5">
-        <div className="text-[13px] font-medium text-text">
-          Connections <span className="text-faint">· {conns.length}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
-            <IconPlus className="h-3.5 w-3.5" />
-            Add
-          </Button>
-          <IconButton onClick={reload} title="Reload">
-            <IconRefresh className="h-3.5 w-3.5" />
-          </IconButton>
-        </div>
+        <div className="text-[13px] font-medium text-text">Connections</div>
+        <IconButton onClick={reload} title="Reload">
+          <IconRefresh className="h-3.5 w-3.5" />
+        </IconButton>
       </div>
 
       <div className="flex-1 overflow-auto p-5">
@@ -252,8 +244,20 @@ export function Connections(): JSX.Element {
           {id ? <ConnectorsGallery agentId={id} /> : null}
 
           <div className="space-y-2.5">
-            <div className="text-2xs font-medium uppercase tracking-wide text-faint">
-              Connections (MCP / OpenAPI)
+            <div className="flex items-center justify-between border-t border-border pt-5">
+              <div>
+                <div className="text-2xs font-medium uppercase tracking-wide text-faint">
+                  Agent connection files · advanced
+                </div>
+                <div className="text-2xs text-muted">
+                  Direct MCP / OpenAPI connections authored in the agent
+                  <span className="font-mono"> connections/</span> folder.
+                </div>
+              </div>
+              <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+                <IconPlus className="h-3.5 w-3.5" />
+                Add file
+              </Button>
             </div>
             {conns.length === 0 ? (
               <Card className="flex flex-col items-center gap-3 p-8 text-center">

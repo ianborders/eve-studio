@@ -384,6 +384,8 @@ export const IPC = {
   connectorList: "vercel:connectorList",
   connectorCreate: "vercel:connectorCreate",
   connectorAttach: "vercel:connectorAttach",
+  connectOpen: "vercel:connectOpen",
+  connectOpenExternal: "vercel:connectOpenExternal",
 
   cliRun: "cli:run",
   cliCancel: "cli:cancel",

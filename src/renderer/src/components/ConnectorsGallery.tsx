@@ -1,13 +1,15 @@
 import type { ConnectorItem } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
-import { Console } from "../ui/Console";
 import { IconExternal, IconPlus, IconRefresh } from "../ui/icons";
-import { Badge, Button, Card, Field, Input, Modal, Spinner } from "../ui/kit";
+import { Badge, Button, Card, Spinner } from "../ui/kit";
 
 const TYPE_COLOR: Record<string, string> = {
   slack: "#611f69",
   github: "#24292f",
   linear: "#5E6AD2",
+  discord: "#5865F2",
+  notion: "#000000",
+  figma: "#a259ff",
   mcp: "#0070f3",
   oauth: "#0070f3",
 };
@@ -26,92 +28,10 @@ function Logo({ name, type }: { name: string; type: string }): JSX.Element {
   );
 }
 
-function NewConnectorModal({
-  agentId,
-  onClose,
-  onDone,
-}: {
-  agentId: string;
-  onClose: () => void;
-  onDone: () => void;
-}): JSX.Element {
-  const [type, setType] = useState("slack");
-  const [name, setName] = useState("");
-  const [triggers, setTriggers] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [output, setOutput] = useState("");
-
-  const create = async (): Promise<void> => {
-    setBusy(true);
-    setOutput(`$ vercel connect create ${type} --name ${name || "my-agent"}${triggers ? " --triggers" : ""}\n`);
-    const r = await window.studio.vercel.connectorCreate(
-      agentId,
-      type,
-      name || "my-agent",
-      triggers
-    );
-    setBusy(false);
-    setOutput((o) => o + r.output);
-    if (r.ok) {
-      onDone();
-    }
-  };
-
-  const url = (output.match(/https?:\/\/\S+/) ?? [""])[0];
-
-  return (
-    <Modal title="New Vercel Connect connector" onClose={onClose} width="max-w-xl">
-      <div className="space-y-3 p-4">
-        <Field label="Service / type">
-          <div className="flex flex-wrap gap-1.5">
-            {["slack", "github", "linear", "discord", "mcp", "oauth"].map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setType(t)}
-                className={`rounded-lg border px-2.5 py-1 text-2xs transition-colors ${
-                  type === t ? "border-text bg-text text-white" : "border-border text-muted hover:bg-hover"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-          <Input value={type} onChange={(e) => setType(e.target.value)} className="mt-2 font-mono" placeholder="or type a service name" />
-        </Field>
-        <Field label="Connector name">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="my-agent" className="font-mono" />
-        </Field>
-        <label className="flex items-center gap-2 text-[13px] text-muted">
-          <input type="checkbox" checked={triggers} onChange={(e) => setTriggers(e.target.checked)} className="accent-black" />
-          Enable webhook triggers (needed for channels)
-        </label>
-
-        {url ? (
-          <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-2xs text-accent hover:underline">
-            <IconExternal className="h-3 w-3" />
-            Open to finish authorizing in the browser
-          </a>
-        ) : null}
-        {output ? <Console text={output} className="max-h-44" /> : null}
-
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" onClick={onClose}>
-            Close
-          </Button>
-          <Button variant="primary" onClick={create} disabled={busy || !type}>
-            {busy ? "Creating…" : "Create connector"}
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
 export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element {
   const [list, setList] = useState<ConnectorItem[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
+  const [opening, setOpening] = useState(false);
 
   const load = useCallback(async () => {
     setErr(null);
@@ -128,16 +48,36 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
     void load();
   }, [load]);
 
+  const openGallery = async (external: boolean): Promise<void> => {
+    setOpening(true);
+    const r = external
+      ? await window.studio.vercel.openConnectExternal(agentId)
+      : await window.studio.vercel.openConnect(agentId);
+    setOpening(false);
+    if (!r.ok) {
+      setErr(r.error ?? "Couldn't open Vercel Connect.");
+    } else {
+      // give the user a moment to add one, then refresh on next focus
+      setTimeout(() => void load(), 4000);
+    }
+  };
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       <div className="flex items-center justify-between">
-        <div className="text-2xs font-medium uppercase tracking-wide text-faint">
-          Vercel Connect connectors
+        <div>
+          <div className="text-[13px] font-medium text-text">Connections</div>
+          <div className="text-2xs text-muted">
+            Vercel Connect — the providers your agent can connect to (managed OAuth &amp; API keys).
+          </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)}>
+          <Button variant="ghost" size="sm" onClick={() => openGallery(true)} title="Open in browser">
+            <IconExternal className="h-3.5 w-3.5" />
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => openGallery(false)} disabled={opening}>
             <IconPlus className="h-3.5 w-3.5" />
-            New connector
+            {opening ? "Opening…" : "Add connection"}
           </Button>
           <button type="button" onClick={() => void load()} className="text-faint hover:text-text" title="Refresh">
             <IconRefresh className="h-3.5 w-3.5" />
@@ -158,10 +98,15 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
               : err}
         </Card>
       ) : list.length === 0 ? (
-        <Card className="bg-subtle p-4 text-2xs leading-relaxed text-muted">
-          No connectors yet. Create one to broker OAuth for a channel (Slack, GitHub,
-          Linear…) or a connection — credentials and webhook verification are managed
-          for you.
+        <Card className="flex flex-col items-center gap-3 p-8 text-center">
+          <div className="text-[13px] text-muted">
+            No connections yet. Browse the full provider catalog — Slack, GitHub,
+            Notion, Figma, Shopify, and hundreds more — and add one.
+          </div>
+          <Button variant="primary" size="sm" onClick={() => openGallery(false)} disabled={opening}>
+            <IconPlus className="h-3.5 w-3.5" />
+            Add connection
+          </Button>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -179,14 +124,6 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
           ))}
         </div>
       )}
-
-      {addOpen ? (
-        <NewConnectorModal
-          agentId={agentId}
-          onClose={() => setAddOpen(false)}
-          onDone={load}
-        />
-      ) : null}
     </div>
   );
 }
