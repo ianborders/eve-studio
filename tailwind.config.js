@@ -41,6 +41,7 @@ module.exports = {
           "Menlo",
           "monospace",
         ],
+        spacemono: ['"Space Mono"', "ui-monospace", "monospace"],
       },
       fontSize: {
         "2xs": ["11px", { lineHeight: "15px" }],
