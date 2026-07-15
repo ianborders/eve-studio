@@ -318,11 +318,58 @@ function Setup({
         </div>
         <p className="text-2xs leading-snug text-faint">
           <b className="text-muted">Connect</b> just lets Studio read the brain.{" "}
-          <b className="text-muted">Wire</b> writes files into the agent — restart it
-          afterward to load the connection.
+          <b className="text-muted">Wire</b> writes the connection into the agent —
+          restart it, and it automatically gets Arcana's memory tools
+          (remember/recall/search). Add a line in <b className="text-muted">
+          Instructions</b> telling it when to recall and remember.
         </p>
       </Card>
     </div>
+  );
+}
+
+const NATIVE = [
+  {
+    title: "Durable sessions + compaction",
+    body: "Every conversation persists and auto-summarizes as it approaches the context limit — nothing is authored or configured.",
+  },
+  {
+    title: "defineState",
+    body: "Durable key/value state that survives steps, crashes, and redeploys (eve/context). The agent's own working memory for a session lineage.",
+  },
+  {
+    title: "todo",
+    body: "A built-in durable working list the agent uses to track multi-step tasks.",
+  },
+  {
+    title: "Sandbox /workspace",
+    body: "A filesystem the agent can read and write during a run.",
+  },
+];
+
+function NativeMemory(): JSX.Element {
+  return (
+    <Card>
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
+        <IconBrain className="h-4 w-4 text-muted" />
+        <span className="text-[13px] font-medium text-text">Native memory</span>
+        <Badge tone="success">built in</Badge>
+        <span className="text-2xs text-faint">every Eve agent, no setup</span>
+      </div>
+      <div className="divide-y divide-border/60">
+        {NATIVE.map((n) => (
+          <div key={n.title} className="px-4 py-2.5">
+            <div className="font-mono text-xs text-text">{n.title}</div>
+            <div className="mt-0.5 text-2xs leading-relaxed text-muted">{n.body}</div>
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-border px-4 py-2.5 text-2xs leading-relaxed text-muted">
+        What Eve does <b className="text-text">not</b> do natively is
+        cross-conversation semantic recall (facts, timeline, search). That's the
+        one thing <b className="text-text">Arcana</b> adds — optional, below.
+      </div>
+    </Card>
   );
 }
 
@@ -382,15 +429,27 @@ export function Memory(): JSX.Element {
       </div>
 
       <div className="flex-1 overflow-auto p-5">
-        {loading && !detected ? (
-          <div className="flex h-full items-center justify-center gap-2 text-sm text-muted">
-            <Spinner /> Inspecting…
+        <div className="mx-auto max-w-3xl space-y-5">
+          <NativeMemory />
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="text-2xs font-medium uppercase tracking-wide text-faint">
+                Long-term memory · Arcana
+              </span>
+              <Badge>optional add-on</Badge>
+            </div>
+            {loading && !detected ? (
+              <div className="flex items-center gap-2 text-sm text-muted">
+                <Spinner /> Inspecting…
+              </div>
+            ) : connected && activeAgentId ? (
+              <Browse agentId={activeAgentId} />
+            ) : detected && activeAgentId ? (
+              <Setup agentId={activeAgentId} detected={detected} onConnected={refresh} />
+            ) : null}
           </div>
-        ) : connected && activeAgentId ? (
-          <Browse agentId={activeAgentId} />
-        ) : detected && activeAgentId ? (
-          <Setup agentId={activeAgentId} detected={detected} onConnected={refresh} />
-        ) : null}
+        </div>
       </div>
     </div>
   );
