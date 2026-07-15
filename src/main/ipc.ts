@@ -63,13 +63,14 @@ import {
   vercelStatus,
 } from "./vercel";
 
-/** Read VERCEL_OIDC_TOKEN from an agent's .env.local (for deployed route auth). */
-function readOidc(agentPath: string): string | null {
+/** Read a variable from an agent's .env.local (for deployed route auth). */
+function readEnvLocal(agentPath: string, name: string): string | null {
   const p = join(agentPath, ".env.local");
   if (!existsSync(p)) {
     return null;
   }
-  const m = /^\s*VERCEL_OIDC_TOKEN\s*=\s*(.*)$/m.exec(readFileSync(p, "utf8"));
+  const re = new RegExp(`^\\s*${name}\\s*=\\s*(.*)$`, "m");
+  const m = re.exec(readFileSync(p, "utf8"));
   return m ? m[1].trim().replace(/^["']|["']$/g, "") : null;
 }
 
@@ -686,10 +687,15 @@ export function registerIpc(): IpcHandles {
         throw new Error("No deployed URL set — set it in Chat → Deployed.");
       }
       const a = store.getAgent(agentId);
-      const oidc = a ? readOidc(a.path) : null;
+      const path = a?.path;
+      const oidc = path ? readEnvLocal(path, "VERCEL_OIDC_TOKEN") : null;
+      // Prefer the secret the user pasted; else the one Vercel exposes in .env.local.
+      const bypass =
+        d.bypassSecret ||
+        (path ? readEnvLocal(path, "VERCEL_AUTOMATION_BYPASS_SECRET") : null);
       const headers: Record<string, string> = {};
-      if (d.bypassSecret) {
-        headers["x-vercel-protection-bypass"] = d.bypassSecret;
+      if (bypass) {
+        headers["x-vercel-protection-bypass"] = bypass;
         headers["x-vercel-set-bypass-cookie"] = "true";
       }
       if (oidc) {

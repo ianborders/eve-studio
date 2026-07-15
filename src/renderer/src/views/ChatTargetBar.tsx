@@ -79,10 +79,12 @@ export function ChatTargetBar({ agentId }: { agentId: string }): JSX.Element {
         <div className="space-y-2 border-t border-border bg-subtle px-5 py-2.5">
           <div className="text-2xs leading-relaxed text-muted">
             Studio talks to your <b className="text-text">production</b> deployment.
-            Because it has Deployment Protection, add a{" "}
-            <b className="text-text">Protection Bypass for Automation</b> secret
-            (Vercel → Project → Settings → Deployment Protection). The OIDC token is
-            read from <span className="font-mono">.env.local</span>.
+            Generate a <b className="text-text">Protection Bypass for Automation</b>{" "}
+            secret in Vercel → Project → Settings → Deployment Protection, then{" "}
+            <b className="text-text">Pull env</b> in the Environment tab — Studio
+            reads it (and the OIDC token) from{" "}
+            <span className="font-mono">.env.local</span> automatically. Or paste the
+            secret below to override.
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
             <Input
@@ -95,7 +97,7 @@ export function ChatTargetBar({ agentId }: { agentId: string }): JSX.Element {
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
               type="password"
-              placeholder="protection bypass secret"
+              placeholder="bypass secret (optional — auto from .env.local)"
               className="font-mono text-2xs"
             />
             <div className="flex gap-1.5">
