@@ -473,9 +473,9 @@ export function Memory(): JSX.Element {
         <div className="flex items-center gap-2 text-[13px] font-medium text-text">
           Memory
           {connected ? (
-            <Badge tone="accent">
+            <Badge tone="success">
               <IconBrain className="h-3 w-3" />
-              {connected.workspace}
+              active · {connected.workspace}
             </Badge>
           ) : null}
         </div>
@@ -500,7 +500,11 @@ export function Memory(): JSX.Element {
               <span className="text-2xs font-medium uppercase tracking-wide text-faint">
                 Long-term memory · Arcana
               </span>
-              <Badge>optional add-on</Badge>
+              {connected ? (
+                <Badge tone="success">✓ active</Badge>
+              ) : (
+                <Badge>optional add-on</Badge>
+              )}
             </div>
             {loading && !detected ? (
               <div className="flex items-center gap-2 text-sm text-muted">
@@ -508,6 +512,26 @@ export function Memory(): JSX.Element {
               </div>
             ) : connected && activeAgentId ? (
               <div className="space-y-3">
+                <Card className="border-accent/30 bg-success/[0.06] p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/15 text-success">
+                      <IconBrain className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 text-[13px] font-medium text-text">
+                        Long-term memory is active
+                        <Badge tone="success">ON</Badge>
+                      </div>
+                      <div className="text-2xs text-muted">
+                        Arcana workspace{" "}
+                        <span className="font-mono text-text">{connected.workspace}</span>
+                        {detected?.connections.length
+                          ? " — wired into the agent."
+                          : " — browsing only (not wired into the agent)."}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
                 <MemoryInstructions agentId={activeAgentId} />
                 <Browse agentId={activeAgentId} />
               </div>

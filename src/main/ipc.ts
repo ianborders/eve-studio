@@ -59,6 +59,7 @@ import {
   vercelEnvAdd,
   vercelEnvLs,
   vercelEnvPull,
+  vercelEnvSetAll,
   vercelLink,
   vercelProdInfo,
   vercelStatus,
@@ -648,7 +649,13 @@ export function registerIpc(): IpcHandles {
           envVar: input.envVar,
           key: input.key,
         });
-        return { ok: true, files };
+        // Real fix: if the agent is linked to Vercel, push the key to its env
+        // too, so the DEPLOYED agent has memory (deploys don't ship local .env).
+        let pushedToVercel = false;
+        if (vercelStatus(a.path).linked) {
+          pushedToVercel = vercelEnvSetAll(a.path, input.envVar, input.key).ok;
+        }
+        return { ok: true, files, pushedToVercel };
       } catch (err) {
         return {
           ok: false,

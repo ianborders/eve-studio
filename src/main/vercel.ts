@@ -153,6 +153,33 @@ export function vercelEnvAdd(
   return run(agentPath, ["env", "add", name, target], `${value}\n`);
 }
 
+/** Idempotently set an env var for a target (remove any existing, then add). */
+export function vercelEnvSet(
+  agentPath: string,
+  name: string,
+  value: string,
+  target: string
+): CmdResult {
+  run(agentPath, ["env", "rm", name, target, "--yes"]); // ignore "not found"
+  return run(agentPath, ["env", "add", name, target], `${value}\n`);
+}
+
+/** Set an env var across production/preview/development so it works everywhere. */
+export function vercelEnvSetAll(
+  agentPath: string,
+  name: string,
+  value: string
+): CmdResult {
+  let ok = true;
+  let output = "";
+  for (const target of ["production", "preview", "development"]) {
+    const r = vercelEnvSet(agentPath, name, value, target);
+    ok = ok && r.ok;
+    output += `[${target}] ${r.output}\n`;
+  }
+  return { ok, output };
+}
+
 // ---------------- Vercel Connect ----------------
 /** List Connect connectors for the linked project (optionally by service). */
 export function vercelConnectList(

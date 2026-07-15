@@ -184,6 +184,8 @@ export interface WireBrainInput {
 export interface WireBrainResult {
   ok: boolean;
   files?: string[];
+  /** True when the key was also pushed to the linked Vercel project's env. */
+  pushedToVercel?: boolean;
   error?: string;
 }
 
