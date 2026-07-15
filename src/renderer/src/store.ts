@@ -41,6 +41,7 @@ interface State {
   structure: Record<string, AgentStructure>;
   structureLoading: Record<string, boolean>;
   chatTarget: Record<string, ChatTarget>;
+  deployNonce: number;
   booted: boolean;
 
   init: () => Promise<void>;
@@ -60,6 +61,7 @@ interface State {
   send: (text: string) => Promise<void>;
   respond: (requestId: string, optionId?: string, text?: string) => Promise<void>;
   setChatTarget: (agentId: string, target: ChatTarget) => void;
+  bumpDeploy: () => void;
 }
 
 export const useStore = create<State>((set, get) => ({
@@ -74,6 +76,7 @@ export const useStore = create<State>((set, get) => ({
   structure: {},
   structureLoading: {},
   chatTarget: {},
+  deployNonce: 0,
   booted: false,
 
   init: async () => {
@@ -235,4 +238,6 @@ export const useStore = create<State>((set, get) => ({
 
   setChatTarget: (agentId, target) =>
     set((st) => ({ chatTarget: { ...st.chatTarget, [agentId]: target } })),
+
+  bumpDeploy: () => set((st) => ({ deployNonce: st.deployNonce + 1 })),
 }));

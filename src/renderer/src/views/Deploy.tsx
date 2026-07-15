@@ -8,9 +8,17 @@ import { Badge, Button } from "../ui/kit";
 export function Deploy(): JSX.Element {
   const activeAgentId = useStore((s) => s.activeAgentId);
   const runtime = useStore((s) => (activeAgentId ? s.runtime[activeAgentId] : undefined));
+  const bumpDeploy = useStore((s) => s.bumpDeploy);
   const { output, running, exitCode, start, cancel } = useCliRun();
   const [devLogs, setDevLogs] = useState("");
   const [action, setAction] = useState<"build" | "deploy" | null>(null);
+
+  // Refresh the header's deployed badge when a deploy finishes successfully.
+  useEffect(() => {
+    if (action === "deploy" && exitCode === 0) {
+      bumpDeploy();
+    }
+  }, [exitCode, action, bumpDeploy]);
 
   const seedLogs = useCallback(async () => {
     if (activeAgentId) {

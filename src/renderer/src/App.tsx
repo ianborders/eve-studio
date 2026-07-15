@@ -76,16 +76,16 @@ function AgentWorkspace(): JSX.Element {
   const startAgent = useStore((s) => s.startAgent);
   const stopAgent = useStore((s) => s.stopAgent);
 
+  const deployNonce = useStore((s) => s.deployNonce);
   const [prod, setProd] = useState<ProdInfo | null>(null);
   useEffect(() => {
-    setProd(null);
     if (activeAgentId) {
       window.studio.vercel
         .prodInfo(activeAgentId)
         .then(setProd)
         .catch(() => setProd(null));
     }
-  }, [activeAgentId]);
+  }, [activeAgentId, deployNonce]);
 
   const agent = agents.find((a) => a.id === activeAgentId);
   const rt = activeAgentId ? runtime[activeAgentId] : undefined;
