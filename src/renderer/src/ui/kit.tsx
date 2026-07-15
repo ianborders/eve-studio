@@ -348,6 +348,49 @@ export function Modal({
   );
 }
 
+// --- SubNav (segmented sub-tabs inside a grouped tab) ---
+export interface SubNavItem {
+  id: string;
+  label: string;
+  count?: number;
+}
+
+export function SubNav({
+  items,
+  active,
+  onChange,
+}: {
+  items: SubNavItem[];
+  active: string;
+  onChange: (id: string) => void;
+}): JSX.Element {
+  return (
+    <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-3 py-1.5">
+      {items.map((t) => {
+        const on = t.id === active;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => onChange(t.id)}
+            className={cx(
+              "shrink-0 rounded-md px-2.5 py-1 text-[13px] transition-colors",
+              on ? "bg-text text-white" : "text-muted hover:bg-hover"
+            )}
+          >
+            {t.label}
+            {typeof t.count === "number" ? (
+              <span className={cx("ml-1.5 text-2xs", on ? "opacity-80" : "opacity-60")}>
+                {t.count}
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // --- SectionHeader (for panels) ---
 export function PanelHeader({
   title,

@@ -3,65 +3,44 @@ import { useEffect, useState } from "react";
 import { type Section, useStore } from "./store";
 import {
   IconBot,
-  IconBox,
   IconBrain,
   IconCalendar,
   IconChat,
   IconCheck,
-  IconCpu,
   IconExternal,
   IconFile,
   IconFolder,
-  IconKey,
-  IconLayers,
   IconPlay,
   IconPlus,
   IconPlug,
-  IconRadio,
   IconRocket,
   IconSettings,
   IconStop,
-  IconWand,
-  IconWebhook,
   IconWrench,
 } from "./ui/icons";
 import { EveLogo } from "./ui/EveLogo";
 import { Badge, Button, StatusDot, type TabItem, Tabs } from "./ui/kit";
-import { Channels } from "./views/Channels";
 import { Chat } from "./views/Chat";
-import { Connections } from "./views/Connections";
 import { CreateAgent } from "./views/CreateAgent";
-import { Deploy } from "./views/Deploy";
-import { Environment } from "./views/Environment";
 import { Evals } from "./views/Evals";
-import { Hooks } from "./views/Hooks";
-import { Instructions } from "./views/Instructions";
+import {
+  CapabilitiesGroup,
+  DeployGroup,
+  InstructionsGroup,
+  IntegrationsGroup,
+} from "./views/Grouped";
 import { Memory } from "./views/Memory";
-import { Model } from "./views/Model";
-import { Sandbox } from "./views/Sandbox";
 import { Schedules } from "./views/Schedules";
 import { Settings } from "./views/Settings";
-import { Skills } from "./views/Skills";
-import { Structure } from "./views/Structure";
-import { Subagents } from "./views/Subagents";
-import { Tools } from "./views/Tools";
 import { Welcome } from "./views/Welcome";
 
 const TABS: TabItem[] = [
   { id: "chat", label: "Chat", icon: IconChat },
-  { id: "structure", label: "Structure", icon: IconLayers },
   { id: "instructions", label: "Instructions", icon: IconFile },
-  { id: "model", label: "Model", icon: IconCpu },
-  { id: "tools", label: "Tools", icon: IconWrench },
-  { id: "connections", label: "Connections", icon: IconPlug },
-  { id: "channels", label: "Channels", icon: IconRadio },
-  { id: "skills", label: "Skills", icon: IconWand },
-  { id: "subagents", label: "Subagents", icon: IconBot },
-  { id: "schedules", label: "Schedules", icon: IconCalendar },
-  { id: "sandbox", label: "Sandbox", icon: IconBox },
-  { id: "hooks", label: "Hooks", icon: IconWebhook },
+  { id: "capabilities", label: "Capabilities", icon: IconWrench },
+  { id: "integrations", label: "Integrations", icon: IconPlug },
   { id: "memory", label: "Memory", icon: IconBrain },
-  { id: "environment", label: "Environment", icon: IconKey },
+  { id: "schedules", label: "Schedules", icon: IconCalendar },
   { id: "deploy", label: "Deploy", icon: IconRocket },
   { id: "evals", label: "Evals", icon: IconCheck },
 ];
@@ -100,16 +79,9 @@ function AgentWorkspace(): JSX.Element {
     return <div className="flex-1" />;
   }
 
-  const counts: Record<string, number | undefined> = {
-    tools: structure?.tools.length,
-    connections: structure?.connections.length,
-    channels: structure?.channels.length,
-    skills: structure?.skills.length,
-    subagents: structure?.subagents.length,
-    schedules: structure?.schedules.length,
-    hooks: structure?.hooks.length,
-  };
-  const tabs = TABS.map((t) => ({ ...t, count: counts[t.id] }));
+  const tabs = TABS.map((t) =>
+    t.id === "schedules" ? { ...t, count: structure?.schedules.length } : t
+  );
 
   const busy = status === "starting";
 
@@ -190,34 +162,18 @@ function AgentWorkspace(): JSX.Element {
       <div className="min-h-0 flex-1 overflow-hidden">
         {section === "chat" ? (
           <Chat />
-        ) : section === "structure" ? (
-          <Structure />
         ) : section === "instructions" ? (
-          <Instructions />
-        ) : section === "model" ? (
-          <Model />
-        ) : section === "tools" ? (
-          <Tools />
-        ) : section === "connections" ? (
-          <Connections />
-        ) : section === "channels" ? (
-          <Channels />
-        ) : section === "skills" ? (
-          <Skills />
-        ) : section === "subagents" ? (
-          <Subagents />
+          <InstructionsGroup />
+        ) : section === "capabilities" ? (
+          <CapabilitiesGroup />
+        ) : section === "integrations" ? (
+          <IntegrationsGroup />
         ) : section === "schedules" ? (
           <Schedules />
-        ) : section === "sandbox" ? (
-          <Sandbox />
-        ) : section === "hooks" ? (
-          <Hooks />
         ) : section === "memory" ? (
           <Memory />
-        ) : section === "environment" ? (
-          <Environment />
         ) : section === "deploy" ? (
-          <Deploy />
+          <DeployGroup />
         ) : section === "evals" ? (
           <Evals />
         ) : null}

@@ -12,19 +12,11 @@ import { create } from "zustand";
 /** Per-agent workspace tabs (plus the global "settings"). */
 export type Section =
   | "chat"
-  | "structure"
   | "instructions"
-  | "model"
-  | "tools"
-  | "connections"
-  | "channels"
-  | "skills"
-  | "subagents"
-  | "schedules"
-  | "sandbox"
-  | "hooks"
+  | "capabilities"
+  | "integrations"
   | "memory"
-  | "environment"
+  | "schedules"
   | "deploy"
   | "evals"
   | "settings";
