@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { ConnectorPicker } from "../components/ConnectorPicker";
+import { ConnectorsGallery } from "../components/ConnectorsGallery";
 import { useActiveStructure } from "../lib/useStructure";
 import { IconExternal, IconPlug, IconPlus, IconRefresh } from "../ui/icons";
 import {
   Badge,
   Button,
   Card,
-  EmptyState,
   Field,
   IconButton,
   Input,
@@ -248,49 +248,57 @@ export function Connections(): JSX.Element {
       </div>
 
       <div className="flex-1 overflow-auto p-5">
-        {conns.length === 0 ? (
-          <EmptyState
-            icon={<IconPlug className="h-5 w-5" />}
-            title="No connections"
-            action={
-              <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
-                <IconPlus className="h-3.5 w-3.5" />
-                Add connection
-              </Button>
-            }
-          >
-            MCP connections give the agent programmatic access to external systems.
-          </EmptyState>
-        ) : (
-          <div className="mx-auto max-w-3xl space-y-2.5">
-            {conns.map((c) => (
-              <Card key={c.name} className="p-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.04] text-muted">
-                    <IconPlug className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-[13px] text-text">{c.name}</span>
-                      {c.protocol ? <Badge tone="info">{c.protocol}</Badge> : null}
-                    </div>
-                    {c.url ? (
-                      <div className="mt-0.5 flex items-center gap-1 truncate font-mono text-2xs text-faint">
-                        <IconExternal className="h-3 w-3 shrink-0" />
-                        {c.url}
-                      </div>
-                    ) : null}
-                  </div>
+        <div className="mx-auto max-w-3xl space-y-6">
+          {id ? <ConnectorsGallery agentId={id} /> : null}
+
+          <div className="space-y-2.5">
+            <div className="text-2xs font-medium uppercase tracking-wide text-faint">
+              Connections (MCP / OpenAPI)
+            </div>
+            {conns.length === 0 ? (
+              <Card className="flex flex-col items-center gap-3 p-8 text-center">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted">
+                  <IconPlug className="h-4 w-4" />
                 </div>
-                {c.description ? (
-                  <p className="mt-2.5 text-[13px] leading-relaxed text-muted">
-                    {c.description}
-                  </p>
-                ) : null}
+                <div className="text-[13px] text-muted">
+                  No connections yet — give the agent programmatic access to an
+                  external system.
+                </div>
+                <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+                  <IconPlus className="h-3.5 w-3.5" />
+                  Add connection
+                </Button>
               </Card>
-            ))}
+            ) : (
+              conns.map((c) => (
+                <Card key={c.name} className="p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.04] text-muted">
+                      <IconPlug className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[13px] text-text">{c.name}</span>
+                        {c.protocol ? <Badge tone="info">{c.protocol}</Badge> : null}
+                      </div>
+                      {c.url ? (
+                        <div className="mt-0.5 flex items-center gap-1 truncate font-mono text-2xs text-faint">
+                          <IconExternal className="h-3 w-3 shrink-0" />
+                          {c.url}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                  {c.description ? (
+                    <p className="mt-2.5 text-[13px] leading-relaxed text-muted">
+                      {c.description}
+                    </p>
+                  ) : null}
+                </Card>
+              ))
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {addOpen && id ? (
