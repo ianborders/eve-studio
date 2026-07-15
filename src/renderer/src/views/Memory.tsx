@@ -373,6 +373,69 @@ function NativeMemory(): JSX.Element {
   );
 }
 
+const MEMORY_SNIPPET = `## Memory
+
+You have long-term memory (Arcana). Use it on every turn:
+
+- **Recall first** — at the start of a task or check-in, recall what you already
+  know about the user, the topic, and any open threads before you respond.
+- **Remember as you go** — when the user shares a fact, decision, preference,
+  plan, or outcome, or when you finish something, record it so it persists across
+  conversations.
+- Keep the durable state — profile, current plan, the running log, and results —
+  in memory, not just this chat.`;
+
+function MemoryInstructions({ agentId }: { agentId: string }): JSX.Element {
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const copy = (): void => {
+    void navigator.clipboard.writeText(MEMORY_SNIPPET);
+    setStatus("copied ✓");
+    setTimeout(() => setStatus(null), 1500);
+  };
+
+  const addToInstructions = async (): Promise<void> => {
+    setBusy(true);
+    const f = await window.studio.agents.readInstructions(agentId);
+    if (/^##\s*Memory\b/m.test(f.content)) {
+      setBusy(false);
+      setStatus("already in Instructions");
+      setTimeout(() => setStatus(null), 2000);
+      return;
+    }
+    const next = `${f.content.trimEnd()}\n\n${MEMORY_SNIPPET}\n`;
+    await window.studio.agents.writeInstructions(agentId, next);
+    setBusy(false);
+    setStatus("added to Instructions ✓ — restart the agent");
+    setTimeout(() => setStatus(null), 3000);
+  };
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-2">
+        <IconBrain className="h-4 w-4 text-muted" />
+        <span className="text-[13px] font-medium text-text">Teach it to use memory</span>
+        <div className="flex-1" />
+        {status ? <span className="text-2xs text-success">{status}</span> : null}
+        <Button variant="secondary" size="sm" onClick={copy}>
+          Copy
+        </Button>
+        <Button variant="primary" size="sm" onClick={addToInstructions} disabled={busy}>
+          {busy ? "Adding…" : "Add to Instructions"}
+        </Button>
+      </div>
+      <p className="mt-1.5 text-2xs leading-relaxed text-muted">
+        The tools load automatically — this tells the agent <b className="text-text">when</b>{" "}
+        to recall and remember. Add it once (idempotent), then restart the agent.
+      </p>
+      <pre className="mt-2 overflow-auto rounded-lg border border-border bg-subtle p-3 text-2xs leading-relaxed text-muted">
+        {MEMORY_SNIPPET}
+      </pre>
+    </Card>
+  );
+}
+
 export function Memory(): JSX.Element {
   const activeAgentId = useStore((s) => s.activeAgentId);
   const [detected, setDetected] = useState<DetectedBrain | null>(null);
@@ -444,7 +507,10 @@ export function Memory(): JSX.Element {
                 <Spinner /> Inspecting…
               </div>
             ) : connected && activeAgentId ? (
-              <Browse agentId={activeAgentId} />
+              <div className="space-y-3">
+                <MemoryInstructions agentId={activeAgentId} />
+                <Browse agentId={activeAgentId} />
+              </div>
             ) : detected && activeAgentId ? (
               <Setup agentId={activeAgentId} detected={detected} onConnected={refresh} />
             ) : null}
