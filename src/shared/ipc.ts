@@ -275,6 +275,11 @@ export interface VercelStatus {
   projectId?: string | null;
   orgId?: string | null;
 }
+/** Whether an agent can actually run its model locally. */
+export interface ModelReadiness {
+  linked: boolean;
+  hasCredential: boolean;
+}
 export interface CmdResult {
   ok: boolean;
   output: string;
@@ -411,6 +416,8 @@ export const IPC = {
   vercelEnvPull: "vercel:envPull",
   vercelEnvAdd: "vercel:envAdd",
   vercelProdInfo: "vercel:prodInfo",
+  vercelLink: "vercel:link",
+  modelReadiness: "vercel:modelReadiness",
   deployGet: "agent:deployGet",
   deploySet: "agent:deploySet",
   deployHealth: "agent:deployHealth",

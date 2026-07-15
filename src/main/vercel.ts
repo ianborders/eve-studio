@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type {
   CmdResult,
   ConnectorItem,
+  ModelReadiness,
   ProdInfo,
   VercelStatus,
 } from "../shared/ipc";
@@ -65,6 +66,51 @@ export function vercelEnvLs(agentPath: string): CmdResult {
 /** `vercel env pull .env.local --yes` — sync remote env down. */
 export function vercelEnvPull(agentPath: string): CmdResult {
   return run(agentPath, ["env", "pull", ".env.local", "--yes"]);
+}
+
+const MODEL_CRED_VARS = [
+  "VERCEL_OIDC_TOKEN",
+  "AI_GATEWAY_API_KEY",
+  "ANTHROPIC_API_KEY",
+  "OPENAI_API_KEY",
+];
+
+/** Can this agent's model actually run locally? (linked + a gateway/provider credential) */
+export function modelReadiness(agentPath: string): ModelReadiness {
+  const linked = existsSync(join(agentPath, ".vercel", "project.json"));
+  let hasCredential = false;
+  for (const f of [".env.local", ".env"]) {
+    const p = join(agentPath, f);
+    if (!existsSync(p)) {
+      continue;
+    }
+    const src = readFileSync(p, "utf8");
+    for (const v of MODEL_CRED_VARS) {
+      const m = new RegExp(`^\\s*${v}\\s*=\\s*(.+)$`, "m").exec(src);
+      if (m && m[1].trim().replace(/^["']|["']$/g, "")) {
+        hasCredential = true;
+        break;
+      }
+    }
+    if (hasCredential) {
+      break;
+    }
+  }
+  return { linked, hasCredential };
+}
+
+/**
+ * Link the agent to Vercel and pull an AI Gateway credential — all non-interactively.
+ * `vercel link --yes` creates/links a project under the default team; `env pull`
+ * drops VERCEL_OIDC_TOKEN into .env.local so the model can run locally.
+ */
+export function vercelLink(agentPath: string): CmdResult {
+  const link = run(agentPath, ["link", "--yes"]);
+  const pull = run(agentPath, ["env", "pull", ".env.local", "--yes"]);
+  return {
+    ok: link.ok && pull.ok,
+    output: `$ vercel link --yes\n${link.output}\n\n$ vercel env pull\n${pull.output}`,
+  };
 }
 
 /** Latest production deployment for the linked project, from `vercel ls --prod`. */

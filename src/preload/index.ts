@@ -33,6 +33,7 @@ import {
   type InstructionsFile,
   type LogChunk,
   type ModelConfig,
+  type ModelReadiness,
   type ProdInfo,
   type QueryHit,
   type SandboxInfo,
@@ -159,6 +160,9 @@ const api = {
       ipcRenderer.invoke(IPC.vercelEnvAdd, id, name, value, target),
     prodInfo: (id: string): Promise<ProdInfo> =>
       ipcRenderer.invoke(IPC.vercelProdInfo, id),
+    modelReadiness: (id: string): Promise<ModelReadiness> =>
+      ipcRenderer.invoke(IPC.modelReadiness, id),
+    link: (id: string): Promise<CmdResult> => ipcRenderer.invoke(IPC.vercelLink, id),
     connectorList: (
       id: string,
       service?: string

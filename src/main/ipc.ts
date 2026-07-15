@@ -59,9 +59,11 @@ import {
   vercelEnvAdd,
   vercelEnvLs,
   vercelEnvPull,
+  vercelLink,
   vercelProdInfo,
   vercelStatus,
 } from "./vercel";
+import { modelReadiness } from "./vercel";
 
 /** Read a variable from an agent's .env.local (for deployed route auth). */
 function readEnvLocal(agentPath: string, name: string): string | null {
@@ -768,6 +770,12 @@ export function registerIpc(): IpcHandles {
   );
   ipcMain.handle(IPC.vercelProdInfo, (_e: IpcMainInvokeEvent, id: string) =>
     vercelProdInfo(agentPathOf(id))
+  );
+  ipcMain.handle(IPC.modelReadiness, (_e: IpcMainInvokeEvent, id: string) =>
+    modelReadiness(agentPathOf(id))
+  );
+  ipcMain.handle(IPC.vercelLink, (_e: IpcMainInvokeEvent, id: string) =>
+    vercelLink(agentPathOf(id))
   );
   ipcMain.handle(
     IPC.deployHealth,

@@ -3,6 +3,7 @@ import { type Block, projectEvents } from "../lib/events";
 import { useStore } from "../store";
 import { IconChat, IconExternal, IconPlus, IconWrench, IconX } from "../ui/icons";
 import { Badge, Button, EmptyState } from "../ui/kit";
+import { NeedsLink } from "../components/NeedsLink";
 import { ChatTargetBar } from "./ChatTargetBar";
 
 function json(value: unknown): string {
@@ -234,6 +235,7 @@ export function Chat(): JSX.Element {
 
       {/* Conversation */}
       <div className="flex min-w-0 flex-1 flex-col">
+        <NeedsLink agentId={activeAgentId} />
         <ChatTargetBar agentId={activeAgentId} />
         {projection.costUsd > 0 || projection.outputTokens > 0 ? (
           <div className="flex items-center justify-end border-b border-border px-5 py-1.5 text-2xs text-faint">

@@ -1,4 +1,4 @@
-import type { AppInfo, ProdInfo } from "@shared/ipc";
+import type { AppInfo, ModelReadiness, ProdInfo } from "@shared/ipc";
 import { useEffect, useState } from "react";
 import { type Section, useStore } from "./store";
 import {
@@ -78,12 +78,17 @@ function AgentWorkspace(): JSX.Element {
 
   const deployNonce = useStore((s) => s.deployNonce);
   const [prod, setProd] = useState<ProdInfo | null>(null);
+  const [ready, setReady] = useState<ModelReadiness | null>(null);
   useEffect(() => {
     if (activeAgentId) {
       window.studio.vercel
         .prodInfo(activeAgentId)
         .then(setProd)
         .catch(() => setProd(null));
+      window.studio.vercel
+        .modelReadiness(activeAgentId)
+        .then(setReady)
+        .catch(() => setReady(null));
     }
   }, [activeAgentId, deployNonce]);
 
@@ -130,6 +135,9 @@ function AgentWorkspace(): JSX.Element {
               </Badge>
             ) : prod && !prod.url ? (
               <Badge>not deployed</Badge>
+            ) : null}
+            {ready && !ready.hasCredential ? (
+              <Badge tone="warn">⚠ not linked</Badge>
             ) : null}
           </div>
           <div className="mt-0.5 flex items-center gap-2 text-2xs text-faint">
