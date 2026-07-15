@@ -24,12 +24,17 @@ export interface SessionConn {
   headers?: Record<string, string>;
 }
 
-/** Probe /eve/v1/health, detecting Vercel platform protection (302 → login). */
+/**
+ * Probe the agent to see if a turn would succeed: hits the auth-gated
+ * `/eve/v1/info` (not public `/health`), so a 200 means both Vercel platform
+ * protection AND eve route auth are satisfied. 3xx = platform protection;
+ * 401/403 = eve route auth rejected the token.
+ */
 export async function checkHealth(
   conn: SessionConn
 ): Promise<{ ok: boolean; status: number; protected: boolean }> {
   try {
-    const res = await fetch(`${conn.baseUrl}/eve/v1/health`, {
+    const res = await fetch(`${conn.baseUrl}/eve/v1/info`, {
       headers: conn.headers,
       redirect: "manual",
       signal: AbortSignal.timeout(9000),

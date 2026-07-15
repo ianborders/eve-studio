@@ -695,8 +695,9 @@ export function registerIpc(): IpcHandles {
         (path ? readEnvLocal(path, "VERCEL_AUTOMATION_BYPASS_SECRET") : null);
       const headers: Record<string, string> = {};
       if (bypass) {
+        // Header alone grants per-request access; do NOT set-bypass-cookie —
+        // that makes Vercel issue a redirect that reads as "still protected".
         headers["x-vercel-protection-bypass"] = bypass;
-        headers["x-vercel-set-bypass-cookie"] = "true";
       }
       if (oidc) {
         headers.Authorization = `Bearer ${oidc}`;
