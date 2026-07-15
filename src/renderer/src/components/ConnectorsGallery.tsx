@@ -115,6 +115,15 @@ function UseConnectorModal({
             <span className="font-mono">{connector.uid}</span>
           </div>
 
+          <div className="rounded-lg border border-border bg-subtle p-3 text-2xs leading-relaxed text-muted">
+            You already attached this connector to the project in Vercel — that
+            grants permission to mint tokens. This step writes the{" "}
+            <b className="text-text">agent code</b> that actually uses it: as a{" "}
+            <b className="text-text">connection</b> (the agent gets this provider's
+            tools) or a <b className="text-text">channel</b> (the agent talks where
+            its events arrive).
+          </div>
+
           {canChannel ? (
             <div className="flex gap-1.5">
               <button
