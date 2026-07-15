@@ -1,7 +1,189 @@
 import type { ConnectorItem } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
+import { Console } from "../ui/Console";
 import { IconExternal, IconPlus, IconRefresh } from "../ui/icons";
-import { Badge, Button, Card, Spinner } from "../ui/kit";
+import { Badge, Button, Card, Field, Input, Modal, Spinner } from "../ui/kit";
+
+const CHANNEL_TYPES = new Set(["slack", "github", "linear"]);
+const MCP_URL: Record<string, string> = {
+  linear: "https://mcp.linear.app/mcp",
+};
+
+function UseConnectorModal({
+  agentId,
+  connector,
+  onClose,
+}: {
+  agentId: string;
+  connector: ConnectorItem;
+  onClose: () => void;
+}): JSX.Element {
+  const canChannel = CHANNEL_TYPES.has(connector.type);
+  const [mode, setMode] = useState<"channel" | "connection">(
+    canChannel ? "channel" : "connection"
+  );
+  const [connName, setConnName] = useState(connector.type);
+  const [url, setUrl] = useState(MCP_URL[connector.type] ?? "");
+  const [scope, setScope] = useState<"connect-app" | "connect-user">("connect-app");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<{ what: string; channel?: boolean } | null>(null);
+  const [attaching, setAttaching] = useState(false);
+  const [attachOut, setAttachOut] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+
+  const addChannel = async (): Promise<void> => {
+    setBusy(true);
+    setErr(null);
+    const r = await window.studio.agents.channelWrite(agentId, {
+      kind: connector.type as "slack" | "github" | "linear",
+      connector: connector.uid,
+    });
+    setBusy(false);
+    if (r.ok) {
+      setDone({ what: r.relPath ?? `channels/${connector.type}.ts`, channel: true });
+    } else {
+      setErr(r.error ?? "Failed.");
+    }
+  };
+
+  const attach = async (): Promise<void> => {
+    setAttaching(true);
+    setAttachOut(
+      `$ vercel connect attach ${connector.uid} --triggers --trigger-path /eve/v1/${connector.type}\n`
+    );
+    const r = await window.studio.vercel.connectorAttach(
+      agentId,
+      connector.uid,
+      connector.type
+    );
+    setAttaching(false);
+    setAttachOut((o) => o + r.output);
+  };
+
+  const addConnection = async (): Promise<void> => {
+    setBusy(true);
+    setErr(null);
+    const r = await window.studio.agents.addConnection(agentId, {
+      name: connName,
+      kind: "mcp",
+      url,
+      description: `${connector.name} — via Vercel Connect (${connector.uid})`,
+      authMode: scope,
+      connector: connector.uid,
+    });
+    setBusy(false);
+    if (r.ok) {
+      setDone({ what: r.relPath ?? "connection" });
+    } else {
+      setErr(r.error ?? "Failed.");
+    }
+  };
+
+  return (
+    <Modal title={`Use ${connector.name} in the agent`} onClose={onClose} width="max-w-xl">
+      {done ? (
+        <div className="space-y-3 p-4">
+          <div className="rounded-lg bg-success/10 px-3 py-2 text-[13px] text-success">
+            Wrote <span className="font-mono">{done.what}</span>.
+          </div>
+          {done.channel ? (
+            <div className="space-y-2">
+              <p className="text-2xs leading-relaxed text-muted">
+                Attach the connector so the platform delivers events to
+                <span className="font-mono"> /eve/v1/{connector.type}</span>, then deploy.
+              </p>
+              <Button variant="secondary" size="sm" onClick={attach} disabled={attaching}>
+                {attaching ? "Attaching…" : "Attach for triggers"}
+              </Button>
+              {attachOut ? <Console text={attachOut} className="max-h-40" /> : null}
+            </div>
+          ) : (
+            <p className="text-2xs leading-relaxed text-muted">
+              Restart the agent to load the connection.
+            </p>
+          )}
+          <div className="flex justify-end">
+            <Button variant="primary" onClick={onClose}>
+              Done
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3 p-4">
+          <div className="flex items-center gap-2 text-2xs text-muted">
+            <Badge tone="accent">{connector.type}</Badge>
+            <span className="font-mono">{connector.uid}</span>
+          </div>
+
+          {canChannel ? (
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => setMode("channel")}
+                className={`rounded-lg border px-2.5 py-1 text-2xs ${mode === "channel" ? "border-text bg-text text-white" : "border-border text-muted hover:bg-hover"}`}
+              >
+                As a channel
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("connection")}
+                className={`rounded-lg border px-2.5 py-1 text-2xs ${mode === "connection" ? "border-text bg-text text-white" : "border-border text-muted hover:bg-hover"}`}
+              >
+                As a connection
+              </button>
+            </div>
+          ) : null}
+
+          {mode === "channel" && canChannel ? (
+            <>
+              <p className="text-2xs leading-relaxed text-muted">
+                Adds <span className="font-mono">channels/{connector.type}.ts</span> wired
+                to this connector — the agent replies where {connector.type} events arrive.
+              </p>
+              {err ? <div className="text-xs text-danger">{err}</div> : null}
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                <Button variant="primary" onClick={addChannel} disabled={busy}>
+                  {busy ? "Adding…" : `Add ${connector.type} channel`}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Field label="Connection name" hint="becomes connections/<name>.ts">
+                <Input value={connName} onChange={(e) => setConnName(e.target.value)} className="font-mono" />
+              </Field>
+              <Field label="MCP URL">
+                <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://mcp.example.com/mcp" className="font-mono" />
+              </Field>
+              <Field label="Scope">
+                <div className="flex gap-1.5">
+                  {(["connect-app", "connect-user"] as const).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setScope(s)}
+                      className={`rounded-lg border px-2.5 py-1 text-2xs ${scope === s ? "border-text bg-text text-white" : "border-border text-muted hover:bg-hover"}`}
+                    >
+                      {s === "connect-app" ? "App (bot)" : "User (per-caller)"}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              {err ? <div className="text-xs text-danger">{err}</div> : null}
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                <Button variant="primary" onClick={addConnection} disabled={busy || !connName || !url}>
+                  {busy ? "Adding…" : "Add connection"}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
 
 const TYPE_COLOR: Record<string, string> = {
   slack: "#611f69",
@@ -32,6 +214,7 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
   const [list, setList] = useState<ConnectorItem[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
+  const [use, setUse] = useState<ConnectorItem | null>(null);
 
   const load = useCallback(async () => {
     setErr(null);
@@ -120,10 +303,21 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
                 </div>
                 <div className="truncate font-mono text-2xs text-faint">{c.uid}</div>
               </div>
+              <Button variant="secondary" size="sm" onClick={() => setUse(c)}>
+                Use in agent
+              </Button>
             </Card>
           ))}
         </div>
       )}
+
+      {use ? (
+        <UseConnectorModal
+          agentId={agentId}
+          connector={use}
+          onClose={() => setUse(null)}
+        />
+      ) : null}
     </div>
   );
 }
