@@ -1,5 +1,10 @@
 import type { ChatStatus, ChatStatusMessage, EveEvent } from "../shared/ipc";
-import { type InputResponse, postSession, streamSession } from "./eveSession";
+import {
+  type InputResponse,
+  postSession,
+  type SessionConn,
+  streamSession,
+} from "./eveSession";
 import * as store from "./store";
 
 const BOUNDARY = new Set([
@@ -29,18 +34,18 @@ export class ChatController {
     return this.active.has(threadId);
   }
 
-  send(threadId: string, baseUrl: string, text: string): Promise<void> {
-    return this.runTurn(threadId, baseUrl, { message: text });
+  send(threadId: string, conn: SessionConn, text: string): Promise<void> {
+    return this.runTurn(threadId, conn, { message: text });
   }
 
   respond(
     threadId: string,
-    baseUrl: string,
+    conn: SessionConn,
     requestId: string,
     optionId?: string,
     text?: string
   ): Promise<void> {
-    return this.runTurn(threadId, baseUrl, {
+    return this.runTurn(threadId, conn, {
       inputResponses: [{ requestId, optionId, text }],
     });
   }
@@ -51,7 +56,7 @@ export class ChatController {
 
   private async runTurn(
     threadId: string,
-    baseUrl: string,
+    conn: SessionConn,
     payload: TurnPayload
   ): Promise<void> {
     if (this.active.has(threadId)) {
@@ -71,7 +76,7 @@ export class ChatController {
 
       if (canContinue) {
         try {
-          resp = await postSession(baseUrl, cursor.sessionId as string, {
+          resp = await postSession(conn, cursor.sessionId as string, {
             continuationToken: cursor.continuationToken,
             ...payload,
           });
@@ -82,7 +87,7 @@ export class ChatController {
           if (!payload.message) {
             throw err;
           }
-          resp = await postSession(baseUrl, null, { message: payload.message });
+          resp = await postSession(conn, null, { message: payload.message });
           sessionId = resp.sessionId;
           startIndex = 0;
         }
@@ -90,7 +95,7 @@ export class ChatController {
         if (!payload.message) {
           throw new Error("No active session to respond to.");
         }
-        resp = await postSession(baseUrl, null, { message: payload.message });
+        resp = await postSession(conn, null, { message: payload.message });
         sessionId = resp.sessionId;
         startIndex = 0;
       }
@@ -100,7 +105,7 @@ export class ChatController {
       let finalStatus: ChatStatus = "waiting";
 
       for await (const event of streamSession(
-        baseUrl,
+        conn,
         sessionId,
         startIndex,
         abort.signal

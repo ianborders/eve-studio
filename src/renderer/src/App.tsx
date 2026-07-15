@@ -1,4 +1,4 @@
-import type { AppInfo } from "@shared/ipc";
+import type { AppInfo, ProdInfo } from "@shared/ipc";
 import { useEffect, useState } from "react";
 import { type Section, useStore } from "./store";
 import {
@@ -76,6 +76,17 @@ function AgentWorkspace(): JSX.Element {
   const startAgent = useStore((s) => s.startAgent);
   const stopAgent = useStore((s) => s.stopAgent);
 
+  const [prod, setProd] = useState<ProdInfo | null>(null);
+  useEffect(() => {
+    setProd(null);
+    if (activeAgentId) {
+      window.studio.vercel
+        .prodInfo(activeAgentId)
+        .then(setProd)
+        .catch(() => setProd(null));
+    }
+  }, [activeAgentId]);
+
   const agent = agents.find((a) => a.id === activeAgentId);
   const rt = activeAgentId ? runtime[activeAgentId] : undefined;
   const status = rt?.status ?? "stopped";
@@ -104,12 +115,21 @@ function AgentWorkspace(): JSX.Element {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="truncate text-[15px] font-semibold text-text">{agent.name}</h1>
+            <span className="text-2xs text-faint">local</span>
             <Badge tone={status === "running" ? "accent" : status === "error" ? "danger" : "default"}>
               <StatusDot status={status} />
               {status}
             </Badge>
             {rt?.port ? (
               <span className="font-mono text-2xs text-faint">:{rt.port}</span>
+            ) : null}
+            {prod?.url ? (
+              <Badge tone="success">
+                <IconRocket className="h-3 w-3" />
+                deployed{prod.age ? ` · ${prod.age}` : ""}
+              </Badge>
+            ) : prod && !prod.url ? (
+              <Badge>not deployed</Badge>
             ) : null}
           </div>
           <div className="mt-0.5 flex items-center gap-2 text-2xs text-faint">

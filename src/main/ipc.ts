@@ -43,7 +43,7 @@ import {
 import { detectBrain, keyFromEnv, wireBrain } from "./arcanaWire";
 import { ChatController } from "./chat";
 import { addChannel, CliRunner, initAgent, listChannels, listEvals } from "./cli";
-import { getAgentInfo } from "./eveSession";
+import { checkHealth, getAgentInfo, type SessionConn } from "./eveSession";
 import * as store from "./store";
 import { readStructure } from "./structure";
 import { writeChannel } from "./agentChannels";
@@ -59,8 +59,19 @@ import {
   vercelEnvAdd,
   vercelEnvLs,
   vercelEnvPull,
+  vercelProdInfo,
   vercelStatus,
 } from "./vercel";
+
+/** Read VERCEL_OIDC_TOKEN from an agent's .env.local (for deployed route auth). */
+function readOidc(agentPath: string): string | null {
+  const p = join(agentPath, ".env.local");
+  if (!existsSync(p)) {
+    return null;
+  }
+  const m = /^\s*VERCEL_OIDC_TOKEN\s*=\s*(.*)$/m.exec(readFileSync(p, "utf8"));
+  return m ? m[1].trim().replace(/^["']|["']$/g, "") : null;
+}
 
 function agentPathOf(id: string): string {
   const a = store.getAgent(id);
@@ -664,21 +675,52 @@ export function registerIpc(): IpcHandles {
       return true;
     }
   );
+  /** Resolve the session connection for a chat target (local dev vs deployed). */
+  const resolveConn = (
+    agentId: string,
+    target: "local" | "deployed"
+  ): SessionConn => {
+    if (target === "deployed") {
+      const d = store.getDeploy(agentId);
+      if (!d.url) {
+        throw new Error("No deployed URL set — set it in Chat → Deployed.");
+      }
+      const a = store.getAgent(agentId);
+      const oidc = a ? readOidc(a.path) : null;
+      const headers: Record<string, string> = {};
+      if (d.bypassSecret) {
+        headers["x-vercel-protection-bypass"] = d.bypassSecret;
+        headers["x-vercel-set-bypass-cookie"] = "true";
+      }
+      if (oidc) {
+        headers.Authorization = `Bearer ${oidc}`;
+      }
+      return { baseUrl: d.url.replace(/\/$/, ""), headers };
+    }
+    const url = agents.url(agentId);
+    if (!url) {
+      throw new Error("Agent isn't running — start it first.");
+    }
+    return { baseUrl: url };
+  };
+
   ipcMain.handle(
     IPC.chatSend,
-    (_e: IpcMainInvokeEvent, threadId: string, text: string) => {
+    (
+      _e: IpcMainInvokeEvent,
+      threadId: string,
+      text: string,
+      target: "local" | "deployed" = "local"
+    ) => {
       const t = store.getThread(threadId);
       if (!t) {
         throw new Error("Unknown thread.");
       }
-      const url = agents.url(t.agentId);
-      if (!url) {
-        throw new Error("Agent isn't running — start it first.");
-      }
+      const conn = resolveConn(t.agentId, target);
       if (t.title === "New chat") {
         store.touchThread(threadId, text.slice(0, 48));
       }
-      void chat.send(threadId, url, text);
+      void chat.send(threadId, conn, text);
       return true;
     }
   );
@@ -689,18 +731,63 @@ export function registerIpc(): IpcHandles {
       threadId: string,
       requestId: string,
       optionId?: string,
-      text?: string
+      text?: string,
+      target: "local" | "deployed" = "local"
     ) => {
       const t = store.getThread(threadId);
       if (!t) {
         throw new Error("Unknown thread.");
       }
-      const url = agents.url(t.agentId);
-      if (!url) {
-        throw new Error("Agent isn't running.");
-      }
-      void chat.respond(threadId, url, requestId, optionId, text);
+      const conn = resolveConn(t.agentId, target);
+      void chat.respond(threadId, conn, requestId, optionId, text);
       return true;
+    }
+  );
+
+  // --- deploy target / status ---
+  ipcMain.handle(IPC.deployGet, (_e: IpcMainInvokeEvent, id: string) =>
+    store.getDeploy(id)
+  );
+  ipcMain.handle(
+    IPC.deploySet,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      settings: import("../shared/ipc").DeploySettings
+    ) => {
+      store.setDeploy(id, settings);
+      return store.getDeploy(id);
+    }
+  );
+  ipcMain.handle(IPC.vercelProdInfo, (_e: IpcMainInvokeEvent, id: string) =>
+    vercelProdInfo(agentPathOf(id))
+  );
+  ipcMain.handle(
+    IPC.deployHealth,
+    async (_e: IpcMainInvokeEvent, id: string) => {
+      let conn: SessionConn;
+      try {
+        conn = resolveConn(id, "deployed");
+      } catch (err) {
+        return {
+          ok: false,
+          status: 0,
+          protected: false,
+          reason: err instanceof Error ? err.message : String(err),
+        };
+      }
+      const h = await checkHealth(conn);
+      let reason: string | undefined;
+      if (h.protected) {
+        reason =
+          "Blocked by Vercel Deployment Protection — add a Protection Bypass secret below.";
+      } else if (h.status === 401 || h.status === 403) {
+        reason =
+          "Reached the agent but route auth rejected the request — run `vercel env pull` to refresh the OIDC token, or the agent's eve channel auth blocks external clients.";
+      } else if (!h.ok && h.status === 0) {
+        reason = "Couldn't reach the URL.";
+      }
+      return { ...h, reason };
     }
   );
 

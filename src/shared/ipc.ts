@@ -279,6 +279,25 @@ export interface CmdResult {
   ok: boolean;
   output: string;
 }
+/** Latest production deployment info from `vercel ls --prod`. */
+export interface ProdInfo {
+  ok: boolean;
+  url?: string;
+  age?: string;
+  ready?: boolean;
+  error?: string;
+}
+export interface DeploySettings {
+  url?: string;
+  bypassSecret?: string;
+}
+export type ChatTarget = "local" | "deployed";
+export interface DeployHealth {
+  ok: boolean;
+  status: number;
+  protected: boolean;
+  reason?: string;
+}
 
 // --- authoring inputs ---
 export interface ToolInput {
@@ -391,6 +410,10 @@ export const IPC = {
   vercelEnvLs: "vercel:envLs",
   vercelEnvPull: "vercel:envPull",
   vercelEnvAdd: "vercel:envAdd",
+  vercelProdInfo: "vercel:prodInfo",
+  deployGet: "agent:deployGet",
+  deploySet: "agent:deploySet",
+  deployHealth: "agent:deployHealth",
   connectorList: "vercel:connectorList",
   connectorCreate: "vercel:connectorCreate",
   connectorAttach: "vercel:connectorAttach",

@@ -18,9 +18,38 @@ export interface PostBody {
   inputResponses?: InputResponse[];
 }
 
+/** Where a session lives: a base URL plus any auth headers (deployed = bypass + OIDC). */
+export interface SessionConn {
+  baseUrl: string;
+  headers?: Record<string, string>;
+}
+
+/** Probe /eve/v1/health, detecting Vercel platform protection (302 → login). */
+export async function checkHealth(
+  conn: SessionConn
+): Promise<{ ok: boolean; status: number; protected: boolean }> {
+  try {
+    const res = await fetch(`${conn.baseUrl}/eve/v1/health`, {
+      headers: conn.headers,
+      redirect: "manual",
+      signal: AbortSignal.timeout(9000),
+    });
+    if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) {
+      return { ok: false, status: 302, protected: true };
+    }
+    return { ok: res.ok, status: res.status, protected: false };
+  } catch {
+    return { ok: false, status: 0, protected: false };
+  }
+}
+
 /** GET /eve/v1/info — the running agent's runtime surface. */
-export async function getAgentInfo(baseUrl: string): Promise<unknown> {
+export async function getAgentInfo(
+  baseUrl: string,
+  headers?: Record<string, string>
+): Promise<unknown> {
   const res = await fetch(`${baseUrl}/eve/v1/info`, {
+    headers,
     signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) {
@@ -31,16 +60,16 @@ export async function getAgentInfo(baseUrl: string): Promise<unknown> {
 
 /** POST /eve/v1/session (create) or /eve/v1/session/:id (continue). */
 export async function postSession(
-  baseUrl: string,
+  conn: SessionConn,
   sessionId: string | null,
   body: PostBody
 ): Promise<SessionResponse> {
   const url = sessionId
-    ? `${baseUrl}/eve/v1/session/${sessionId}`
-    : `${baseUrl}/eve/v1/session`;
+    ? `${conn.baseUrl}/eve/v1/session/${sessionId}`
+    : `${conn.baseUrl}/eve/v1/session`;
   const res = await fetch(url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...conn.headers },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(30_000),
   });
@@ -53,14 +82,14 @@ export async function postSession(
 
 /** GET /eve/v1/session/:id/stream?startIndex=n — yields NDJSON events until the caller stops. */
 export async function* streamSession(
-  baseUrl: string,
+  conn: SessionConn,
   sessionId: string,
   startIndex: number,
   signal?: AbortSignal
 ): AsyncGenerator<EveEvent> {
   const res = await fetch(
-    `${baseUrl}/eve/v1/session/${sessionId}/stream?startIndex=${startIndex}`,
-    { headers: { accept: "application/x-ndjson" }, signal }
+    `${conn.baseUrl}/eve/v1/session/${sessionId}/stream?startIndex=${startIndex}`,
+    { headers: { accept: "application/x-ndjson", ...conn.headers }, signal }
   );
   if (!(res.ok && res.body)) {
     throw new Error(`stream ${res.status}`);

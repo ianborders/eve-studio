@@ -1,7 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { CmdResult, ConnectorItem, VercelStatus } from "../shared/ipc";
+import type {
+  CmdResult,
+  ConnectorItem,
+  ProdInfo,
+  VercelStatus,
+} from "../shared/ipc";
 
 function vercelBin(): string {
   return process.platform === "win32" ? "vercel.cmd" : "vercel";
@@ -60,6 +65,36 @@ export function vercelEnvLs(agentPath: string): CmdResult {
 /** `vercel env pull .env.local --yes` — sync remote env down. */
 export function vercelEnvPull(agentPath: string): CmdResult {
   return run(agentPath, ["env", "pull", ".env.local", "--yes"]);
+}
+
+/** Latest production deployment for the linked project, from `vercel ls --prod`. */
+export function vercelProdInfo(agentPath: string): ProdInfo {
+  let project = "";
+  try {
+    project = (
+      JSON.parse(
+        readFileSync(join(agentPath, ".vercel", "project.json"), "utf8")
+      ) as { projectName?: string }
+    ).projectName ?? "";
+  } catch {
+    // not linked
+  }
+  const r = run(agentPath, ["ls", "--prod"]);
+  if (!r.ok && !r.output.includes("https://")) {
+    return { ok: false, error: r.output };
+  }
+  for (const line of r.output.split("\n")) {
+    if (!line.includes("https://")) {
+      continue;
+    }
+    if (project && !line.includes(`/${project} `) && !line.includes(`/${project}\t`)) {
+      continue;
+    }
+    const url = (/https:\/\/\S+/.exec(line) ?? [""])[0];
+    const age = (/^\s*(\S+)/.exec(line) ?? ["", ""])[1];
+    return { ok: true, url, age, ready: /Ready|●/i.test(line) };
+  }
+  return { ok: true };
 }
 
 /** `vercel env add <NAME> <target>` with the value fed on stdin (non-interactive). */

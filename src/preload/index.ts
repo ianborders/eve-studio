@@ -14,6 +14,7 @@ import {
   type ChannelAddInput,
   type ChannelItem,
   type ChannelWriteResult,
+  type ChatTarget,
   type CliChunk,
   type CliExit,
   type CmdResult,
@@ -21,6 +22,8 @@ import {
   type ConnectorItem,
   type ConnectorUsage,
   type CreateAgentInput,
+  type DeployHealth,
+  type DeploySettings,
   type DetectedBrain,
   type EnvState,
   type EvalItem,
@@ -30,6 +33,7 @@ import {
   type InstructionsFile,
   type LogChunk,
   type ModelConfig,
+  type ProdInfo,
   type QueryHit,
   type SandboxInfo,
   type ScheduleInput,
@@ -98,6 +102,12 @@ const api = {
       ipcRenderer.invoke(IPC.connectionDelete, id, name),
     connectorUsage: (id: string, uids: string[]): Promise<ConnectorUsage[]> =>
       ipcRenderer.invoke(IPC.connectorUsage, id, uids),
+    getDeploy: (id: string): Promise<DeploySettings> =>
+      ipcRenderer.invoke(IPC.deployGet, id),
+    setDeploy: (id: string, settings: DeploySettings): Promise<DeploySettings> =>
+      ipcRenderer.invoke(IPC.deploySet, id, settings),
+    deployHealth: (id: string): Promise<DeployHealth> =>
+      ipcRenderer.invoke(IPC.deployHealth, id),
     modelRead: (id: string): Promise<ModelConfig> =>
       ipcRenderer.invoke(IPC.modelRead, id),
     modelWrite: (
@@ -147,6 +157,8 @@ const api = {
       target: string
     ): Promise<CmdResult> =>
       ipcRenderer.invoke(IPC.vercelEnvAdd, id, name, value, target),
+    prodInfo: (id: string): Promise<ProdInfo> =>
+      ipcRenderer.invoke(IPC.vercelProdInfo, id),
     connectorList: (
       id: string,
       service?: string
@@ -230,15 +242,19 @@ const api = {
       ipcRenderer.invoke(IPC.chatGetThread, threadId),
     deleteThread: (threadId: string): Promise<boolean> =>
       ipcRenderer.invoke(IPC.chatDeleteThread, threadId),
-    send: (threadId: string, text: string): Promise<boolean> =>
-      ipcRenderer.invoke(IPC.chatSend, threadId, text),
+    send: (
+      threadId: string,
+      text: string,
+      target: ChatTarget = "local"
+    ): Promise<boolean> => ipcRenderer.invoke(IPC.chatSend, threadId, text, target),
     respond: (
       threadId: string,
       requestId: string,
       optionId?: string,
-      text?: string
+      text?: string,
+      target: ChatTarget = "local"
     ): Promise<boolean> =>
-      ipcRenderer.invoke(IPC.chatRespond, threadId, requestId, optionId, text),
+      ipcRenderer.invoke(IPC.chatRespond, threadId, requestId, optionId, text, target),
     onEvent: (cb: (m: ChatEventMessage) => void): (() => void) =>
       sub(IPC.chatEvent, cb),
     onStatus: (cb: (m: ChatStatusMessage) => void): (() => void) =>

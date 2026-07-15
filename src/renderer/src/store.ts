@@ -3,6 +3,7 @@ import type {
   AgentRuntimeState,
   AgentStructure,
   ChatStatus,
+  ChatTarget,
   EveEvent,
   ThreadRecord,
 } from "@shared/ipc";
@@ -39,6 +40,7 @@ interface State {
   status: Record<string, ChatStatus>;
   structure: Record<string, AgentStructure>;
   structureLoading: Record<string, boolean>;
+  chatTarget: Record<string, ChatTarget>;
   booted: boolean;
 
   init: () => Promise<void>;
@@ -57,6 +59,7 @@ interface State {
   deleteThread: (threadId: string) => Promise<void>;
   send: (text: string) => Promise<void>;
   respond: (requestId: string, optionId?: string, text?: string) => Promise<void>;
+  setChatTarget: (agentId: string, target: ChatTarget) => void;
 }
 
 export const useStore = create<State>((set, get) => ({
@@ -70,6 +73,7 @@ export const useStore = create<State>((set, get) => ({
   status: {},
   structure: {},
   structureLoading: {},
+  chatTarget: {},
   booted: false,
 
   init: async () => {
@@ -213,15 +217,22 @@ export const useStore = create<State>((set, get) => ({
 
   send: async (text) => {
     const tid = get().activeThreadId;
+    const aid = get().activeAgentId;
     if (tid) {
-      await window.studio.chat.send(tid, text);
+      const target = aid ? (get().chatTarget[aid] ?? "local") : "local";
+      await window.studio.chat.send(tid, text, target);
     }
   },
 
   respond: async (requestId, optionId, text) => {
     const tid = get().activeThreadId;
+    const aid = get().activeAgentId;
     if (tid) {
-      await window.studio.chat.respond(tid, requestId, optionId, text);
+      const target = aid ? (get().chatTarget[aid] ?? "local") : "local";
+      await window.studio.chat.respond(tid, requestId, optionId, text, target);
     }
   },
+
+  setChatTarget: (agentId, target) =>
+    set((st) => ({ chatTarget: { ...st.chatTarget, [agentId]: target } })),
 }));

@@ -3,6 +3,7 @@ import { type Block, projectEvents } from "../lib/events";
 import { useStore } from "../store";
 import { IconChat, IconExternal, IconPlus, IconWrench, IconX } from "../ui/icons";
 import { Badge, Button, EmptyState } from "../ui/kit";
+import { ChatTargetBar } from "./ChatTargetBar";
 
 function json(value: unknown): string {
   try {
@@ -155,6 +156,7 @@ export function Chat(): JSX.Element {
   const deleteThread = useStore((s) => s.deleteThread);
   const send = useStore((s) => s.send);
   const respond = useStore((s) => s.respond);
+  const chatTargetMap = useStore((s) => s.chatTarget);
 
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -174,11 +176,13 @@ export function Chat(): JSX.Element {
 
   const rt = runtime[activeAgentId];
   const running = rt?.status === "running";
+  const target = chatTargetMap[activeAgentId] ?? "local";
+  const ready = target === "deployed" ? true : running;
   const agentThreads = threads[activeAgentId] ?? [];
 
   const submit = (): void => {
     const text = draft.trim();
-    if (!text || streaming || !running) {
+    if (!text || streaming || !ready) {
       return;
     }
     setDraft("");
@@ -230,6 +234,7 @@ export function Chat(): JSX.Element {
 
       {/* Conversation */}
       <div className="flex min-w-0 flex-1 flex-col">
+        <ChatTargetBar agentId={activeAgentId} />
         {projection.costUsd > 0 || projection.outputTokens > 0 ? (
           <div className="flex items-center justify-end border-b border-border px-5 py-1.5 text-2xs text-faint">
             ${projection.costUsd.toFixed(4)} · {projection.inputTokens}↑{" "}
@@ -253,7 +258,9 @@ export function Chat(): JSX.Element {
             </EmptyState>
           ) : projection.blocks.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-muted">
-              {running ? "Say something to start." : "Start the agent to chat."}
+              {ready
+                ? "Say something to start."
+                : "Start the agent (or switch to Deployed) to chat."}
             </div>
           ) : (
             projection.blocks.map((b) => (
@@ -278,15 +285,21 @@ export function Chat(): JSX.Element {
                 }
               }}
               rows={1}
-              placeholder={running ? "Message the agent…" : "Start the agent to chat"}
-              disabled={!running || !activeThreadId}
+              placeholder={
+                ready
+                  ? target === "deployed"
+                    ? "Message the deployed agent…"
+                    : "Message the agent…"
+                  : "Start the agent to chat"
+              }
+              disabled={!ready || !activeThreadId}
               className="max-h-40 flex-1 resize-none bg-transparent text-[13px] text-text outline-none placeholder:text-faint disabled:opacity-50"
             />
             <Button
               variant="primary"
               size="sm"
               onClick={submit}
-              disabled={streaming || !draft.trim() || !running || !activeThreadId}
+              disabled={streaming || !draft.trim() || !ready || !activeThreadId}
             >
               {streaming ? "…" : "Send"}
             </Button>

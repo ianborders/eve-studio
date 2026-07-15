@@ -31,16 +31,23 @@ export interface BrainCred {
   key: string;
 }
 
+/** Per-agent deployed-target settings for "chat with deployed". */
+export interface DeploySettings {
+  url?: string;
+  bypassSecret?: string;
+}
+
 interface Db {
   agents: AgentRecord[];
   threads: ThreadRecord[];
   cursors: Record<string, SessionCursor>;
   brains: Record<string, BrainCred>;
+  deploy: Record<string, DeploySettings>;
 }
 
 let dbPath = "";
 let eventsDir = "";
-let db: Db = { agents: [], threads: [], cursors: {}, brains: {} };
+let db: Db = { agents: [], threads: [], cursors: {}, brains: {}, deploy: {} };
 
 export function initStore(): void {
   const dataDir = app.getPath("userData");
@@ -55,9 +62,10 @@ export function initStore(): void {
         threads: parsed.threads ?? [],
         cursors: parsed.cursors ?? {},
         brains: parsed.brains ?? {},
+        deploy: parsed.deploy ?? {},
       };
     } catch {
-      db = { agents: [], threads: [], cursors: {}, brains: {} };
+      db = { agents: [], threads: [], cursors: {}, brains: {}, deploy: {} };
     }
   } else {
     persist();
@@ -144,6 +152,15 @@ export function setBrain(agentId: string, cred: BrainCred): void {
 }
 export function deleteBrain(agentId: string): void {
   delete db.brains[agentId];
+  persist();
+}
+
+// --- deploy settings ---
+export function getDeploy(agentId: string): DeploySettings {
+  return db.deploy[agentId] ?? {};
+}
+export function setDeploy(agentId: string, settings: DeploySettings): void {
+  db.deploy[agentId] = { ...db.deploy[agentId], ...settings };
   persist();
 }
 
