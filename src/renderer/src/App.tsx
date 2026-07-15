@@ -272,7 +272,7 @@ export function App(): JSX.Element {
         <div className="titlebar-drag h-11 shrink-0" />
         <div className="no-drag flex items-center justify-between px-3.5 pb-2.5">
           <div className="flex items-center gap-2 text-text">
-            <EveLogo className="h-3.5 w-auto" />
+            <EveLogo className="h-5 w-auto" />
             <span className="text-[14px] font-semibold tracking-tight text-muted">
               Studio
             </span>
