@@ -205,15 +205,18 @@ export function deleteConnectionFile(agentPath: string, name: string): void {
 }
 
 /**
- * Scan the agent's connection + channel files for referenced Vercel Connect
- * connector UIDs, so the UI can show which connectors are wired in and how.
+ * Scan the agent's connection + channel files for references to the given
+ * connector UIDs (matched as quoted string literals, so env-fallback forms like
+ * `process.env.X ?? "slack/eve"` are caught), so the UI can show which
+ * connectors are wired in and how.
  */
-export function scanConnectorUsage(agentPath: string): ConnectorUsage[] {
+export function scanConnectorUsage(
+  agentPath: string,
+  uids: string[]
+): ConnectorUsage[] {
   const root = agentRoot(agentPath);
+  const wanted = uids.filter(Boolean);
   const out: ConnectorUsage[] = [];
-  // connect("uid") | connect({ connector: "uid" }) | connect<X>Credentials("uid")
-  const re =
-    /connect(?:[A-Za-z]*Credentials)?\(\s*(?:\{[^}]*?connector:\s*)?["']([^"']+)["']/g;
 
   const scan = (dir: string, kind: "connection" | "channel"): void => {
     if (!existsSync(dir)) {
@@ -224,15 +227,10 @@ export function scanConnectorUsage(agentPath: string): ConnectorUsage[] {
         continue;
       }
       const src = readFileSync(join(dir, f), "utf8");
-      const seen = new Set<string>();
-      let m: RegExpExecArray | null;
-      re.lastIndex = 0;
-      // biome-ignore lint/suspicious/noAssignInExpressions: standard regex loop
-      while ((m = re.exec(src)) !== null) {
-        seen.add(m[1]);
-      }
-      for (const uid of seen) {
-        out.push({ uid, kind, name: f.replace(/\.ts$/, "") });
+      for (const uid of wanted) {
+        if (src.includes(`"${uid}"`) || src.includes(`'${uid}'`)) {
+          out.push({ uid, kind, name: f.replace(/\.ts$/, "") });
+        }
       }
     }
   };

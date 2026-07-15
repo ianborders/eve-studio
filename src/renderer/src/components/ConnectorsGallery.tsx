@@ -238,21 +238,26 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
   const [opening, setOpening] = useState(false);
   const [use, setUse] = useState<ConnectorItem | null>(null);
 
-  const loadUsage = useCallback(async () => {
-    setUsage(await window.studio.agents.connectorUsage(agentId));
-  }, [agentId]);
+  const refreshUsage = useCallback(async () => {
+    const uids = (list ?? []).map((c) => c.uid);
+    setUsage(await window.studio.agents.connectorUsage(agentId, uids));
+  }, [agentId, list]);
 
   const load = useCallback(async () => {
     setErr(null);
-    void loadUsage();
     const r = await window.studio.vercel.connectorList(agentId);
-    if (r.ok) {
-      setList(r.connectors);
-    } else {
+    const connectors = r.ok ? r.connectors : [];
+    if (!r.ok) {
       setErr(r.output ?? "Couldn't list connectors.");
-      setList([]);
     }
-  }, [agentId, loadUsage]);
+    setList(connectors);
+    setUsage(
+      await window.studio.agents.connectorUsage(
+        agentId,
+        connectors.map((c) => c.uid)
+      )
+    );
+  }, [agentId]);
 
   useEffect(() => {
     void load();
@@ -356,7 +361,7 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
           connector={use}
           onClose={() => {
             setUse(null);
-            void loadUsage();
+            void refreshUsage();
           }}
         />
       ) : null}

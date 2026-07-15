@@ -96,8 +96,8 @@ const api = {
       ipcRenderer.invoke(IPC.connectionWrite, id, name, content),
     deleteConnection: (id: string, name: string): Promise<WriteResult> =>
       ipcRenderer.invoke(IPC.connectionDelete, id, name),
-    connectorUsage: (id: string): Promise<ConnectorUsage[]> =>
-      ipcRenderer.invoke(IPC.connectorUsage, id),
+    connectorUsage: (id: string, uids: string[]): Promise<ConnectorUsage[]> =>
+      ipcRenderer.invoke(IPC.connectorUsage, id, uids),
     modelRead: (id: string): Promise<ModelConfig> =>
       ipcRenderer.invoke(IPC.modelRead, id),
     modelWrite: (

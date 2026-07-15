@@ -534,8 +534,10 @@ export function registerIpc(): IpcHandles {
       }
     }
   );
-  ipcMain.handle(IPC.connectorUsage, (_e: IpcMainInvokeEvent, id: string) =>
-    scanConnectorUsage(agentPathOf(id))
+  ipcMain.handle(
+    IPC.connectorUsage,
+    (_e: IpcMainInvokeEvent, id: string, uids: string[]) =>
+      scanConnectorUsage(agentPathOf(id), uids)
   );
 
   // --- arcana (memory) ---
