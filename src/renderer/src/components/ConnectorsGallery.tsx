@@ -1,7 +1,7 @@
 import type { ConnectorItem } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
 import { Console } from "../ui/Console";
-import { IconExternal, IconPlus, IconRefresh } from "../ui/icons";
+import { IconExternal, IconRefresh } from "../ui/icons";
 import { Badge, Button, Card, Field, Input, Modal, Spinner } from "../ui/kit";
 
 const CHANNEL_TYPES = new Set(["slack", "github", "linear"]);
@@ -159,6 +159,18 @@ function UseConnectorModal({
             </>
           ) : (
             <>
+              {canChannel ? (
+                <div className="rounded-lg border border-warn/40 bg-warn/[0.06] p-2.5 text-2xs leading-relaxed text-muted">
+                  Heads up: <span className="font-mono text-text">{connector.uid}</span> is
+                  the <b className="text-text">managed {connector.type}</b> connector,
+                  built for the {connector.type} <b className="text-text">channel</b>. For
+                  MCP <b className="text-text">tools</b> you usually need a separate{" "}
+                  <b className="text-text">Custom OAuth</b> connector for the provider's MCP
+                  host (e.g. <span className="font-mono">mcp.linear.app</span>). If tools
+                  return "authorization required", that's why — create that connector in
+                  Vercel Connect and use it here instead.
+                </div>
+              ) : null}
               <Field label="Connection name" hint="becomes connections/<name>.ts">
                 <Input value={connName} onChange={(e) => setConnName(e.target.value)} className="font-mono" />
               </Field>
@@ -264,11 +276,8 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <Button variant="ghost" size="sm" onClick={() => openGallery(true)} title="Open in browser">
+          <Button variant="primary" size="sm" onClick={() => openGallery(true)} disabled={opening}>
             <IconExternal className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant="primary" size="sm" onClick={() => openGallery(false)} disabled={opening}>
-            <IconPlus className="h-3.5 w-3.5" />
             {opening ? "Opening…" : "Add connection"}
           </Button>
           <button type="button" onClick={() => void load()} className="text-faint hover:text-text" title="Refresh">
@@ -295,8 +304,8 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
             No connections yet. Browse the full provider catalog — Slack, GitHub,
             Notion, Figma, Shopify, and hundreds more — and add one.
           </div>
-          <Button variant="primary" size="sm" onClick={() => openGallery(false)} disabled={opening}>
-            <IconPlus className="h-3.5 w-3.5" />
+          <Button variant="primary" size="sm" onClick={() => openGallery(true)} disabled={opening}>
+            <IconExternal className="h-3.5 w-3.5" />
             Add connection
           </Button>
         </Card>
@@ -312,6 +321,14 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
                 </div>
                 <div className="truncate font-mono text-2xs text-faint">{c.uid}</div>
               </div>
+              <button
+                type="button"
+                onClick={() => window.studio.vercel.openConnectorPage(agentId, c.uid)}
+                title="Open in Vercel (authorize / manage)"
+                className="rounded-md p-1.5 text-faint hover:bg-hover hover:text-text"
+              >
+                <IconExternal className="h-3.5 w-3.5" />
+              </button>
               <Button variant="secondary" size="sm" onClick={() => setUse(c)}>
                 Use in agent
               </Button>

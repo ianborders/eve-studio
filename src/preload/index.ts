@@ -166,6 +166,11 @@ const api = {
       ipcRenderer.invoke(IPC.connectOpen, id),
     openConnectExternal: (id: string): Promise<{ ok: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC.connectOpenExternal, id),
+    openConnectorPage: (
+      id: string,
+      connector: string
+    ): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC.connectorOpenPage, id, connector),
   },
 
   dialog: {

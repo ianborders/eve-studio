@@ -101,3 +101,21 @@ export function openConnectExternal(agentPath: string): { ok: boolean; error?: s
   void shell.openExternal(base);
   return { ok: true };
 }
+
+/**
+ * Open a specific connector's Vercel page (where you authorize / manage it) in
+ * the default browser — OAuth authorize flows are most reliable there.
+ */
+export function openConnector(
+  agentPath: string,
+  connectorIdOrUid: string
+): { ok: boolean; error?: string } {
+  const parsed = parseJson(
+    vc(agentPath, ["connect", "open", connectorIdOrUid, "--format=json"])
+  ) as { url?: string } | null;
+  if (!parsed?.url) {
+    return { ok: false, error: "Couldn't resolve the connector URL." };
+  }
+  void shell.openExternal(parsed.url);
+  return { ok: true };
+}

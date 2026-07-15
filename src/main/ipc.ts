@@ -46,7 +46,11 @@ import { getAgentInfo } from "./eveSession";
 import * as store from "./store";
 import { readStructure } from "./structure";
 import { writeChannel } from "./agentChannels";
-import { openConnectExternal, openConnectWindow } from "./connectWindow";
+import {
+  openConnectExternal,
+  openConnector,
+  openConnectWindow,
+} from "./connectWindow";
 import {
   vercelConnectAttach,
   vercelConnectCreate,
@@ -398,6 +402,11 @@ export function registerIpc(): IpcHandles {
   );
   ipcMain.handle(IPC.connectOpenExternal, (_e: IpcMainInvokeEvent, id: string) =>
     openConnectExternal(agentPathOf(id))
+  );
+  ipcMain.handle(
+    IPC.connectorOpenPage,
+    (_e: IpcMainInvokeEvent, id: string, connector: string) =>
+      openConnector(agentPathOf(id), connector)
   );
 
   ipcMain.handle(
