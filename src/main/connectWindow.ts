@@ -19,11 +19,12 @@ function vc(agentPath: string, args: string[]): string {
 
 function parseJson(out: string): unknown {
   const s = out.indexOf("{");
-  if (s < 0) {
+  const e = out.lastIndexOf("}");
+  if (s < 0 || e < s) {
     return null;
   }
   try {
-    return JSON.parse(out.slice(s));
+    return JSON.parse(out.slice(s, e + 1));
   } catch {
     return null;
   }

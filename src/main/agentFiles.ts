@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import type { ConnectionInput, SkillInput } from "../shared/ipc";
 
@@ -150,4 +156,45 @@ ${endpoint}
   writeFileSync(file, src);
   const nested = existsSync(join(agentPath, "agent"));
   return { relPath: `${nested ? "agent/" : ""}connections/${slug}.ts`, envVar: usedEnvVar };
+}
+
+function connectionFile(agentPath: string, name: string): string {
+  const safe = name.replace(/[^a-zA-Z0-9._-]/g, "");
+  return join(agentRoot(agentPath), "connections", `${safe}.ts`);
+}
+
+/** Read a connection file's source for viewing/editing. */
+export function readConnectionFile(
+  agentPath: string,
+  name: string
+): { relPath: string; content: string; exists: boolean } {
+  const file = connectionFile(agentPath, name);
+  const exists = existsSync(file);
+  const nested = existsSync(join(agentPath, "agent"));
+  return {
+    relPath: `${nested ? "agent/" : ""}connections/${name}.ts`,
+    content: exists ? readFileSync(file, "utf8") : "",
+    exists,
+  };
+}
+
+/** Overwrite a connection file's source. */
+export function writeConnectionFile(
+  agentPath: string,
+  name: string,
+  content: string
+): void {
+  const file = connectionFile(agentPath, name);
+  if (!existsSync(file)) {
+    throw new Error(`connections/${name}.ts does not exist.`);
+  }
+  writeFileSync(file, content);
+}
+
+/** Delete a connection file. */
+export function deleteConnectionFile(agentPath: string, name: string): void {
+  const file = connectionFile(agentPath, name);
+  if (existsSync(file)) {
+    rmSync(file);
+  }
 }

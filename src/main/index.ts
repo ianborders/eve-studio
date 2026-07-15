@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import { BrowserWindow, app, shell } from "electron";
+import { hydratePath } from "./env";
 import { type IpcHandles, registerIpc } from "./ipc";
 import { initStore } from "./store";
 
@@ -44,6 +45,7 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window);
   });
 
+  hydratePath();
   initStore();
   handles = registerIpc();
 

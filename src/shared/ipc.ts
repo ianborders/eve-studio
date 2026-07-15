@@ -361,6 +361,9 @@ export const IPC = {
   agentRegister: "agent:register",
   skillCreate: "agent:skillCreate",
   connectionAdd: "agent:connectionAdd",
+  connectionRead: "agent:connectionRead",
+  connectionWrite: "agent:connectionWrite",
+  connectionDelete: "agent:connectionDelete",
   dialogPickDir: "dialog:pickDir",
 
   modelRead: "agent:modelRead",

@@ -82,6 +82,19 @@ const api = {
       ipcRenderer.invoke(IPC.skillCreate, id, input),
     addConnection: (id: string, input: ConnectionInput): Promise<FileWriteResult> =>
       ipcRenderer.invoke(IPC.connectionAdd, id, input),
+    readConnection: (
+      id: string,
+      name: string
+    ): Promise<{ relPath: string; content: string; exists: boolean }> =>
+      ipcRenderer.invoke(IPC.connectionRead, id, name),
+    writeConnection: (
+      id: string,
+      name: string,
+      content: string
+    ): Promise<WriteResult> =>
+      ipcRenderer.invoke(IPC.connectionWrite, id, name, content),
+    deleteConnection: (id: string, name: string): Promise<WriteResult> =>
+      ipcRenderer.invoke(IPC.connectionDelete, id, name),
     modelRead: (id: string): Promise<ModelConfig> =>
       ipcRenderer.invoke(IPC.modelRead, id),
     modelWrite: (

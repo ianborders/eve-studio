@@ -27,7 +27,10 @@ import {
 import {
   addConnection,
   createSkill,
+  deleteConnectionFile,
+  readConnectionFile,
   readInstructions,
+  writeConnectionFile,
   writeInstructions,
 } from "./agentFiles";
 import {
@@ -489,6 +492,33 @@ export function registerIpc(): IpcHandles {
       }
       try {
         return { ok: true, ...addConnection(a.path, input) };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
+  ipcMain.handle(
+    IPC.connectionRead,
+    (_e: IpcMainInvokeEvent, id: string, name: string) =>
+      readConnectionFile(agentPathOf(id), name)
+  );
+  ipcMain.handle(
+    IPC.connectionWrite,
+    (_e: IpcMainInvokeEvent, id: string, name: string, content: string) => {
+      try {
+        writeConnectionFile(agentPathOf(id), name, content);
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  );
+  ipcMain.handle(
+    IPC.connectionDelete,
+    (_e: IpcMainInvokeEvent, id: string, name: string) => {
+      try {
+        deleteConnectionFile(agentPathOf(id), name);
+        return { ok: true };
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : String(err) };
       }

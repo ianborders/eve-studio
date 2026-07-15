@@ -78,7 +78,14 @@ export function vercelConnectList(
   agentPath: string,
   service?: string
 ): { ok: boolean; connectors: ConnectorItem[]; output?: string } {
-  const args = ["connect", "list", "--format", "json", "--non-interactive"];
+  const args = [
+    "connect",
+    "list",
+    "--format",
+    "json",
+    "--non-interactive",
+    "--all-projects",
+  ];
   if (service) {
     args.push("--service", service);
   }
@@ -86,12 +93,15 @@ export function vercelConnectList(
   if (!r.ok) {
     return { ok: false, connectors: [], output: r.output };
   }
+  // The CLI prints a banner to stderr; extract just the JSON object
+  // (first "{" through the matching last "}") so trailing text can't break parse.
   const start = r.output.indexOf("{");
-  if (start < 0) {
+  const end = r.output.lastIndexOf("}");
+  if (start < 0 || end < start) {
     return { ok: true, connectors: [] };
   }
   try {
-    const parsed = JSON.parse(r.output.slice(start)) as {
+    const parsed = JSON.parse(r.output.slice(start, end + 1)) as {
       connectors?: Array<Record<string, unknown>>;
     };
     const connectors = (parsed.connectors ?? []).map((c) => ({

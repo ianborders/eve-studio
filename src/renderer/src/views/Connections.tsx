@@ -1,8 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ConnectorPicker } from "../components/ConnectorPicker";
 import { ConnectorsGallery } from "../components/ConnectorsGallery";
 import { useActiveStructure } from "../lib/useStructure";
-import { IconExternal, IconPlug, IconPlus, IconRefresh } from "../ui/icons";
+import {
+  IconExternal,
+  IconPlug,
+  IconPlus,
+  IconRefresh,
+  IconTrash,
+} from "../ui/icons";
 import {
   Badge,
   Button,
@@ -12,6 +18,7 @@ import {
   Input,
   Modal,
   Spinner,
+  Textarea,
 } from "../ui/kit";
 
 type Kind = "mcp" | "openapi";
@@ -220,6 +227,10 @@ function AddConnectionModal({
 export function Connections(): JSX.Element {
   const { id, structure, loading, reload } = useActiveStructure();
   const [addOpen, setAddOpen] = useState(false);
+  const [editName, setEditName] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [removed, setRemoved] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   if (loading && !structure) {
     return (
@@ -229,6 +240,18 @@ export function Connections(): JSX.Element {
     );
   }
   const conns = structure?.connections ?? [];
+  const visibleConns = conns.filter((c) => !removed.has(c.name));
+
+  const doDelete = async (): Promise<void> => {
+    if (!id || !confirmDelete) {
+      return;
+    }
+    setDeleting(true);
+    await window.studio.agents.deleteConnection(id, confirmDelete);
+    setRemoved((s) => new Set(s).add(confirmDelete));
+    setDeleting(false);
+    setConfirmDelete(null);
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -247,26 +270,26 @@ export function Connections(): JSX.Element {
             <div className="flex items-center justify-between border-t border-border pt-5">
               <div>
                 <div className="text-2xs font-medium uppercase tracking-wide text-faint">
-                  Agent connection files · advanced
+                  Custom connections · MCP / OpenAPI
                 </div>
                 <div className="text-2xs text-muted">
-                  Direct MCP / OpenAPI connections authored in the agent
-                  <span className="font-mono"> connections/</span> folder.
+                  Connection files the agent authors under
+                  <span className="font-mono"> connections/</span> (like Arcana).
                 </div>
               </div>
               <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
                 <IconPlus className="h-3.5 w-3.5" />
-                Add file
+                Add
               </Button>
             </div>
-            {conns.length === 0 ? (
+            {visibleConns.length === 0 ? (
               <Card className="flex flex-col items-center gap-3 p-8 text-center">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted">
                   <IconPlug className="h-4 w-4" />
                 </div>
                 <div className="text-[13px] text-muted">
-                  No connections yet — give the agent programmatic access to an
-                  external system.
+                  No custom connections yet — wire an MCP server or OpenAPI API
+                  directly.
                 </div>
                 <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
                   <IconPlus className="h-3.5 w-3.5" />
@@ -274,7 +297,7 @@ export function Connections(): JSX.Element {
                 </Button>
               </Card>
             ) : (
-              conns.map((c) => (
+              visibleConns.map((c) => (
                 <Card key={c.name} className="p-4">
                   <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.04] text-muted">
@@ -292,6 +315,17 @@ export function Connections(): JSX.Element {
                         </div>
                       ) : null}
                     </div>
+                    <Button variant="secondary" size="sm" onClick={() => setEditName(c.name)}>
+                      Open
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(c.name)}
+                      className="rounded-md p-1.5 text-faint hover:bg-danger/10 hover:text-danger"
+                      title="Delete"
+                    >
+                      <IconTrash className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                   {c.description ? (
                     <p className="mt-2.5 text-[13px] leading-relaxed text-muted">
@@ -308,6 +342,112 @@ export function Connections(): JSX.Element {
       {addOpen && id ? (
         <AddConnectionModal agentId={id} onClose={() => setAddOpen(false)} />
       ) : null}
+
+      {editName && id ? (
+        <EditConnectionModal
+          agentId={id}
+          name={editName}
+          onClose={() => setEditName(null)}
+        />
+      ) : null}
+
+      {confirmDelete ? (
+        <Modal title="Delete connection" onClose={() => setConfirmDelete(null)}>
+          <div className="space-y-3 p-4">
+            <p className="text-[13px] text-muted">
+              Delete <span className="font-mono text-text">connections/{confirmDelete}.ts</span>?
+              This removes the file. Restart the agent to apply.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setConfirmDelete(null)}>
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={doDelete} disabled={deleting}>
+                {deleting ? "Deleting…" : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
     </div>
+  );
+}
+
+function EditConnectionModal({
+  agentId,
+  name,
+  onClose,
+}: {
+  agentId: string;
+  name: string;
+  onClose: () => void;
+}): JSX.Element {
+  const [content, setContent] = useState<string | null>(null);
+  const [original, setOriginal] = useState("");
+  const [relPath, setRelPath] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      const f = await window.studio.agents.readConnection(agentId, name);
+      setContent(f.content);
+      setOriginal(f.content);
+      setRelPath(f.relPath);
+    })();
+  }, [agentId, name]);
+
+  const dirty = content !== null && content !== original;
+
+  const save = async (): Promise<void> => {
+    if (content === null) {
+      return;
+    }
+    setSaving(true);
+    setErr(null);
+    const r = await window.studio.agents.writeConnection(agentId, name, content);
+    setSaving(false);
+    if (r.ok) {
+      setOriginal(content);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } else {
+      setErr(r.error ?? "Failed to save.");
+    }
+  };
+
+  return (
+    <Modal title={`Edit ${name}`} onClose={onClose} width="max-w-2xl">
+      <div className="space-y-3 p-4">
+        <div className="flex items-center gap-2 font-mono text-2xs text-faint">
+          {relPath}
+          <div className="flex-1" />
+          {dirty ? <span className="text-warn">unsaved</span> : null}
+          {saved ? <span className="text-success">saved ✓</span> : null}
+        </div>
+        {content === null ? (
+          <div className="flex h-64 items-center justify-center">
+            <Spinner />
+          </div>
+        ) : (
+          <Textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            spellCheck={false}
+            className="h-72 resize-none font-mono text-[12px]"
+          />
+        )}
+        {err ? <div className="text-xs text-danger">{err}</div> : null}
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>
+            Close
+          </Button>
+          <Button variant="primary" onClick={save} disabled={!dirty || saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
