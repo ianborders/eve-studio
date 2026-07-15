@@ -102,14 +102,19 @@ function AddConnectionModal({
     });
     setBusy(false);
     if (r.ok) {
-      setDone({ path: r.relPath ?? "connection", env: (r as { envVar?: string }).envVar });
+      setDone({
+        path: r.relPath ?? "connection",
+        env: (r as { envVar?: string }).envVar,
+      });
     } else {
       setErr(r.error ?? "Failed.");
     }
   };
 
   const needsEndpoint = kind === "mcp" ? Boolean(url) : Boolean(spec);
-  const needsConnector = authMode.startsWith("connect") ? Boolean(connector) : true;
+  const needsConnector = authMode.startsWith("connect")
+    ? Boolean(connector)
+    : true;
 
   return (
     <Modal title="Add connection" onClose={onClose} width="max-w-xl">
@@ -121,14 +126,16 @@ function AddConnectionModal({
           <p className="text-2xs leading-relaxed text-muted">
             {done.env ? (
               <>
-                Set <span className="font-mono text-text">{done.env}</span> in the
-                agent's .env (Environment tab), then restart it.
+                Set <span className="font-mono text-text">{done.env}</span> in
+                the agent's .env (Environment tab), then restart it.
               </>
             ) : authMode.startsWith("connect") ? (
               <>
                 Provision the connector with{" "}
-                <span className="font-mono text-text">vercel connect create</span> and
-                restart the agent.
+                <span className="font-mono text-text">
+                  vercel connect create
+                </span>{" "}
+                and restart the agent.
               </>
             ) : (
               "Restart the agent to load the connection."
@@ -143,7 +150,12 @@ function AddConnectionModal({
       ) : (
         <div className="max-h-[70vh] space-y-3 overflow-auto p-4">
           <Field label="Name" hint="becomes connections/<name>.ts">
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="linear" className="font-mono" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="linear"
+              className="font-mono"
+            />
           </Field>
 
           <Field label="Kind">
@@ -159,21 +171,43 @@ function AddConnectionModal({
 
           {kind === "mcp" ? (
             <Field label="MCP URL" hint="Streamable HTTP or SSE">
-              <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://mcp.example.com/mcp" className="font-mono" />
+              <Input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://mcp.example.com/mcp"
+                className="font-mono"
+              />
             </Field>
           ) : (
             <>
               <Field label="OpenAPI spec URL">
-                <Input value={spec} onChange={(e) => setSpec(e.target.value)} placeholder="https://api.example.com/openapi.json" className="font-mono" />
+                <Input
+                  value={spec}
+                  onChange={(e) => setSpec(e.target.value)}
+                  placeholder="https://api.example.com/openapi.json"
+                  className="font-mono"
+                />
               </Field>
               <Field label="Base URL" hint="optional override">
-                <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.example.com" className="font-mono" />
+                <Input
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  placeholder="https://api.example.com"
+                  className="font-mono"
+                />
               </Field>
             </>
           )}
 
-          <Field label="Description" hint="written for the model — routing hint">
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What the agent can do here" />
+          <Field
+            label="Description"
+            hint="written for the model — routing hint"
+          >
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What the agent can do here"
+            />
           </Field>
 
           <Field label="Auth">
@@ -188,23 +222,48 @@ function AddConnectionModal({
           </Field>
 
           {authMode === "static" ? (
-            <Field label="Token env var" hint="Bearer — defaults to <NAME>_TOKEN">
-              <Input value={envVar} onChange={(e) => setEnvVar(e.target.value)} placeholder="LINEAR_TOKEN" className="font-mono" />
+            <Field
+              label="Token env var"
+              hint="Bearer — defaults to <NAME>_TOKEN"
+            >
+              <Input
+                value={envVar}
+                onChange={(e) => setEnvVar(e.target.value)}
+                placeholder="LINEAR_TOKEN"
+                className="font-mono"
+              />
             </Field>
           ) : null}
           {authMode === "header" ? (
             <>
               <Field label="Header name">
-                <Input value={headerName} onChange={(e) => setHeaderName(e.target.value)} placeholder="X-Api-Key" className="font-mono" />
+                <Input
+                  value={headerName}
+                  onChange={(e) => setHeaderName(e.target.value)}
+                  placeholder="X-Api-Key"
+                  className="font-mono"
+                />
               </Field>
               <Field label="Value env var" hint="defaults to <NAME>_TOKEN">
-                <Input value={envVar} onChange={(e) => setEnvVar(e.target.value)} placeholder="DOCS_API_KEY" className="font-mono" />
+                <Input
+                  value={envVar}
+                  onChange={(e) => setEnvVar(e.target.value)}
+                  placeholder="DOCS_API_KEY"
+                  className="font-mono"
+                />
               </Field>
             </>
           ) : null}
           {authMode.startsWith("connect") ? (
-            <Field label="Connector" hint="pick an existing Vercel Connect connector">
-              <ConnectorPicker agentId={agentId} value={connector} onChange={setConnector} />
+            <Field
+              label="Connector"
+              hint="pick an existing Vercel Connect connector"
+            >
+              <ConnectorPicker
+                agentId={agentId}
+                value={connector}
+                onChange={setConnector}
+              />
             </Field>
           ) : null}
 
@@ -276,13 +335,21 @@ export function Connections(): JSX.Element {
           <div className="space-y-2.5 border-t border-border pt-6">
             <div className="flex items-end justify-between gap-3">
               <div>
-                <Kicker className="mb-1.5">Custom connections · MCP / OpenAPI</Kicker>
+                <Kicker className="mb-1.5">
+                  Custom connections · MCP / OpenAPI
+                </Kicker>
                 <div className="text-[13px] leading-relaxed text-muted">
                   Connection files the agent authors under
-                  <span className="font-mono"> connections/</span> (like Arcana).
+                  <span className="font-mono"> connections/</span> (like
+                  Arcana).
                 </div>
               </div>
-              <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setAddOpen(true)}
+                disabled={!id}
+              >
                 <IconPlus className="h-3.5 w-3.5" />
                 Add
               </Button>
@@ -296,7 +363,12 @@ export function Connections(): JSX.Element {
                   No custom connections yet — wire an MCP server or OpenAPI API
                   directly.
                 </div>
-                <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setAddOpen(true)}
+                  disabled={!id}
+                >
                   <IconPlus className="h-3.5 w-3.5" />
                   Add connection
                 </Button>
@@ -308,7 +380,11 @@ export function Connections(): JSX.Element {
                     key={c.name}
                     icon={<IconPlug className="h-4 w-4" />}
                     title={c.name}
-                    badge={c.protocol ? <Badge tone="info">{c.protocol}</Badge> : undefined}
+                    badge={
+                      c.protocol ? (
+                        <Badge tone="info">{c.protocol}</Badge>
+                      ) : undefined
+                    }
                     desc={c.description || undefined}
                     meta={
                       c.url ? (
@@ -320,7 +396,11 @@ export function Connections(): JSX.Element {
                     }
                     right={
                       <div className="flex items-center gap-1">
-                        <Button variant="secondary" size="sm" onClick={() => setEditName(c.name)}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setEditName(c.name)}
+                        >
                           Open
                         </Button>
                         <IconButton
@@ -356,8 +436,11 @@ export function Connections(): JSX.Element {
         <Modal title="Delete connection" onClose={() => setConfirmDelete(null)}>
           <div className="space-y-3 p-4">
             <p className="text-[13px] text-muted">
-              Delete <span className="font-mono text-text">connections/{confirmDelete}.ts</span>?
-              This removes the file. Restart the agent to apply.
+              Delete{" "}
+              <span className="font-mono text-text">
+                connections/{confirmDelete}.ts
+              </span>
+              ? This removes the file. Restart the agent to apply.
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setConfirmDelete(null)}>
@@ -407,7 +490,11 @@ function EditConnectionModal({
     }
     setSaving(true);
     setErr(null);
-    const r = await window.studio.agents.writeConnection(agentId, name, content);
+    const r = await window.studio.agents.writeConnection(
+      agentId,
+      name,
+      content,
+    );
     setSaving(false);
     if (r.ok) {
       setOriginal(content);

@@ -55,9 +55,10 @@ function NewSubagentModal({
             Created <span className="font-mono">{done}</span> + instructions.md.
           </div>
           <p className="text-2xs leading-relaxed text-muted">
-            The parent delegates to it by its name; the description is the routing
-            hint. It's its own agent root — add its own tools/skills/connections
-            under the subagent folder. Restart the agent to load it.
+            The parent delegates to it by its name; the description is the
+            routing hint. It's its own agent root — add its own
+            tools/skills/connections under the subagent folder. Restart the
+            agent to load it.
           </p>
           <div className="flex justify-end">
             <Button variant="primary" onClick={onClose}>
@@ -67,10 +68,21 @@ function NewSubagentModal({
         </div>
       ) : (
         <div className="space-y-3 p-4">
-          <Field label="Name" hint="becomes subagents/<name>/ — unique vs tools">
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="researcher" className="font-mono" />
+          <Field
+            label="Name"
+            hint="becomes subagents/<name>/ — unique vs tools"
+          >
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="researcher"
+              className="font-mono"
+            />
           </Field>
-          <Field label="Description" hint="the delegation trigger, for the parent">
+          <Field
+            label="Description"
+            hint="the delegation trigger, for the parent"
+          >
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -91,7 +103,11 @@ function NewSubagentModal({
             <Button variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={submit} disabled={busy || !name || !description}>
+            <Button
+              variant="primary"
+              onClick={submit}
+              disabled={busy || !name || !description}
+            >
               {busy ? "Creating…" : "Create subagent"}
             </Button>
           </div>
@@ -123,7 +139,12 @@ export function Subagents(): JSX.Element {
         count={subagents.length}
         right={
           <>
-            <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setAddOpen(true)}
+              disabled={!id}
+            >
               <IconPlus className="h-3.5 w-3.5" />
               New
             </Button>
@@ -141,14 +162,19 @@ export function Subagents(): JSX.Element {
             kicker="Subagents"
             title="No subagents yet"
             action={
-              <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setAddOpen(true)}
+                disabled={!id}
+              >
                 <IconPlus className="h-3.5 w-3.5" />
                 New subagent
               </Button>
             }
           >
-            Declared subagents are specialists the root delegates to — each its own
-            isolated agent with its own tools, skills, and memory.
+            Declared subagents are specialists the root delegates to — each its
+            own isolated agent with its own tools, skills, and memory.
           </EmptyState>
         ) : (
           <div className="mx-auto max-w-2xl px-4 py-4">

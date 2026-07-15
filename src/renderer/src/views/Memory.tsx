@@ -102,7 +102,9 @@ function Browse({ agentId }: { agentId: string }): JSX.Element {
   return (
     <div className="space-y-5">
       {err ? (
-        <div className="rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">{err}</div>
+        <div className="rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">
+          {err}
+        </div>
       ) : null}
 
       {stats ? (
@@ -127,7 +129,12 @@ function Browse({ agentId }: { agentId: string }): JSX.Element {
           placeholder="Ask the brain — hybrid semantic + graph search…"
           className="no-drag flex-1 bg-transparent text-[13px] text-text outline-none placeholder:text-faint"
         />
-        <Button size="sm" variant="primary" onClick={() => void runQuery()} disabled={busy || !q.trim()}>
+        <Button
+          size="sm"
+          variant="primary"
+          onClick={() => void runQuery()}
+          disabled={busy || !q.trim()}
+        >
           {busy ? "…" : "Search"}
         </Button>
       </div>
@@ -181,7 +188,9 @@ function Browse({ agentId }: { agentId: string }): JSX.Element {
                   {timeAgo(e.timestamp)}
                 </span>
               </div>
-              <div className="mt-1.5 text-[13px] leading-snug text-text">{e.title}</div>
+              <div className="mt-1.5 text-[13px] leading-snug text-text">
+                {e.title}
+              </div>
               {e.entities && e.entities.length > 0 ? (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {e.entities.slice(0, 8).map((ent) => (
@@ -218,11 +227,13 @@ function Setup({
   const [err, setErr] = useState<string | null>(null);
 
   const canBrowseFromEnv =
-    detected.keyPresent && Boolean(detected.workspace) && Boolean(detected.envVar);
+    detected.keyPresent &&
+    Boolean(detected.workspace) &&
+    Boolean(detected.envVar);
 
   const run = async (
     kind: string,
-    fn: () => Promise<{ ok: boolean; error?: string }>
+    fn: () => Promise<{ ok: boolean; error?: string }>,
   ): Promise<void> => {
     setBusy(kind);
     setErr(null);
@@ -267,7 +278,7 @@ function Setup({
                 workspace: detected.workspace ?? workspace,
                 envVar: detected.envVar ?? envVar,
                 fromEnv: true,
-              })
+              }),
             )
           }
         >
@@ -279,7 +290,11 @@ function Setup({
 
       <Card className="space-y-3 p-4">
         <Field label="Workspace slug">
-          <Input value={workspace} onChange={(e) => setWorkspace(e.target.value)} placeholder="eve-gtm" />
+          <Input
+            value={workspace}
+            onChange={(e) => setWorkspace(e.target.value)}
+            placeholder="eve-gtm"
+          />
         </Field>
         <Field label="Env var name">
           <Input
@@ -308,7 +323,11 @@ function Setup({
             disabled={busy !== null || !workspace || !key}
             onClick={() =>
               void run("connect", () =>
-                window.studio.arcana.saveBrain(agentId, { workspace, envVar, key })
+                window.studio.arcana.saveBrain(agentId, {
+                  workspace,
+                  envVar,
+                  key,
+                }),
               )
             }
           >
@@ -320,7 +339,7 @@ function Setup({
             disabled={busy !== null || !workspace || !key || !envVar}
             onClick={() =>
               void run("wire", () =>
-                window.studio.arcana.wire(agentId, { workspace, envVar, key })
+                window.studio.arcana.wire(agentId, { workspace, envVar, key }),
               )
             }
           >
@@ -329,10 +348,11 @@ function Setup({
         </div>
         <p className="text-2xs leading-snug text-faint">
           <b className="text-muted">Connect</b> just lets Studio read the brain.{" "}
-          <b className="text-muted">Wire</b> writes the connection into the agent —
-          restart it, and it automatically gets Arcana's memory tools
-          (remember/recall/search). Add a line in <b className="text-muted">
-          Instructions</b> telling it when to recall and remember.
+          <b className="text-muted">Wire</b> writes the connection into the
+          agent — restart it, and it automatically gets Arcana's memory tools
+          (remember/recall/search). Add a line in{" "}
+          <b className="text-muted">Instructions</b> telling it when to recall
+          and remember.
         </p>
       </Card>
     </div>
@@ -376,8 +396,9 @@ function NativeMemory(): JSX.Element {
         </List>
         <div className="border-t border-border px-4 py-3 text-[13px] leading-relaxed text-muted">
           What Eve does <b className="text-text">not</b> do natively is
-          cross-conversation semantic recall (facts, timeline, search). That's the
-          one thing <b className="text-text">Arcana</b> adds — optional, below.
+          cross-conversation semantic recall (facts, timeline, search). That's
+          the one thing <b className="text-text">Arcana</b> adds — optional,
+          below.
         </div>
       </Card>
     </section>
@@ -425,7 +446,9 @@ function MemoryInstructions({ agentId }: { agentId: string }): JSX.Element {
   return (
     <Card className="p-4">
       <div className="flex items-center gap-2">
-        <span className="text-[13px] font-medium text-text">Teach it to use memory</span>
+        <span className="text-[13px] font-medium text-text">
+          Teach it to use memory
+        </span>
         <div className="flex-1" />
         {status ? (
           <span className="font-spacemono text-[10px] uppercase tracking-[0.14em] text-success">
@@ -435,13 +458,19 @@ function MemoryInstructions({ agentId }: { agentId: string }): JSX.Element {
         <Button variant="secondary" size="sm" onClick={copy}>
           Copy
         </Button>
-        <Button variant="primary" size="sm" onClick={addToInstructions} disabled={busy}>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={addToInstructions}
+          disabled={busy}
+        >
           {busy ? "Adding…" : "Add to Instructions"}
         </Button>
       </div>
       <p className="mt-1.5 text-2xs leading-relaxed text-muted">
-        The tools load automatically — this tells the agent <b className="text-text">when</b>{" "}
-        to recall and remember. Add it once (idempotent), then restart the agent.
+        The tools load automatically — this tells the agent{" "}
+        <b className="text-text">when</b> to recall and remember. Add it once
+        (idempotent), then restart the agent.
       </p>
       <pre className="mt-2 overflow-auto rounded-lg border border-border bg-subtle p-3 font-mono text-2xs leading-relaxed text-muted">
         {MEMORY_SNIPPET}
@@ -533,7 +562,9 @@ export function Memory(): JSX.Element {
                     </div>
                     <p className="mt-1 text-[13px] leading-relaxed text-muted">
                       Arcana workspace{" "}
-                      <span className="font-mono text-text">{connected.workspace}</span>
+                      <span className="font-mono text-text">
+                        {connected.workspace}
+                      </span>
                       {detected?.connections.length
                         ? " — wired into the agent."
                         : " — browsing only (not wired into the agent)."}
@@ -544,7 +575,11 @@ export function Memory(): JSX.Element {
                 <Browse agentId={activeAgentId} />
               </div>
             ) : detected && activeAgentId ? (
-              <Setup agentId={activeAgentId} detected={detected} onConnected={refresh} />
+              <Setup
+                agentId={activeAgentId}
+                detected={detected}
+                onConnected={refresh}
+              />
             ) : null}
           </section>
         </div>

@@ -52,7 +52,11 @@ interface State {
   deleteThread: (threadId: string) => Promise<void>;
   archiveThread: (threadId: string, archived: boolean) => Promise<void>;
   send: (text: string) => Promise<void>;
-  respond: (requestId: string, optionId?: string, text?: string) => Promise<void>;
+  respond: (
+    requestId: string,
+    optionId?: string,
+    text?: string,
+  ) => Promise<void>;
   setChatTarget: (agentId: string, target: ChatTarget) => void;
   bumpDeploy: () => void;
 }
@@ -79,7 +83,7 @@ export const useStore = create<State>((set, get) => ({
     set({ booted: true });
 
     window.studio.agents.onStatusChanged((s) =>
-      set((st) => ({ runtime: { ...st.runtime, [s.agentId]: s } }))
+      set((st) => ({ runtime: { ...st.runtime, [s.agentId]: s } })),
     );
     window.studio.chat.onEvent(({ threadId, event }) =>
       set((st) => ({
@@ -87,10 +91,10 @@ export const useStore = create<State>((set, get) => ({
           ...st.events,
           [threadId]: [...(st.events[threadId] ?? []), event],
         },
-      }))
+      })),
     );
     window.studio.chat.onStatus(({ threadId, status }) =>
-      set((st) => ({ status: { ...st.status, [threadId]: status } }))
+      set((st) => ({ status: { ...st.status, [threadId]: status } })),
     );
 
     await get().refreshAgents();
@@ -147,9 +151,10 @@ export const useStore = create<State>((set, get) => ({
     set({ activeAgentId: id, activeThreadId: null });
     void get().loadStructure(id);
     await get().loadThreads(id);
-    const threads = get().threads[id] ?? [];
-    if (threads[0]) {
-      await get().selectThread(threads[0].id);
+    // Only auto-open a live (non-archived) thread — never a hidden/archived one.
+    const first = (get().threads[id] ?? []).find((t) => !t.archived);
+    if (first) {
+      await get().selectThread(first.id);
     }
   },
 
@@ -162,7 +167,9 @@ export const useStore = create<State>((set, get) => ({
       const s = await window.studio.agents.structure(id);
       set((st) => ({ structure: { ...st.structure, [id]: s } }));
     } finally {
-      set((st) => ({ structureLoading: { ...st.structureLoading, [id]: false } }));
+      set((st) => ({
+        structureLoading: { ...st.structureLoading, [id]: false },
+      }));
     }
   },
 
@@ -173,9 +180,9 @@ export const useStore = create<State>((set, get) => ({
     }
     set({ activeAgentId: id, section: "chat" });
     await get().loadThreads(id);
-    const threads = get().threads[id] ?? [];
-    if (threads[0]) {
-      await get().selectThread(threads[0].id);
+    const first = (get().threads[id] ?? []).find((t) => !t.archived);
+    if (first) {
+      await get().selectThread(first.id);
     } else {
       await get().newThread(id);
     }
@@ -189,7 +196,10 @@ export const useStore = create<State>((set, get) => ({
   newThread: async (agentId) => {
     const t = await window.studio.chat.createThread(agentId);
     await get().loadThreads(agentId);
-    set((st) => ({ activeThreadId: t.id, events: { ...st.events, [t.id]: [] } }));
+    set((st) => ({
+      activeThreadId: t.id,
+      events: { ...st.events, [t.id]: [] },
+    }));
   },
 
   selectThread: async (threadId) => {

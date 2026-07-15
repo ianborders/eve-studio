@@ -19,18 +19,21 @@ const TIMEOUT_MS = 20_000;
 async function call<T>(
   path: string,
   workspace: string,
-  key: string
+  key: string,
 ): Promise<ArcanaResult<T>> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(`${BASE}/brain/${encodeURIComponent(workspace)}${path}`, {
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "X-Kyberagent-Agent": workspace,
+    const res = await fetch(
+      `${BASE}/brain/${encodeURIComponent(workspace)}${path}`,
+      {
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "X-Kyberagent-Agent": workspace,
+        },
+        signal: controller.signal,
       },
-      signal: controller.signal,
-    });
+    );
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       let msg = `HTTP ${res.status}`;
@@ -59,7 +62,7 @@ async function call<T>(
 /** Timeline + entity-graph aggregates for a workspace. */
 export function arcanaStats(
   workspace: string,
-  key: string
+  key: string,
 ): Promise<ArcanaResult<ArcanaStats>> {
   return call<ArcanaStats>("/stats", workspace, key);
 }
@@ -68,7 +71,7 @@ export function arcanaStats(
 export function arcanaTimeline(
   workspace: string,
   key: string,
-  limit = 30
+  limit = 30,
 ): Promise<ArcanaResult<TimelineEvent[]>> {
   return call<TimelineEvent[]>(`/timeline?limit=${limit}`, workspace, key);
 }
@@ -78,19 +81,19 @@ export function arcanaQuery(
   workspace: string,
   key: string,
   q: string,
-  limit = 20
+  limit = 20,
 ): Promise<ArcanaResult<QueryHit[]>> {
   return call<QueryHit[]>(
     `/query?q=${encodeURIComponent(q)}&limit=${limit}`,
     workspace,
-    key
+    key,
   );
 }
 
 /** Validate a key/workspace pair by fetching stats (read-only). */
 export async function arcanaValidate(
   workspace: string,
-  key: string
+  key: string,
 ): Promise<ArcanaResult<ArcanaStats>> {
   return await arcanaStats(workspace, key);
 }

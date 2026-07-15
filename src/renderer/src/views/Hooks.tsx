@@ -48,8 +48,8 @@ function NewHookModal({
             Created <span className="font-mono">{done}</span>.
           </div>
           <p className="text-2xs leading-relaxed text-muted">
-            Hooks observe the session event stream (audit, metrics, persistence).
-            Edit the events map, then restart the agent.
+            Hooks observe the session event stream (audit, metrics,
+            persistence). Edit the events map, then restart the agent.
           </p>
           <div className="flex justify-end">
             <Button variant="primary" onClick={onClose}>
@@ -60,7 +60,12 @@ function NewHookModal({
       ) : (
         <div className="space-y-3 p-4">
           <Field label="Name" hint="becomes hooks/<name>.ts">
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="audit" className="font-mono" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="audit"
+              className="font-mono"
+            />
           </Field>
           {err ? <div className="text-xs text-danger">{err}</div> : null}
           <div className="flex justify-end gap-2 pt-1">
@@ -99,7 +104,12 @@ export function Hooks(): JSX.Element {
         count={hooks.length}
         right={
           <>
-            <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setAddOpen(true)}
+              disabled={!id}
+            >
               <IconPlus className="h-3.5 w-3.5" />
               New
             </Button>
@@ -117,7 +127,12 @@ export function Hooks(): JSX.Element {
             kicker="Hooks"
             title="No hooks yet"
             action={
-              <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setAddOpen(true)}
+                disabled={!id}
+              >
                 <IconPlus className="h-3.5 w-3.5" />
                 New hook
               </Button>

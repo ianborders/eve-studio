@@ -1,6 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { BrowserWindow, type IpcMainInvokeEvent, app, dialog, ipcMain } from "electron";
+import {
+  BrowserWindow,
+  type IpcMainInvokeEvent,
+  app,
+  dialog,
+  ipcMain,
+} from "electron";
 import {
   type AddAgentResult,
   type AgentRecord,
@@ -47,7 +53,13 @@ import {
 } from "./arcana";
 import { detectBrain, keyFromEnv, wireBrain } from "./arcanaWire";
 import { ChatController } from "./chat";
-import { addChannel, CliRunner, initAgent, listChannels, listEvals } from "./cli";
+import {
+  addChannel,
+  CliRunner,
+  initAgent,
+  listChannels,
+  listEvals,
+} from "./cli";
 import { checkHealth, getAgentInfo, type SessionConn } from "./eveSession";
 import * as store from "./store";
 import { readStructure } from "./structure";
@@ -97,7 +109,10 @@ function tryWrite(fn: () => { relPath: string }): {
   try {
     return { ok: true, ...fn() };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 
@@ -109,7 +124,11 @@ export interface IpcHandles {
 
 function brainInfo(cred: store.BrainCred | undefined): BrainInfo | null {
   return cred
-    ? { workspace: cred.workspace, envVar: cred.envVar, hasKey: Boolean(cred.key) }
+    ? {
+        workspace: cred.workspace,
+        envVar: cred.envVar,
+        hasKey: Boolean(cred.key),
+      }
     : null;
 }
 
@@ -142,7 +161,8 @@ function addAgentFromPath(dir: string): AddAgentResult {
   }
   const hasAgentDir = existsSync(join(dir, "agent"));
   const flatAgent =
-    existsSync(join(dir, "agent.ts")) || existsSync(join(dir, "instructions.md"));
+    existsSync(join(dir, "agent.ts")) ||
+    existsSync(join(dir, "instructions.md"));
   if (!(hasAgentDir || flatAgent)) {
     return { ok: false, error: "No agent/ directory found in that folder." };
   }
@@ -161,7 +181,7 @@ function addAgentFromPath(dir: string): AddAgentResult {
   try {
     eveVersion = (
       JSON.parse(
-        readFileSync(join(dir, "node_modules", "eve", "package.json"), "utf8")
+        readFileSync(join(dir, "node_modules", "eve", "package.json"), "utf8"),
       ) as { version: string }
     ).version;
   } catch {
@@ -173,7 +193,13 @@ function addAgentFromPath(dir: string): AddAgentResult {
   if (existing) {
     return { ok: true, agent: existing };
   }
-  const agent: AgentRecord = { id, name, path: dir, eveVersion, addedAt: Date.now() };
+  const agent: AgentRecord = {
+    id,
+    name,
+    path: dir,
+    eveVersion,
+    addedAt: Date.now(),
+  };
   store.upsertAgent(agent);
   return { ok: true, agent };
 }
@@ -186,24 +212,21 @@ export function registerIpc(): IpcHandles {
 
   const cli = new CliRunner(
     (runId, data) => broadcast(IPC.cliChunk, { runId, data }),
-    (runId, code) => broadcast(IPC.cliExit, { runId, code })
+    (runId, code) => broadcast(IPC.cliExit, { runId, code }),
   );
 
   const chat = new ChatController(
     (threadId, event) => broadcast(IPC.chatEvent, { threadId, event }),
-    (msg) => broadcast(IPC.chatStatus, msg)
+    (msg) => broadcast(IPC.chatStatus, msg),
   );
 
-  ipcMain.handle(
-    IPC.appInfo,
-    (): AppInfo => ({
-      appVersion: app.getVersion(),
-      electron: process.versions.electron,
-      node: process.versions.node,
-      chrome: process.versions.chrome,
-      platform: process.platform,
-    })
-  );
+  ipcMain.handle(IPC.appInfo, (): AppInfo => ({
+    appVersion: app.getVersion(),
+    electron: process.versions.electron,
+    node: process.versions.node,
+    chrome: process.versions.chrome,
+    platform: process.platform,
+  }));
 
   // --- agents ---
   ipcMain.handle(IPC.agentsList, () => store.listAgents());
@@ -247,15 +270,24 @@ export function registerIpc(): IpcHandles {
 
   ipcMain.handle(
     IPC.agentCreate,
-    (_e: IpcMainInvokeEvent, input: import("../shared/ipc").CreateAgentInput) => {
+    (
+      _e: IpcMainInvokeEvent,
+      input: import("../shared/ipc").CreateAgentInput,
+    ) => {
       const runId = store.rid();
-      initAgent(cli, runId, input.parentDir, input.name, Boolean(input.webChat));
+      initAgent(
+        cli,
+        runId,
+        input.parentDir,
+        input.name,
+        Boolean(input.webChat),
+      );
       return runId;
-    }
+    },
   );
 
   ipcMain.handle(IPC.agentRegister, (_e: IpcMainInvokeEvent, dir: string) =>
-    addAgentFromPath(dir)
+    addAgentFromPath(dir),
   );
 
   // --- runtime ---
@@ -271,7 +303,7 @@ export function registerIpc(): IpcHandles {
     return agents.state(id);
   });
   ipcMain.handle(IPC.agentStatus, (_e: IpcMainInvokeEvent, id: string) =>
-    agents.state(id)
+    agents.state(id),
   );
   ipcMain.handle(IPC.agentInfo, (_e: IpcMainInvokeEvent, id: string) => {
     const url = agents.url(id);
@@ -290,23 +322,31 @@ export function registerIpc(): IpcHandles {
 
   // --- model / config ---
   ipcMain.handle(IPC.modelRead, (_e: IpcMainInvokeEvent, id: string) =>
-    readModelConfig(agentPathOf(id))
+    readModelConfig(agentPathOf(id)),
   );
   ipcMain.handle(
     IPC.modelWrite,
-    (_e: IpcMainInvokeEvent, id: string, model: string, reasoning: string | null) => {
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      model: string,
+      reasoning: string | null,
+    ) => {
       try {
         writeModelConfig(agentPathOf(id), model, reasoning);
         return { ok: true };
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
       }
-    }
+    },
   );
 
   // --- env ---
   ipcMain.handle(IPC.envRead, (_e: IpcMainInvokeEvent, id: string) =>
-    readEnv(agentPathOf(id))
+    readEnv(agentPathOf(id)),
   );
   ipcMain.handle(
     IPC.envWrite,
@@ -315,31 +355,43 @@ export function registerIpc(): IpcHandles {
         writeEnv(agentPathOf(id), name, content);
         return { ok: true };
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
       }
-    }
+    },
   );
 
   // --- authoring scaffolds ---
   ipcMain.handle(
     IPC.toolCreate,
-    (_e: IpcMainInvokeEvent, id: string, input: import("../shared/ipc").ToolInput) =>
-      tryWrite(() => createTool(agentPathOf(id), input))
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      input: import("../shared/ipc").ToolInput,
+    ) => tryWrite(() => createTool(agentPathOf(id), input)),
   );
   ipcMain.handle(
     IPC.subagentCreate,
-    (_e: IpcMainInvokeEvent, id: string, input: import("../shared/ipc").SubagentInput) =>
-      tryWrite(() => createSubagent(agentPathOf(id), input))
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      input: import("../shared/ipc").SubagentInput,
+    ) => tryWrite(() => createSubagent(agentPathOf(id), input)),
   );
   ipcMain.handle(
     IPC.hookCreate,
     (_e: IpcMainInvokeEvent, id: string, name: string) =>
-      tryWrite(() => createHook(agentPathOf(id), name))
+      tryWrite(() => createHook(agentPathOf(id), name)),
   );
   ipcMain.handle(
     IPC.scheduleCreate,
-    (_e: IpcMainInvokeEvent, id: string, input: import("../shared/ipc").ScheduleInput) =>
-      tryWrite(() => createSchedule(agentPathOf(id), input))
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      input: import("../shared/ipc").ScheduleInput,
+    ) => tryWrite(() => createSchedule(agentPathOf(id), input)),
   );
 
   // --- capability read / edit / delete (tools, skills, subagents, hooks, schedules) ---
@@ -349,13 +401,13 @@ export function registerIpc(): IpcHandles {
       _e: IpcMainInvokeEvent,
       id: string,
       kind: import("../shared/ipc").CapabilityKind,
-      name: string
-    ) => capabilityFiles(agentPathOf(id), kind, name)
+      name: string,
+    ) => capabilityFiles(agentPathOf(id), kind, name),
   );
   ipcMain.handle(
     IPC.capabilityWrite,
     (_e: IpcMainInvokeEvent, id: string, relPath: string, content: string) =>
-      tryWrite(() => writeCapabilityFile(agentPathOf(id), relPath, content))
+      tryWrite(() => writeCapabilityFile(agentPathOf(id), relPath, content)),
   );
   ipcMain.handle(
     IPC.capabilityDelete,
@@ -363,51 +415,54 @@ export function registerIpc(): IpcHandles {
       _e: IpcMainInvokeEvent,
       id: string,
       kind: import("../shared/ipc").CapabilityKind,
-      name: string
-    ) => tryWrite(() => deleteCapability(agentPathOf(id), kind, name))
+      name: string,
+    ) => tryWrite(() => deleteCapability(agentPathOf(id), kind, name)),
   );
 
   // --- sandbox ---
   ipcMain.handle(IPC.sandboxRead, (_e: IpcMainInvokeEvent, id: string) =>
-    readSandbox(agentPathOf(id))
+    readSandbox(agentPathOf(id)),
   );
   ipcMain.handle(IPC.sandboxCreate, (_e: IpcMainInvokeEvent, id: string) =>
-    tryWrite(() => createSandbox(agentPathOf(id)))
+    tryWrite(() => createSandbox(agentPathOf(id))),
   );
 
   // --- channels ---
   ipcMain.handle(IPC.channelsList, (_e: IpcMainInvokeEvent, id: string) =>
-    listChannels(agentPathOf(id))
+    listChannels(agentPathOf(id)),
   );
   ipcMain.handle(
     IPC.channelAdd,
     (_e: IpcMainInvokeEvent, id: string, kind: "slack" | "web") =>
-      addChannel(agentPathOf(id), kind)
+      addChannel(agentPathOf(id), kind),
   );
   ipcMain.handle(
     IPC.channelWrite,
     (
       _e: IpcMainInvokeEvent,
       id: string,
-      input: import("../shared/ipc").ChannelAddInput
+      input: import("../shared/ipc").ChannelAddInput,
     ) => {
       try {
         return { ok: true, ...writeChannel(agentPathOf(id), input) };
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
       }
-    }
+    },
   );
 
   // --- vercel ---
   ipcMain.handle(IPC.vercelStatus, (_e: IpcMainInvokeEvent, id: string) =>
-    vercelStatus(agentPathOf(id))
+    vercelStatus(agentPathOf(id)),
   );
   ipcMain.handle(IPC.vercelEnvLs, (_e: IpcMainInvokeEvent, id: string) =>
-    vercelEnvLs(agentPathOf(id))
+    vercelEnvLs(agentPathOf(id)),
   );
   ipcMain.handle(IPC.vercelEnvPull, (_e: IpcMainInvokeEvent, id: string) =>
-    vercelEnvPull(agentPathOf(id))
+    vercelEnvPull(agentPathOf(id)),
   );
   ipcMain.handle(
     IPC.vercelEnvAdd,
@@ -416,13 +471,13 @@ export function registerIpc(): IpcHandles {
       id: string,
       name: string,
       value: string,
-      target: string
-    ) => vercelEnvAdd(agentPathOf(id), name, value, target)
+      target: string,
+    ) => vercelEnvAdd(agentPathOf(id), name, value, target),
   );
   ipcMain.handle(
     IPC.connectorList,
     (_e: IpcMainInvokeEvent, id: string, service?: string) =>
-      vercelConnectList(agentPathOf(id), service)
+      vercelConnectList(agentPathOf(id), service),
   );
   ipcMain.handle(
     IPC.connectorCreate,
@@ -431,8 +486,8 @@ export function registerIpc(): IpcHandles {
       id: string,
       type: string,
       name: string,
-      triggers: boolean
-    ) => vercelConnectCreate(agentPathOf(id), type, name, triggers)
+      triggers: boolean,
+    ) => vercelConnectCreate(agentPathOf(id), type, name, triggers),
   );
   ipcMain.handle(
     IPC.connectorAttach,
@@ -440,19 +495,21 @@ export function registerIpc(): IpcHandles {
       vercelConnectAttach(
         agentPathOf(id),
         connector,
-        kind ? `/eve/v1/${kind}` : undefined
-      )
+        kind ? `/eve/v1/${kind}` : undefined,
+      ),
   );
   ipcMain.handle(IPC.connectOpen, (_e: IpcMainInvokeEvent, id: string) =>
-    openConnectWindow(agentPathOf(id))
+    openConnectWindow(agentPathOf(id)),
   );
-  ipcMain.handle(IPC.connectOpenExternal, (_e: IpcMainInvokeEvent, id: string) =>
-    openConnectExternal(agentPathOf(id))
+  ipcMain.handle(
+    IPC.connectOpenExternal,
+    (_e: IpcMainInvokeEvent, id: string) =>
+      openConnectExternal(agentPathOf(id)),
   );
   ipcMain.handle(
     IPC.connectorOpenPage,
     (_e: IpcMainInvokeEvent, id: string, connector: string) =>
-      openConnector(agentPathOf(id), connector)
+      openConnector(agentPathOf(id), connector),
   );
 
   ipcMain.handle(
@@ -463,7 +520,7 @@ export function registerIpc(): IpcHandles {
         throw new Error("Unknown agent.");
       }
       return readInstructions(a.path);
-    }
+    },
   );
   ipcMain.handle(
     IPC.agentWriteInstructions,
@@ -474,7 +531,7 @@ export function registerIpc(): IpcHandles {
       }
       writeInstructions(a.path, content);
       return true;
-    }
+    },
   );
 
   // --- CLI (build / deploy / eval), logs, scaffolding ---
@@ -484,7 +541,7 @@ export function registerIpc(): IpcHandles {
       _e: IpcMainInvokeEvent,
       id: string,
       kind: "build" | "deploy" | "evalRun",
-      extra?: { ids?: string[] }
+      extra?: { ids?: string[] },
     ) => {
       const a = store.getAgent(id);
       if (!a) {
@@ -499,7 +556,7 @@ export function registerIpc(): IpcHandles {
             : ["eval", ...(extra?.ids ?? []), "--json"];
       cli.run(runId, a.path, args);
       return runId;
-    }
+    },
   );
   ipcMain.handle(IPC.cliCancel, (_e: IpcMainInvokeEvent, runId: string) => {
     cli.cancel(runId);
@@ -513,7 +570,7 @@ export function registerIpc(): IpcHandles {
     return listEvals(a.path);
   });
   ipcMain.handle(IPC.agentLogs, (_e: IpcMainInvokeEvent, id: string) =>
-    agents.logs(id)
+    agents.logs(id),
   );
 
   ipcMain.handle(
@@ -521,7 +578,7 @@ export function registerIpc(): IpcHandles {
     (
       _e: IpcMainInvokeEvent,
       id: string,
-      input: import("../shared/ipc").SkillInput
+      input: import("../shared/ipc").SkillInput,
     ) => {
       const a = store.getAgent(id);
       if (!a) {
@@ -530,16 +587,19 @@ export function registerIpc(): IpcHandles {
       try {
         return { ok: true, ...createSkill(a.path, input) };
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
       }
-    }
+    },
   );
   ipcMain.handle(
     IPC.connectionAdd,
     (
       _e: IpcMainInvokeEvent,
       id: string,
-      input: import("../shared/ipc").ConnectionInput
+      input: import("../shared/ipc").ConnectionInput,
     ) => {
       const a = store.getAgent(id);
       if (!a) {
@@ -548,14 +608,17 @@ export function registerIpc(): IpcHandles {
       try {
         return { ok: true, ...addConnection(a.path, input) };
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
       }
-    }
+    },
   );
   ipcMain.handle(
     IPC.connectionRead,
     (_e: IpcMainInvokeEvent, id: string, name: string) =>
-      readConnectionFile(agentPathOf(id), name)
+      readConnectionFile(agentPathOf(id), name),
   );
   ipcMain.handle(
     IPC.connectionWrite,
@@ -564,9 +627,12 @@ export function registerIpc(): IpcHandles {
         writeConnectionFile(agentPathOf(id), name, content);
         return { ok: true };
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
       }
-    }
+    },
   );
   ipcMain.handle(
     IPC.connectionDelete,
@@ -575,14 +641,17 @@ export function registerIpc(): IpcHandles {
         deleteConnectionFile(agentPathOf(id), name);
         return { ok: true };
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
       }
-    }
+    },
   );
   ipcMain.handle(
     IPC.connectorUsage,
     (_e: IpcMainInvokeEvent, id: string, uids: string[]) =>
-      scanConnectorUsage(agentPathOf(id), uids)
+      scanConnectorUsage(agentPathOf(id), uids),
   );
 
   // --- arcana (memory) ---
@@ -595,7 +664,7 @@ export function registerIpc(): IpcHandles {
       }
       const detected = detectBrain(a.path, readStructure(a.path));
       return { ...detected, saved: brainInfo(store.getBrain(id)) };
-    }
+    },
   );
 
   ipcMain.handle(
@@ -603,7 +672,12 @@ export function registerIpc(): IpcHandles {
     async (
       _e: IpcMainInvokeEvent,
       id: string,
-      input: { workspace: string; envVar: string; key?: string; fromEnv?: boolean }
+      input: {
+        workspace: string;
+        envVar: string;
+        key?: string;
+        fromEnv?: boolean;
+      },
     ) => {
       const a = store.getAgent(id);
       if (!a) {
@@ -619,23 +693,27 @@ export function registerIpc(): IpcHandles {
       if (!check.ok) {
         return { ok: false, error: check.error ?? "Validation failed." };
       }
-      store.setBrain(id, { workspace: input.workspace, envVar: input.envVar, key });
+      store.setBrain(id, {
+        workspace: input.workspace,
+        envVar: input.envVar,
+        key,
+      });
       return { ok: true, info: brainInfo(store.getBrain(id)) };
-    }
+    },
   );
 
-  ipcMain.handle(IPC.arcanaForgetBrain, (_e: IpcMainInvokeEvent, id: string) => {
-    store.deleteBrain(id);
-    return true;
-  });
+  ipcMain.handle(
+    IPC.arcanaForgetBrain,
+    (_e: IpcMainInvokeEvent, id: string) => {
+      store.deleteBrain(id);
+      return true;
+    },
+  );
 
   ipcMain.handle(
     IPC.arcanaValidate,
-    (
-      _e: IpcMainInvokeEvent,
-      workspace: string,
-      key: string
-    ) => arcanaValidate(workspace, key)
+    (_e: IpcMainInvokeEvent, workspace: string, key: string) =>
+      arcanaValidate(workspace, key),
   );
 
   ipcMain.handle(IPC.arcanaStats, (_e: IpcMainInvokeEvent, id: string) => {
@@ -647,14 +725,14 @@ export function registerIpc(): IpcHandles {
     (_e: IpcMainInvokeEvent, id: string, limit?: number) => {
       const c = requireBrain(id);
       return arcanaTimeline(c.workspace, c.key, limit ?? 30);
-    }
+    },
   );
   ipcMain.handle(
     IPC.arcanaQuery,
     (_e: IpcMainInvokeEvent, id: string, q: string) => {
       const c = requireBrain(id);
       return arcanaQuery(c.workspace, c.key, q);
-    }
+    },
   );
 
   ipcMain.handle(
@@ -662,7 +740,7 @@ export function registerIpc(): IpcHandles {
     async (
       _e: IpcMainInvokeEvent,
       id: string,
-      input: WireBrainInput
+      input: WireBrainInput,
     ): Promise<WireBrainResult> => {
       const a = store.getAgent(id);
       if (!a) {
@@ -692,40 +770,41 @@ export function registerIpc(): IpcHandles {
           error: err instanceof Error ? err.message : String(err),
         };
       }
-    }
+    },
   );
 
   // --- chat ---
   ipcMain.handle(
     IPC.chatListThreads,
-    (_e: IpcMainInvokeEvent, agentId: string) => store.listThreads(agentId)
+    (_e: IpcMainInvokeEvent, agentId: string) => store.listThreads(agentId),
   );
   ipcMain.handle(
     IPC.chatCreateThread,
     (_e: IpcMainInvokeEvent, agentId: string, title?: string) =>
-      store.createThread(agentId, title || "New chat")
+      store.createThread(agentId, title || "New chat"),
   );
-  ipcMain.handle(IPC.chatGetThread, (_e: IpcMainInvokeEvent, threadId: string) =>
-    store.readEvents(threadId)
+  ipcMain.handle(
+    IPC.chatGetThread,
+    (_e: IpcMainInvokeEvent, threadId: string) => store.readEvents(threadId),
   );
   ipcMain.handle(
     IPC.chatDeleteThread,
     (_e: IpcMainInvokeEvent, threadId: string) => {
       store.deleteThread(threadId);
       return true;
-    }
+    },
   );
   ipcMain.handle(
     IPC.chatArchiveThread,
     (_e: IpcMainInvokeEvent, threadId: string, archived: boolean) => {
       store.setThreadArchived(threadId, archived);
       return true;
-    }
+    },
   );
   /** Resolve the session connection for a chat target (local dev vs deployed). */
   const resolveConn = (
     agentId: string,
-    target: "local" | "deployed"
+    target: "local" | "deployed",
   ): SessionConn => {
     if (target === "deployed") {
       const d = store.getDeploy(agentId);
@@ -763,7 +842,7 @@ export function registerIpc(): IpcHandles {
       _e: IpcMainInvokeEvent,
       threadId: string,
       text: string,
-      target: "local" | "deployed" = "local"
+      target: "local" | "deployed" = "local",
     ) => {
       const t = store.getThread(threadId);
       if (!t) {
@@ -775,7 +854,7 @@ export function registerIpc(): IpcHandles {
       }
       void chat.send(threadId, conn, text);
       return true;
-    }
+    },
   );
   ipcMain.handle(
     IPC.chatRespond,
@@ -785,7 +864,7 @@ export function registerIpc(): IpcHandles {
       requestId: string,
       optionId?: string,
       text?: string,
-      target: "local" | "deployed" = "local"
+      target: "local" | "deployed" = "local",
     ) => {
       const t = store.getThread(threadId);
       if (!t) {
@@ -794,32 +873,32 @@ export function registerIpc(): IpcHandles {
       const conn = resolveConn(t.agentId, target);
       void chat.respond(threadId, conn, requestId, optionId, text);
       return true;
-    }
+    },
   );
 
   // --- deploy target / status ---
   ipcMain.handle(IPC.deployGet, (_e: IpcMainInvokeEvent, id: string) =>
-    store.getDeploy(id)
+    store.getDeploy(id),
   );
   ipcMain.handle(
     IPC.deploySet,
     (
       _e: IpcMainInvokeEvent,
       id: string,
-      settings: import("../shared/ipc").DeploySettings
+      settings: import("../shared/ipc").DeploySettings,
     ) => {
       store.setDeploy(id, settings);
       return store.getDeploy(id);
-    }
+    },
   );
   ipcMain.handle(IPC.vercelProdInfo, (_e: IpcMainInvokeEvent, id: string) =>
-    vercelProdInfo(agentPathOf(id))
+    vercelProdInfo(agentPathOf(id)),
   );
   ipcMain.handle(IPC.modelReadiness, (_e: IpcMainInvokeEvent, id: string) =>
-    modelReadiness(agentPathOf(id))
+    modelReadiness(agentPathOf(id)),
   );
   ipcMain.handle(IPC.vercelLink, (_e: IpcMainInvokeEvent, id: string) =>
-    vercelLink(agentPathOf(id))
+    vercelLink(agentPathOf(id)),
   );
   ipcMain.handle(
     IPC.deployHealth,
@@ -847,7 +926,7 @@ export function registerIpc(): IpcHandles {
         reason = "Couldn't reach the URL.";
       }
       return { ...h, reason };
-    }
+    },
   );
 
   return { agents, cli };

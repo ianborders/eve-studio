@@ -14,7 +14,10 @@ const EMPTY = {
   hooks: [] as string[],
 };
 
-function empty(source: AgentStructure["source"], error?: string): AgentStructure {
+function empty(
+  source: AgentStructure["source"],
+  error?: string,
+): AgentStructure {
   return {
     source,
     model: null,
@@ -90,7 +93,7 @@ function normalizeCompiled(m: any): AgentStructure {
         urlPath: c.urlPath,
         kind: c.adapterKind ?? c.kind,
       })),
-      (c) => `${c.name}:${c.kind}`
+      (c) => `${c.name}:${c.kind}`,
     ),
     // biome-ignore lint/suspicious/noExplicitAny: manifest entry
     schedules: arr(m.schedules).map((s: any) => ({
@@ -115,7 +118,7 @@ function normalizeCompiled(m: any): AgentStructure {
         h.slug ??
         String(h.logicalPath ?? "hook")
           .replace(/^hooks\//, "")
-          .replace(/\.tsx?$/, "")
+          .replace(/\.tsx?$/, ""),
     ),
     sandbox: m?.sandbox?.backendName ?? null,
     diagnostics: {
@@ -149,7 +152,7 @@ export function readStructure(agentPath: string): AgentStructure {
     agentPath,
     ".eve",
     "compile",
-    "compiled-agent-manifest.json"
+    "compiled-agent-manifest.json",
   );
 
   const existing = readCompiledFile(compiledPath);
@@ -177,6 +180,6 @@ export function readStructure(agentPath: string): AgentStructure {
   }
   return empty(
     "none",
-    "No compiled manifest. Start the agent (or run `eve build` in its folder) to inspect its structure."
+    "No compiled manifest. Start the agent (or run `eve build` in its folder) to inspect its structure.",
   );
 }

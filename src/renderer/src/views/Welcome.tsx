@@ -32,11 +32,21 @@ export function Welcome({
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5">
-            <Button variant="primary" size="md" onClick={onAdd} className="px-4">
+            <Button
+              variant="primary"
+              size="md"
+              onClick={onAdd}
+              className="px-4"
+            >
               <IconFolder className="h-4 w-4" />
               Add existing agent
             </Button>
-            <Button variant="secondary" size="md" onClick={onCreate} className="px-4">
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={onCreate}
+              className="px-4"
+            >
               <IconPlus className="h-4 w-4" />
               Create new
             </Button>
@@ -44,7 +54,9 @@ export function Welcome({
 
           <p className="mt-8 max-w-sm text-2xs leading-relaxed text-faint">
             Point at any Eve project folder (the one with an{" "}
-            <code className="rounded bg-black/[0.05] px-1 font-mono">agent/</code>{" "}
+            <code className="rounded bg-black/[0.05] px-1 font-mono">
+              agent/
+            </code>{" "}
             directory). Studio spawns its dev server and talks to it locally.
           </p>
         </div>

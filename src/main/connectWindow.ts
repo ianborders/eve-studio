@@ -44,13 +44,13 @@ export function connectBaseUrl(agentPath: string): string | null {
     return null;
   }
   const list = parseJson(
-    vc(agentPath, ["connect", "list", "--format", "json", "--non-interactive"])
+    vc(agentPath, ["connect", "list", "--format", "json", "--non-interactive"]),
   ) as { connectors?: Array<{ id?: string; uid?: string }> } | null;
   const first = list?.connectors?.[0];
   const id = first?.id ?? first?.uid;
   if (id) {
     const opened = parseJson(
-      vc(agentPath, ["connect", "open", id, "--format=json"])
+      vc(agentPath, ["connect", "open", id, "--format=json"]),
     ) as { url?: string } | null;
     if (opened?.url) {
       // .../~/connect/<connectorId>  ->  .../~/connect
@@ -61,9 +61,10 @@ export function connectBaseUrl(agentPath: string): string | null {
 }
 
 /** Open the Vercel Connect provider gallery in an in-app window. */
-export function openConnectWindow(
-  agentPath: string
-): { ok: boolean; error?: string } {
+export function openConnectWindow(agentPath: string): {
+  ok: boolean;
+  error?: string;
+} {
   const base = connectBaseUrl(agentPath);
   if (!base) {
     return {
@@ -93,10 +94,16 @@ export function openConnectWindow(
 }
 
 /** Open the same gallery in the user's default browser (already signed in). */
-export function openConnectExternal(agentPath: string): { ok: boolean; error?: string } {
+export function openConnectExternal(agentPath: string): {
+  ok: boolean;
+  error?: string;
+} {
   const base = connectBaseUrl(agentPath);
   if (!base) {
-    return { ok: false, error: "Couldn't resolve the Vercel Connect URL. Link the project first." };
+    return {
+      ok: false,
+      error: "Couldn't resolve the Vercel Connect URL. Link the project first.",
+    };
   }
   void shell.openExternal(base);
   return { ok: true };
@@ -108,10 +115,10 @@ export function openConnectExternal(agentPath: string): { ok: boolean; error?: s
  */
 export function openConnector(
   agentPath: string,
-  connectorIdOrUid: string
+  connectorIdOrUid: string,
 ): { ok: boolean; error?: string } {
   const parsed = parseJson(
-    vc(agentPath, ["connect", "open", connectorIdOrUid, "--format=json"])
+    vc(agentPath, ["connect", "open", connectorIdOrUid, "--format=json"]),
   ) as { url?: string } | null;
   if (!parsed?.url) {
     return { ok: false, error: "Couldn't resolve the connector URL." };

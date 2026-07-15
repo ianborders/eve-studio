@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { CapabilityEditor } from "../components/CapabilityEditor";
 import { useActiveStructure } from "../lib/useStructure";
-import { IconCalendar, IconChevronRight, IconPlus, IconRefresh } from "../ui/icons";
+import {
+  IconCalendar,
+  IconChevronRight,
+  IconPlus,
+  IconRefresh,
+} from "../ui/icons";
 import {
   Badge,
   Button,
@@ -55,8 +60,8 @@ function NewScheduleModal({
             Created <span className="font-mono">{done}</span>.
           </div>
           <p className="text-2xs leading-relaxed text-muted">
-            Cron runs in UTC on Vercel. Restart the agent to register it; in dev,
-            fire it once via the dev schedules route.
+            Cron runs in UTC on Vercel. Restart the agent to register it; in
+            dev, fire it once via the dev schedules route.
           </p>
           <div className="flex justify-end">
             <Button variant="primary" onClick={onClose}>
@@ -67,10 +72,20 @@ function NewScheduleModal({
       ) : (
         <div className="space-y-3 p-4">
           <Field label="Name" hint="becomes schedules/<name>.ts">
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="daily-summary" className="font-mono" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="daily-summary"
+              className="font-mono"
+            />
           </Field>
           <Field label="Cron" hint="5-field, UTC (min hour dom mon dow)">
-            <Input value={cron} onChange={(e) => setCron(e.target.value)} placeholder="0 9 * * *" className="font-mono" />
+            <Input
+              value={cron}
+              onChange={(e) => setCron(e.target.value)}
+              placeholder="0 9 * * *"
+              className="font-mono"
+            />
           </Field>
           <Field label="Prompt" hint="fire-and-forget task the agent runs">
             <Textarea
@@ -85,7 +100,11 @@ function NewScheduleModal({
             <Button variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={submit} disabled={busy || !name || !cron || !prompt}>
+            <Button
+              variant="primary"
+              onClick={submit}
+              disabled={busy || !name || !cron || !prompt}
+            >
               {busy ? "Creating…" : "Create schedule"}
             </Button>
           </div>
@@ -149,7 +168,12 @@ export function Schedules(): JSX.Element {
         count={schedules.length}
         right={
           <>
-            <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setAddOpen(true)}
+              disabled={!id}
+            >
               <IconPlus className="h-3.5 w-3.5" />
               New
             </Button>
@@ -167,7 +191,12 @@ export function Schedules(): JSX.Element {
             kicker="Schedules"
             title="No schedules"
             action={
-              <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setAddOpen(true)}
+                disabled={!id}
+              >
                 <IconPlus className="h-3.5 w-3.5" />
                 New schedule
               </Button>

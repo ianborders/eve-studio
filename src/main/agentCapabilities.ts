@@ -46,7 +46,7 @@ function findUnder(
   dir: string,
   wantName: string,
   wantDir: boolean,
-  depth = 0
+  depth = 0,
 ): string | null {
   if (depth > 6 || !existsSync(dir)) {
     return null;
@@ -71,7 +71,11 @@ function findUnder(
     if (wantDir && isDir && e === wantName) {
       return full;
     }
-    if (!wantDir && !isDir && (e === `${wantName}.ts` || e === `${wantName}.tsx`)) {
+    if (
+      !wantDir &&
+      !isDir &&
+      (e === `${wantName}.ts` || e === `${wantName}.tsx`)
+    ) {
       return full;
     }
   }
@@ -98,7 +102,7 @@ function findUnder(
 function locate(
   agentPath: string,
   kind: CapabilityKind,
-  name: string
+  name: string,
 ): { path: string | null; isDir: boolean } {
   const root = agentRoot(agentPath);
   const isDir = kind === "skill" || kind === "subagent";
@@ -114,19 +118,22 @@ function locate(
     return { path: conventional, isDir };
   }
   // Fallback: search (covers subagent-owned/nested capabilities).
-  const base = clean.includes("/") ? clean.split("/").pop() ?? clean : clean;
+  const base = clean.includes("/") ? (clean.split("/").pop() ?? clean) : clean;
   return { path: findUnder(root, base, isDir), isDir };
 }
 
 function rel(agentPath: string, abs: string): string {
-  return relRoot(agentPath) + relative(agentRoot(agentPath), abs).split(sep).join("/");
+  return (
+    relRoot(agentPath) +
+    relative(agentRoot(agentPath), abs).split(sep).join("/")
+  );
 }
 
 /** The editable source files for a capability. */
 export function capabilityFiles(
   agentPath: string,
   kind: CapabilityKind,
-  name: string
+  name: string,
 ): CapabilityFilesResult {
   const { path, isDir } = locate(agentPath, kind, name);
   const empty: CapabilityFilesResult = {
@@ -153,9 +160,21 @@ export function capabilityFiles(
   const files: CapabilityFile[] = [];
   const otherPaths: string[] = [];
   const collect = (dir: string, base = ""): void => {
-    for (const e of readdirSync(dir)) {
+    let entries: string[];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      return;
+    }
+    for (const e of entries) {
       const full = join(dir, e);
-      const isSub = statSync(full).isDirectory();
+      let isSub = false;
+      try {
+        isSub = statSync(full).isDirectory();
+      } catch {
+        // dangling symlink / unreadable entry — skip it rather than throw
+        continue;
+      }
       if (isSub) {
         collect(full, `${base}${e}/`);
         continue;
@@ -164,7 +183,12 @@ export function capabilityFiles(
         (kind === "skill" && e === "SKILL.md") ||
         (kind === "subagent" && (e === "agent.ts" || e === "instructions.md"));
       if (primary) {
-        files.push(read(full));
+        try {
+          files.push(read(full));
+        } catch {
+          // couldn't read the file — surface it as an "also includes" path
+          otherPaths.push(rel(agentPath, full));
+        }
       } else {
         otherPaths.push(rel(agentPath, full));
       }
@@ -186,13 +210,21 @@ function safeJoin(agentPath: string, relPath: string): string {
   return abs;
 }
 
+const CAP_DIRS = new Set(Object.values(KIND_DIR));
+
 /** Overwrite one of a capability's source files. */
 export function writeCapabilityFile(
   agentPath: string,
   relPath: string,
-  content: string
+  content: string,
 ): { relPath: string } {
   const abs = safeJoin(agentPath, relPath);
+  // Defense-in-depth: only ever write files that live under a capability dir,
+  // never arbitrary agent files (package.json, .env, agent.ts at the root, …).
+  const seg = relative(resolve(agentRoot(agentPath)), abs).split(sep)[0];
+  if (!CAP_DIRS.has(seg)) {
+    throw new Error("Refusing to write a file outside a capability directory.");
+  }
   if (!existsSync(abs)) {
     throw new Error(`${relPath} does not exist.`);
   }
@@ -204,7 +236,7 @@ export function writeCapabilityFile(
 export function deleteCapability(
   agentPath: string,
   kind: CapabilityKind,
-  name: string
+  name: string,
 ): { relPath: string } {
   const { path } = locate(agentPath, kind, name);
   if (!path || !existsSync(path)) {

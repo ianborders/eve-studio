@@ -26,7 +26,9 @@ export function Console({
       className={`overflow-auto rounded-lg border border-[#2a2a2a] p-3 font-mono text-[11.5px] leading-relaxed ${className ?? ""}`}
     >
       {text || (
-        <span style={{ color: "#8f8f8f" }}>{placeholder ?? "No output yet."}</span>
+        <span style={{ color: "#8f8f8f" }}>
+          {placeholder ?? "No output yet."}
+        </span>
       )}
     </pre>
   );

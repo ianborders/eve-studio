@@ -115,7 +115,13 @@ export function getThread(id: string): ThreadRecord | undefined {
 }
 export function createThread(agentId: string, title: string): ThreadRecord {
   const now = Date.now();
-  const thread: ThreadRecord = { id: rid(), agentId, title, createdAt: now, updatedAt: now };
+  const thread: ThreadRecord = {
+    id: rid(),
+    agentId,
+    title,
+    createdAt: now,
+    updatedAt: now,
+  };
   db.threads.push(thread);
   persist();
   return thread;

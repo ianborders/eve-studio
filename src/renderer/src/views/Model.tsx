@@ -61,7 +61,8 @@ export function Model(): JSX.Element {
 
   const dirty =
     cfg !== null &&
-    (model !== (cfg.model ?? "") || reasoning !== (cfg.reasoning ?? "provider-default"));
+    (model !== (cfg.model ?? "") ||
+      reasoning !== (cfg.reasoning ?? "provider-default"));
 
   const save = async (): Promise<void> => {
     if (!id) {
@@ -146,7 +147,7 @@ export function Model(): JSX.Element {
                   "rounded-md border px-2.5 py-1 font-mono text-2xs transition-colors disabled:opacity-40",
                   model === m
                     ? "border-text bg-text text-white"
-                    : "border-border text-muted hover:border-border-strong hover:text-text"
+                    : "border-border text-muted hover:border-border-strong hover:text-text",
                 )}
               >
                 {m}
@@ -166,7 +167,7 @@ export function Model(): JSX.Element {
                     "rounded-md border px-2.5 py-1 text-2xs transition-colors disabled:opacity-40",
                     reasoning === r
                       ? "border-text bg-text text-white"
-                      : "border-border text-muted hover:border-border-strong hover:text-text"
+                      : "border-border text-muted hover:border-border-strong hover:text-text",
                   )}
                 >
                   {r}
@@ -181,8 +182,9 @@ export function Model(): JSX.Element {
             <Badge>gateway</Badge>
             <span>
               Routed through the Vercel AI Gateway. Any{" "}
-              <span className="font-mono">provider/model</span> from the catalog works —
-              type it above. Full catalog at vercel.com/ai-gateway/models.
+              <span className="font-mono">provider/model</span> from the catalog
+              works — type it above. Full catalog at
+              vercel.com/ai-gateway/models.
             </span>
           </div>
         </div>

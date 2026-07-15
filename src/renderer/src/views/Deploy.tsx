@@ -7,7 +7,9 @@ import { Badge, Button, IconButton, Kicker, ViewHeader } from "../ui/kit";
 
 export function Deploy(): JSX.Element {
   const activeAgentId = useStore((s) => s.activeAgentId);
-  const runtime = useStore((s) => (activeAgentId ? s.runtime[activeAgentId] : undefined));
+  const runtime = useStore((s) =>
+    activeAgentId ? s.runtime[activeAgentId] : undefined,
+  );
   const bumpDeploy = useStore((s) => s.bumpDeploy);
   const { output, running, exitCode, start, cancel } = useCliRun();
   const [devLogs, setDevLogs] = useState("");
@@ -64,7 +66,11 @@ export function Deploy(): JSX.Element {
                   {action} {exitCode === 0 ? "ok" : `exit ${exitCode}`}
                 </Badge>
               ) : null}
-              <Button variant="secondary" size="sm" onClick={() => run("build")}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => run("build")}
+              >
                 <IconWrench className="h-3.5 w-3.5" />
                 Build
               </Button>

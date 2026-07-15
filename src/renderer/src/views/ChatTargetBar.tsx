@@ -65,7 +65,9 @@ export function ChatTargetBar({ agentId }: { agentId: string }): JSX.Element {
               type="button"
               onClick={() => setChatTarget(agentId, t)}
               className={`rounded-[6px] px-2.5 py-0.5 text-[11px] transition-colors ${
-                target === t ? "bg-text text-white" : "text-muted hover:text-text"
+                target === t
+                  ? "bg-text text-white"
+                  : "text-muted hover:text-text"
               }`}
             >
               {t === "local" ? "Local" : "Deployed"}
@@ -73,21 +75,24 @@ export function ChatTargetBar({ agentId }: { agentId: string }): JSX.Element {
           ))}
         </div>
         {target === "deployed" && deploy?.url ? (
-          <span className="truncate font-mono text-2xs text-faint">{deploy.url}</span>
+          <span className="truncate font-mono text-2xs text-faint">
+            {deploy.url}
+          </span>
         ) : null}
       </div>
 
       {target === "deployed" ? (
         <div className="space-y-2 border-t border-border bg-subtle px-5 py-2.5">
           <div className="text-2xs leading-relaxed text-muted">
-            Studio talks to your <b className="text-text">production</b> deployment.
-            In Vercel → Project → Settings → Deployment Protection →{" "}
-            <b className="text-text">Protection Bypass for Automation</b>, generate
-            the secret and <b className="text-text">copy it</b> — it's a system var,
-            not included in <span className="font-mono">env pull</span> — then paste
-            it below and Save. The OIDC token is read from{" "}
-            <span className="font-mono">.env.local</span> automatically (Pull env in
-            the Environment tab).
+            Studio talks to your <b className="text-text">production</b>{" "}
+            deployment. In Vercel → Project → Settings → Deployment Protection →{" "}
+            <b className="text-text">Protection Bypass for Automation</b>,
+            generate the secret and <b className="text-text">copy it</b> — it's
+            a system var, not included in{" "}
+            <span className="font-mono">env pull</span> — then paste it below
+            and Save. The OIDC token is read from{" "}
+            <span className="font-mono">.env.local</span> automatically (Pull
+            env in the Environment tab).
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
             <Input
@@ -104,19 +109,31 @@ export function ChatTargetBar({ agentId }: { agentId: string }): JSX.Element {
               className="font-mono text-2xs"
             />
             <div className="flex gap-1.5">
-              <Button size="sm" variant="secondary" onClick={detect} disabled={busy !== null}>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={detect}
+                disabled={busy !== null}
+              >
                 {busy === "detect" ? "…" : "Detect"}
               </Button>
               <Button size="sm" variant="secondary" onClick={save}>
                 {saved ? "Saved ✓" : "Save"}
               </Button>
-              <Button size="sm" variant="primary" onClick={test} disabled={busy !== null || !url.trim()}>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={test}
+                disabled={busy !== null || !url.trim()}
+              >
                 {busy === "test" ? "Testing…" : "Test"}
               </Button>
             </div>
           </div>
           {health ? (
-            <div className={`text-2xs ${health.ok ? "text-success" : "text-danger"}`}>
+            <div
+              className={`text-2xs ${health.ok ? "text-success" : "text-danger"}`}
+            >
               {health.ok
                 ? "Reachable ✓ — deployed chat is ready."
                 : (health.reason ?? `Failed (status ${health.status}).`)}

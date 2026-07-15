@@ -46,9 +46,10 @@ function run(agentPath: string, args: string[], input?: string): CmdResult {
       env: { ...process.env, NO_COLOR: "1" },
     });
     if (res.error) {
-      const msg = (res.error as NodeJS.ErrnoException).code === "ENOENT"
-        ? "The Vercel CLI isn't installed or on PATH. Install it: npm i -g vercel"
-        : res.error.message;
+      const msg =
+        (res.error as NodeJS.ErrnoException).code === "ENOENT"
+          ? "The Vercel CLI isn't installed or on PATH. Install it: npm i -g vercel"
+          : res.error.message;
       return { ok: false, output: msg };
     }
     const out = `${res.stdout ?? ""}${res.stderr ?? ""}`.trim();
@@ -117,11 +118,12 @@ export function vercelLink(agentPath: string): CmdResult {
 export function vercelProdInfo(agentPath: string): ProdInfo {
   let project = "";
   try {
-    project = (
-      JSON.parse(
-        readFileSync(join(agentPath, ".vercel", "project.json"), "utf8")
-      ) as { projectName?: string }
-    ).projectName ?? "";
+    project =
+      (
+        JSON.parse(
+          readFileSync(join(agentPath, ".vercel", "project.json"), "utf8"),
+        ) as { projectName?: string }
+      ).projectName ?? "";
   } catch {
     // not linked
   }
@@ -133,7 +135,11 @@ export function vercelProdInfo(agentPath: string): ProdInfo {
     if (!line.includes("https://")) {
       continue;
     }
-    if (project && !line.includes(`/${project} `) && !line.includes(`/${project}\t`)) {
+    if (
+      project &&
+      !line.includes(`/${project} `) &&
+      !line.includes(`/${project}\t`)
+    ) {
       continue;
     }
     const url = (/https:\/\/\S+/.exec(line) ?? [""])[0];
@@ -148,7 +154,7 @@ export function vercelEnvAdd(
   agentPath: string,
   name: string,
   value: string,
-  target: string
+  target: string,
 ): CmdResult {
   return run(agentPath, ["env", "add", name, target], `${value}\n`);
 }
@@ -158,7 +164,7 @@ export function vercelEnvSet(
   agentPath: string,
   name: string,
   value: string,
-  target: string
+  target: string,
 ): CmdResult {
   run(agentPath, ["env", "rm", name, target, "--yes"]); // ignore "not found"
   return run(agentPath, ["env", "add", name, target], `${value}\n`);
@@ -168,7 +174,7 @@ export function vercelEnvSet(
 export function vercelEnvSetAll(
   agentPath: string,
   name: string,
-  value: string
+  value: string,
 ): CmdResult {
   let ok = true;
   let output = "";
@@ -184,7 +190,7 @@ export function vercelEnvSetAll(
 /** List Connect connectors for the linked project (optionally by service). */
 export function vercelConnectList(
   agentPath: string,
-  service?: string
+  service?: string,
 ): { ok: boolean; connectors: ConnectorItem[]; output?: string } {
   const args = [
     "connect",
@@ -233,7 +239,7 @@ export function vercelConnectCreate(
   agentPath: string,
   type: string,
   name: string,
-  triggers: boolean
+  triggers: boolean,
 ): CmdResult {
   const args = ["connect", "create", type, "--name", name, "--format", "json"];
   if (triggers) {
@@ -246,7 +252,7 @@ export function vercelConnectCreate(
 export function vercelConnectAttach(
   agentPath: string,
   connector: string,
-  triggerPath?: string
+  triggerPath?: string,
 ): CmdResult {
   const args = ["connect", "attach", connector, "--yes"];
   if (triggerPath) {

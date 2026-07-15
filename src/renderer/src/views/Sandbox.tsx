@@ -46,7 +46,11 @@ export function Sandbox(): JSX.Element {
   };
 
   if (loading && !info) {
-    return <div className="flex h-full items-center justify-center"><Spinner /></div>;
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Spinner />
+      </div>
+    );
   }
 
   return (
@@ -58,7 +62,9 @@ export function Sandbox(): JSX.Element {
             <Card>
               <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
                 <IconServer className="h-4 w-4 text-faint" />
-                <span className="font-mono text-[13px] text-text">{info.relPath}</span>
+                <span className="font-mono text-[13px] text-text">
+                  {info.relPath}
+                </span>
                 <Badge tone="success">configured</Badge>
               </div>
               <pre className="overflow-x-auto p-4 font-mono text-[12px] leading-relaxed text-muted">
@@ -71,14 +77,19 @@ export function Sandbox(): JSX.Element {
               kicker="Sandbox"
               title="Default sandbox"
               action={
-                <Button variant="primary" size="sm" onClick={create} disabled={busy || !id}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={create}
+                  disabled={busy || !id}
+                >
                   {busy ? "Creating…" : "Add sandbox.ts (Vercel backend)"}
                 </Button>
               }
             >
               No sandbox is authored — the agent uses the framework default (a
-              /workspace bash env, best available backend). Add a sandbox.ts to pick
-              a backend, seed files, or lock down the network.
+              /workspace bash env, best available backend). Add a sandbox.ts to
+              pick a backend, seed files, or lock down the network.
             </EmptyState>
           )}
         </div>

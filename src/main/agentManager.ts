@@ -29,7 +29,10 @@ function killPort(port: number): void {
     const out = spawnSync("lsof", ["-nP", `-tiTCP:${port}`, "-sTCP:LISTEN"], {
       encoding: "utf8",
     }).stdout;
-    for (const pid of out.split("\n").map((s) => s.trim()).filter(Boolean)) {
+    for (const pid of out
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean)) {
       try {
         process.kill(Number(pid), "SIGKILL");
       } catch {
@@ -97,7 +100,10 @@ export class AgentManager {
 
   async start(agentId: string, agentPath: string): Promise<AgentRuntimeState> {
     const existing = this.running.get(agentId);
-    if (existing && (existing.status === "running" || existing.status === "starting")) {
+    if (
+      existing &&
+      (existing.status === "running" || existing.status === "starting")
+    ) {
       return this.state(agentId);
     }
 
@@ -111,7 +117,7 @@ export class AgentManager {
         env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1" },
         stdio: ["ignore", "pipe", "pipe"],
         detached: DETACHED,
-      }
+      },
     );
 
     const rec: Running = {
@@ -184,7 +190,7 @@ export class AgentManager {
         rec.error =
           `Dev server exited (code ${code}).\n${rec.logs.slice(-4).join("")}`.slice(
             0,
-            600
+            600,
           );
       }
       this.emit(agentId);
@@ -286,6 +292,9 @@ export class AgentManager {
     if (existsSync(local)) {
       return { cmd: local, pre: [] };
     }
-    return { cmd: process.platform === "win32" ? "npx.cmd" : "npx", pre: ["eve"] };
+    return {
+      cmd: process.platform === "win32" ? "npx.cmd" : "npx",
+      pre: ["eve"],
+    };
   }
 }

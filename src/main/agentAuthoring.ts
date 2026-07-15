@@ -22,7 +22,11 @@ function slugify(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, "-").replace(SLUG, "");
 }
 function snake(s: string): string {
-  return s.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
 }
 
 // ---------------- model / agent.ts ----------------
@@ -59,7 +63,7 @@ export function readModelConfig(agentPath: string): ModelConfig {
 export function writeModelConfig(
   agentPath: string,
   model: string,
-  reasoning: string | null
+  reasoning: string | null,
 ): void {
   const path = agentTsPath(agentPath);
   let src = readFileSync(path, "utf8");
@@ -75,7 +79,7 @@ export function writeModelConfig(
     } else {
       src = src.replace(
         /(\bmodel:\s*(["'])[^"']*\2,?)/,
-        `$1\n  reasoning: "${reasoning}",`
+        `$1\n  reasoning: "${reasoning}",`,
       );
     }
   } else if (hasReasoning) {
@@ -96,7 +100,11 @@ export function readEnv(agentPath: string): EnvState {
 }
 
 /** Write one env file (.env or .env.local) at the project root. */
-export function writeEnv(agentPath: string, name: string, content: string): void {
+export function writeEnv(
+  agentPath: string,
+  name: string,
+  content: string,
+): void {
   if (name !== ".env" && name !== ".env.local") {
     throw new Error("Only .env and .env.local can be edited.");
   }
@@ -106,7 +114,7 @@ export function writeEnv(agentPath: string, name: string, content: string): void
 // ---------------- tool ----------------
 export function createTool(
   agentPath: string,
-  input: ToolInput
+  input: ToolInput,
 ): { relPath: string } {
   const name = snake(input.name);
   if (!name) {
@@ -143,7 +151,7 @@ export default defineTool({
 // ---------------- subagent ----------------
 export function createSubagent(
   agentPath: string,
-  input: SubagentInput
+  input: SubagentInput,
 ): { relPath: string } {
   const name = slugify(input.name);
   if (!name) {
@@ -166,11 +174,11 @@ export default defineAgent({
   description: ${JSON.stringify(input.description)},
   model: "${model}",
 });
-`
+`,
   );
   writeFileSync(
     join(dir, "instructions.md"),
-    `# ${input.name}\n\n${input.instructions || "Describe how this specialist should work. The parent hands you everything you need in the delegation message."}\n`
+    `# ${input.name}\n\n${input.instructions || "Describe how this specialist should work. The parent hands you everything you need in the delegation message."}\n`,
   );
   return { relPath: `${nested(agentPath)}subagents/${name}/agent.ts` };
 }
@@ -178,7 +186,7 @@ export default defineAgent({
 // ---------------- hook ----------------
 export function createHook(
   agentPath: string,
-  name: string
+  name: string,
 ): { relPath: string } {
   const slug = slugify(name);
   if (!slug) {
@@ -206,7 +214,7 @@ export default defineHook({
     // "*"(event) { /* catch-all */ },
   },
 });
-`
+`,
   );
   return { relPath: `${nested(agentPath)}hooks/${slug}.ts` };
 }
@@ -214,7 +222,7 @@ export default defineHook({
 // ---------------- schedule ----------------
 export function createSchedule(
   agentPath: string,
-  input: ScheduleInput
+  input: ScheduleInput,
 ): { relPath: string } {
   const slug = slugify(input.name);
   if (!slug) {
@@ -237,7 +245,7 @@ export default defineSchedule({
   cron: ${JSON.stringify(input.cron)},
   markdown: ${JSON.stringify(input.prompt)},
 });
-`
+`,
   );
   return { relPath: `${nested(agentPath)}schedules/${slug}.ts` };
 }
@@ -273,7 +281,7 @@ export default defineSandbox({
   backend: vercel(),
   description: "Default build sandbox",
 });
-`
+`,
   );
   return { relPath: `${nested(agentPath)}sandbox.ts` };
 }

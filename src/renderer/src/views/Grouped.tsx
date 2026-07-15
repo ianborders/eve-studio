@@ -43,7 +43,11 @@ export function CapabilitiesGroup(): JSX.Element {
         items={[
           { id: "tools", label: "Tools", count: structure?.tools.length },
           { id: "skills", label: "Skills", count: structure?.skills.length },
-          { id: "subagents", label: "Subagents", count: structure?.subagents.length },
+          {
+            id: "subagents",
+            label: "Subagents",
+            count: structure?.subagents.length,
+          },
           { id: "hooks", label: "Hooks", count: structure?.hooks.length },
         ]}
         active={sub}
@@ -72,8 +76,16 @@ export function IntegrationsGroup(): JSX.Element {
     <div className="flex h-full flex-col">
       <SubNav
         items={[
-          { id: "connections", label: "Connections", count: structure?.connections.length },
-          { id: "channels", label: "Channels", count: structure?.channels.length },
+          {
+            id: "connections",
+            label: "Connections",
+            count: structure?.connections.length,
+          },
+          {
+            id: "channels",
+            label: "Channels",
+            count: structure?.channels.length,
+          },
         ]}
         active={sub}
         onChange={setSub}

@@ -14,7 +14,9 @@ export function CreateAgent({ onClose }: { onClose: () => void }): JSX.Element {
   const [parentDir, setParentDir] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [webChat, setWebChat] = useState(false);
-  const [phase, setPhase] = useState<"form" | "running" | "done" | "error">("form");
+  const [phase, setPhase] = useState<"form" | "running" | "done" | "error">(
+    "form",
+  );
   const [error, setError] = useState<string | null>(null);
   const { output, exitCode, start } = useCliRun();
   const finalized = useRef(false);
@@ -35,7 +37,7 @@ export function CreateAgent({ onClose }: { onClose: () => void }): JSX.Element {
     setPhase("running");
     finalized.current = false;
     await start(() =>
-      window.studio.agents.create({ parentDir, name, webChat })
+      window.studio.agents.create({ parentDir, name, webChat }),
     );
   };
 
@@ -54,11 +56,22 @@ export function CreateAgent({ onClose }: { onClose: () => void }): JSX.Element {
         setPhase("done");
         onClose();
       } else {
-        setError(res.error ?? "Scaffolding finished but the agent could not be registered.");
+        setError(
+          res.error ??
+            "Scaffolding finished but the agent could not be registered.",
+        );
         setPhase("error");
       }
     })();
-  }, [exitCode, phase, parentDir, name, refreshAgents, setActiveAgent, onClose]);
+  }, [
+    exitCode,
+    phase,
+    parentDir,
+    name,
+    refreshAgents,
+    setActiveAgent,
+    onClose,
+  ]);
 
   return (
     <Modal title="Create a new agent" onClose={onClose} width="max-w-xl">
@@ -131,7 +144,11 @@ export function CreateAgent({ onClose }: { onClose: () => void }): JSX.Element {
             Creating <span className="font-mono text-text">{name}</span> and
             installing dependencies…
           </div>
-          <Console text={output} className="h-64" placeholder="Starting eve init…" />
+          <Console
+            text={output}
+            className="h-64"
+            placeholder="Starting eve init…"
+          />
         </div>
       )}
     </Modal>

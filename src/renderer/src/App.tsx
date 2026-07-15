@@ -54,7 +54,9 @@ function AgentWorkspace(): JSX.Element {
   const activeAgentId = useStore((s) => s.activeAgentId);
   const agents = useStore((s) => s.agents);
   const runtime = useStore((s) => s.runtime);
-  const structure = useStore((s) => (activeAgentId ? s.structure[activeAgentId] : undefined));
+  const structure = useStore((s) =>
+    activeAgentId ? s.structure[activeAgentId] : undefined,
+  );
   const startAgent = useStore((s) => s.startAgent);
   const stopAgent = useStore((s) => s.stopAgent);
 
@@ -83,7 +85,7 @@ function AgentWorkspace(): JSX.Element {
   }
 
   const tabs = TABS.map((t) =>
-    t.id === "schedules" ? { ...t, count: structure?.schedules.length } : t
+    t.id === "schedules" ? { ...t, count: structure?.schedules.length } : t,
   );
 
   const busy = status === "starting";
@@ -106,7 +108,9 @@ function AgentWorkspace(): JSX.Element {
             <span>local{rt?.port ? ` :${rt.port}` : ""}</span>
             <span className="text-border-strong">/</span>
             <span className={prod?.url ? "text-success/80" : undefined}>
-              {prod?.url ? `deployed${prod.age ? ` · ${prod.age}` : ""}` : "not deployed"}
+              {prod?.url
+                ? `deployed${prod.age ? ` · ${prod.age}` : ""}`
+                : "not deployed"}
             </span>
             <span className="text-border-strong">/</span>
             <span>eve {agent.eveVersion ?? "?"}</span>
@@ -131,7 +135,11 @@ function AgentWorkspace(): JSX.Element {
             </Button>
           ) : null}
           {status === "running" ? (
-            <Button variant="secondary" size="sm" onClick={() => stopAgent(agent.id)}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => stopAgent(agent.id)}
+            >
               <IconStop className="h-3.5 w-3.5" />
               Stop
             </Button>
@@ -146,7 +154,11 @@ function AgentWorkspace(): JSX.Element {
               {busy ? "Starting…" : "Start"}
             </Button>
           )}
-          <Button variant="secondary" size="sm" onClick={() => setSection("deploy")}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setSection("deploy")}
+          >
             <IconRocket className="h-3.5 w-3.5" />
             Deploy
           </Button>
@@ -155,7 +167,11 @@ function AgentWorkspace(): JSX.Element {
 
       {/* Tabs */}
       <div className="border-b border-border px-5">
-        <Tabs items={tabs} active={section} onChange={(id) => setSection(id as Section)} />
+        <Tabs
+          items={tabs}
+          active={section}
+          onChange={(id) => setSection(id as Section)}
+        />
       </div>
 
       {/* Content */}
@@ -206,7 +222,10 @@ function ArchivedModal({
         ) : (
           <div className="divide-y divide-border/70">
             {archived.map((t) => (
-              <div key={t.id} className="group flex items-center gap-3 px-3 py-2.5">
+              <div
+                key={t.id}
+                className="group flex items-center gap-3 px-3 py-2.5"
+              >
                 <IconInbox className="h-4 w-4 shrink-0 text-faint" />
                 <span className="min-w-0 flex-1 truncate text-[13px] text-text">
                   {t.title}
@@ -214,7 +233,9 @@ function ArchivedModal({
                 <button
                   type="button"
                   onClick={() => {
-                    void archiveThread(t.id, false).then(() => selectThread(t.id));
+                    void archiveThread(t.id, false).then(() =>
+                      selectThread(t.id),
+                    );
                     setSection("chat");
                     onClose();
                   }}
@@ -375,9 +396,7 @@ export function App(): JSX.Element {
                             setSection("chat");
                           }}
                           className={`group flex w-full items-center gap-2.5 py-[7px] pr-2 text-left text-[13px] transition-colors ${
-                            activeT
-                              ? "text-text"
-                              : "text-muted hover:text-text"
+                            activeT ? "text-text" : "text-muted hover:text-text"
                           }`}
                         >
                           <span
@@ -439,7 +458,9 @@ export function App(): JSX.Element {
             type="button"
             onClick={() => setSection("settings")}
             className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-colors ${
-              inSettings ? "bg-black/[0.05] text-text" : "text-muted hover:bg-black/[0.03]"
+              inSettings
+                ? "bg-black/[0.05] text-text"
+                : "text-muted hover:bg-black/[0.03]"
             }`}
           >
             <IconSettings className="h-4 w-4" />
@@ -467,7 +488,10 @@ export function App(): JSX.Element {
 
       {createModal}
       {archivedFor ? (
-        <ArchivedModal agentId={archivedFor} onClose={() => setArchivedFor(null)} />
+        <ArchivedModal
+          agentId={archivedFor}
+          onClose={() => setArchivedFor(null)}
+        />
       ) : null}
     </div>
   );

@@ -1,6 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { AgentStructure, DetectedBrain, WireBrainInput } from "../shared/ipc";
+import type {
+  AgentStructure,
+  DetectedBrain,
+  WireBrainInput,
+} from "../shared/ipc";
 
 /** The `agent/` root inside a project (Eve projects nest their agent there). */
 function agentRoot(agentPath: string): string {
@@ -23,7 +27,10 @@ function readEnvVar(agentPath: string, name: string): string | null {
   if (!existsSync(p)) {
     return null;
   }
-  const re = new RegExp(`^\\s*${name.replace(/[^A-Z0-9_]/gi, "")}\\s*=\\s*(.*)$`, "m");
+  const re = new RegExp(
+    `^\\s*${name.replace(/[^A-Z0-9_]/gi, "")}\\s*=\\s*(.*)$`,
+    "m",
+  );
   const m = re.exec(readFileSync(p, "utf8"));
   if (!m) {
     return null;
@@ -41,7 +48,7 @@ function readEnvVar(agentPath: string, name: string): string | null {
  */
 export function detectBrain(
   agentPath: string,
-  structure: AgentStructure
+  structure: AgentStructure,
 ): DetectedBrain {
   const connections = structure.connections
     .filter((c) => (c.url ?? "").toLowerCase().includes("arcana"))
@@ -54,18 +61,16 @@ export function detectBrain(
   if (existsSync(file)) {
     const src = readFileSync(file, "utf8");
     envVar = /process\.env\.([A-Z0-9_]*ARCANA[A-Z0-9_]*|ARCANA[A-Z0-9_]*)/.exec(
-      src
+      src,
     )?.[1];
     workspace =
       /X-Kyberagent-Agent["']?\s*[:=]\s*["']([a-z0-9-]+)["']/i.exec(src)?.[1] ??
       /arcanaWorkspace\s*=\s*(?:process\.env\.[A-Z0-9_]+\s*\?\?\s*)?["']([a-z0-9-]+)["']/i.exec(
-        src
+        src,
       )?.[1];
   }
 
-  const keyPresent = envVar
-    ? readEnvVar(agentPath, envVar) !== null
-    : false;
+  const keyPresent = envVar ? readEnvVar(agentPath, envVar) !== null : false;
 
   return { connections, workspace, envVar, keyPresent };
 }
@@ -140,7 +145,7 @@ function upsertEnv(agentPath: string, name: string, value: string): void {
  */
 export function wireBrain(
   agentPath: string,
-  input: WireBrainInput
+  input: WireBrainInput,
 ): { files: string[] } {
   const dir = connectionsDir(agentPath);
   mkdirSync(dir, { recursive: true });

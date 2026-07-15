@@ -55,8 +55,8 @@ function NewSkillModal({
             Created <span className="font-mono">{done}</span>.
           </div>
           <p className="text-2xs leading-relaxed text-muted">
-            Restart the agent to load it. The description is the routing hint that
-            decides when the skill loads.
+            Restart the agent to load it. The description is the routing hint
+            that decides when the skill loads.
           </p>
           <div className="flex justify-end">
             <Button variant="primary" onClick={onClose}>
@@ -67,9 +67,17 @@ function NewSkillModal({
       ) : (
         <div className="space-y-3 p-4">
           <Field label="Name" hint="becomes skills/<name>/SKILL.md">
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="pricing-play" className="font-mono" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="pricing-play"
+              className="font-mono"
+            />
           </Field>
-          <Field label="Description" hint="routing hint — when should this load?">
+          <Field
+            label="Description"
+            hint="routing hint — when should this load?"
+          >
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -90,7 +98,11 @@ function NewSkillModal({
             <Button variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={submit} disabled={busy || !name || !description}>
+            <Button
+              variant="primary"
+              onClick={submit}
+              disabled={busy || !name || !description}
+            >
               {busy ? "Creating…" : "Create skill"}
             </Button>
           </div>
@@ -122,7 +134,12 @@ export function Skills(): JSX.Element {
         count={skills.length}
         right={
           <>
-            <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setAddOpen(true)}
+              disabled={!id}
+            >
               <IconPlus className="h-3.5 w-3.5" />
               New
             </Button>
@@ -140,14 +157,20 @@ export function Skills(): JSX.Element {
             kicker="Skills"
             title="No skills yet"
             action={
-              <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setAddOpen(true)}
+                disabled={!id}
+              >
                 <IconPlus className="h-3.5 w-3.5" />
                 New skill
               </Button>
             }
           >
-            Skills are load-on-demand instructions the agent pulls in when relevant.
-            The description is the routing hint that decides when a skill loads.
+            Skills are load-on-demand instructions the agent pulls in when
+            relevant. The description is the routing hint that decides when a
+            skill loads.
           </EmptyState>
         ) : (
           <div className="mx-auto max-w-2xl px-4 py-4">

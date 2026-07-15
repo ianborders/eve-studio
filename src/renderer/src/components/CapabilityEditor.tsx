@@ -32,10 +32,16 @@ export function CapabilityEditor({
   const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const r = await window.studio.agents.capabilityFiles(agentId, kind, name);
-    setFiles(r.files);
-    setOthers(r.otherPaths);
-    setMissing(r.missing);
+    try {
+      const r = await window.studio.agents.capabilityFiles(agentId, kind, name);
+      setFiles(r.files);
+      setOthers(r.otherPaths);
+      setMissing(r.missing);
+    } catch {
+      // Read failed on disk — resolve the spinner into the fallback message.
+      setFiles([]);
+      setMissing(true);
+    }
   }, [agentId, kind, name]);
 
   useEffect(() => {
@@ -63,7 +69,7 @@ export function CapabilityEditor({
         const r = await window.studio.agents.capabilityWrite(
           agentId,
           f.relPath,
-          f.content
+          f.content,
         );
         if (!r.ok) {
           setErr(r.error ?? `Failed to save ${f.relPath}.`);
@@ -162,11 +168,22 @@ export function CapabilityEditor({
             <div className="flex items-center justify-between gap-2 px-5 py-4">
               {confirmDel ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted">Delete this {kind}?</span>
-                  <Button variant="danger" size="sm" onClick={del} disabled={busy !== null}>
+                  <span className="text-xs text-muted">
+                    Delete this {kind}?
+                  </span>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={del}
+                    disabled={busy !== null}
+                  >
                     {busy === "delete" ? "Deleting…" : "Confirm delete"}
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setConfirmDel(false)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setConfirmDel(false)}
+                  >
                     Cancel
                   </Button>
                 </div>

@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { CapabilityEditor } from "../components/CapabilityEditor";
 import { useActiveStructure } from "../lib/useStructure";
-import { IconChevronRight, IconPlus, IconRefresh, IconWrench } from "../ui/icons";
+import {
+  IconChevronRight,
+  IconPlus,
+  IconRefresh,
+  IconWrench,
+} from "../ui/icons";
 import {
   Badge,
   Button,
@@ -26,7 +31,9 @@ function NewToolModal({
 }): JSX.Element {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [approval, setApproval] = useState<"never" | "once" | "always">("never");
+  const [approval, setApproval] = useState<"never" | "once" | "always">(
+    "never",
+  );
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -56,8 +63,8 @@ function NewToolModal({
           </div>
           <p className="text-2xs leading-relaxed text-muted">
             It's scaffolded with an empty Zod input schema and a stub{" "}
-            <span className="font-mono text-text">execute</span>. Fill in the schema
-            and logic, then restart the agent.
+            <span className="font-mono text-text">execute</span>. Fill in the
+            schema and logic, then restart the agent.
           </p>
           <div className="flex justify-end">
             <Button variant="primary" onClick={onClose}>
@@ -68,7 +75,12 @@ function NewToolModal({
       ) : (
         <div className="space-y-3 p-4">
           <Field label="Name" hint="snake_case — becomes tools/<name>.ts">
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="get_weather" className="font-mono" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="get_weather"
+              className="font-mono"
+            />
           </Field>
           <Field label="Description" hint="written for the model">
             <Textarea
@@ -78,7 +90,10 @@ function NewToolModal({
               placeholder="Get the current weather for a city."
             />
           </Field>
-          <Field label="Approval gate" hint="human-in-the-loop for destructive tools">
+          <Field
+            label="Approval gate"
+            hint="human-in-the-loop for destructive tools"
+          >
             <div className="inline-flex rounded-lg border border-border p-0.5">
               {(["never", "once", "always"] as const).map((a) => (
                 <button
@@ -101,7 +116,11 @@ function NewToolModal({
             <Button variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={submit} disabled={busy || !name || !description}>
+            <Button
+              variant="primary"
+              onClick={submit}
+              disabled={busy || !name || !description}
+            >
               {busy ? "Creating…" : "Create tool"}
             </Button>
           </div>
@@ -133,7 +152,12 @@ export function Tools(): JSX.Element {
         count={tools.length}
         right={
           <>
-            <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setAddOpen(true)}
+              disabled={!id}
+            >
               <IconPlus className="h-3.5 w-3.5" />
               New
             </Button>
@@ -151,14 +175,19 @@ export function Tools(): JSX.Element {
             kicker="Tools"
             title="No tools yet"
             action={
-              <Button variant="primary" size="sm" onClick={() => setAddOpen(true)} disabled={!id}>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setAddOpen(true)}
+                disabled={!id}
+              >
                 <IconPlus className="h-3.5 w-3.5" />
                 New tool
               </Button>
             }
           >
-            Tools are typed actions the agent can call. They run in the app runtime
-            with full env access.
+            Tools are typed actions the agent can call. They run in the app
+            runtime with full env access.
           </EmptyState>
         ) : (
           <div className="mx-auto max-w-2xl px-4 py-4">

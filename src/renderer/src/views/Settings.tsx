@@ -48,7 +48,9 @@ export function Settings({ info }: { info: AppInfo | null }): JSX.Element {
           <section className="space-y-2.5">
             <div className="flex items-baseline gap-2">
               <Kicker>Registered agents</Kicker>
-              <span className="font-mono text-2xs text-faint">{agents.length}</span>
+              <span className="font-mono text-2xs text-faint">
+                {agents.length}
+              </span>
             </div>
             {agents.length === 0 ? (
               <EmptyState
@@ -56,7 +58,8 @@ export function Settings({ info }: { info: AppInfo | null }): JSX.Element {
                 kicker="Agents"
                 title="No agents registered"
               >
-                Registered agents appear here once you add them from the sidebar.
+                Registered agents appear here once you add them from the
+                sidebar.
               </EmptyState>
             ) : (
               <List>
@@ -85,10 +88,11 @@ export function Settings({ info }: { info: AppInfo | null }): JSX.Element {
           <section className="space-y-2.5">
             <Kicker>Storage &amp; secrets</Kicker>
             <p className="text-[13px] leading-relaxed text-muted">
-              Agents, chat threads, and Arcana brain keys are stored locally in this
-              app's user-data directory. Brain keys are held in plain JSON for now — an
-              OS-keychain vault is a planned hardening pass. Nothing leaves your machine
-              except calls to the agents' own dev servers and Arcana.
+              Agents, chat threads, and Arcana brain keys are stored locally in
+              this app's user-data directory. Brain keys are held in plain JSON
+              for now — an OS-keychain vault is a planned hardening pass.
+              Nothing leaves your machine except calls to the agents' own dev
+              servers and Arcana.
             </p>
           </section>
         </div>

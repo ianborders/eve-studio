@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { type Block, projectEvents } from "../lib/events";
 import { useStore } from "../store";
-import { IconArrowUp, IconChat, IconExternal, IconPlus, IconWrench } from "../ui/icons";
+import {
+  IconArrowUp,
+  IconChat,
+  IconExternal,
+  IconPlus,
+  IconWrench,
+} from "../ui/icons";
 import { Badge, Button, EmptyState, Spinner } from "../ui/kit";
 import { NeedsLink } from "../components/NeedsLink";
 import { ChatTargetBar } from "./ChatTargetBar";
@@ -58,7 +64,9 @@ function BlockView({
   if (block.kind === "reasoning") {
     return (
       <details className="text-xs text-muted">
-        <summary className="cursor-pointer select-none text-faint">thinking…</summary>
+        <summary className="cursor-pointer select-none text-faint">
+          thinking…
+        </summary>
         <div className="mt-1 whitespace-pre-wrap border-l-2 border-border pl-3 italic">
           {block.text}
         </div>
@@ -88,7 +96,9 @@ function BlockView({
               {json(block.output)}
             </pre>
           ) : null}
-          {block.error ? <div className="text-2xs text-danger">{block.error}</div> : null}
+          {block.error ? (
+            <div className="text-2xs text-danger">{block.error}</div>
+          ) : null}
         </div>
       </details>
     );
@@ -116,10 +126,12 @@ function BlockView({
       <div className="rounded-lg border border-warn/40 bg-warn/[0.06] p-3 text-[13px]">
         <div className="text-text">{block.prompt}</div>
         <div className="mt-2 flex flex-wrap gap-2">
-          {(block.options ?? [
-            { id: "approve", label: "Approve" },
-            { id: "deny", label: "Deny" },
-          ]).map((o) => (
+          {(
+            block.options ?? [
+              { id: "approve", label: "Approve" },
+              { id: "deny", label: "Deny" },
+            ]
+          ).map((o) => (
             <Button
               key={o.id}
               size="sm"
@@ -152,7 +164,9 @@ function BlockView({
           </a>
         ) : null}
         {block.userCode ? (
-          <div className="mt-2 font-mono text-xs text-muted">Code: {block.userCode}</div>
+          <div className="mt-2 font-mono text-xs text-muted">
+            Code: {block.userCode}
+          </div>
         ) : null}
       </div>
     );
@@ -203,7 +217,8 @@ export function Chat(): JSX.Element {
     void send(text);
   };
 
-  const canSend = !streaming && draft.trim().length > 0 && ready && !!activeThreadId;
+  const canSend =
+    !streaming && draft.trim().length > 0 && ready && !!activeThreadId;
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col">
@@ -211,44 +226,52 @@ export function Chat(): JSX.Element {
       <ChatTargetBar agentId={activeAgentId} />
 
       <div className="flex-1 overflow-auto px-8 py-8">
-       <div className="mx-auto w-full max-w-3xl space-y-7">
-        {!activeThreadId ? (
-          <EmptyState
-            icon={<IconChat className="h-5 w-5" />}
-            title="No thread selected"
-            action={
-              <Button variant="primary" size="sm" onClick={() => newThread(activeAgentId)}>
-                <IconPlus className="h-3.5 w-3.5" />
-                New chat
-              </Button>
-            }
-          >
-            Pick a thread in the sidebar, or start a new one.
-          </EmptyState>
-        ) : projection.blocks.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-1 text-center">
-            <div className="text-[15px] font-medium text-text">{agentName}</div>
-            <div className="text-[13px] text-muted">
-              {ready
-                ? "What can I help you with?"
-                : "Start the agent (or switch to Deployed) to chat."}
+        <div className="mx-auto w-full max-w-3xl space-y-7">
+          {!activeThreadId ? (
+            <EmptyState
+              icon={<IconChat className="h-5 w-5" />}
+              title="No thread selected"
+              action={
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => newThread(activeAgentId)}
+                >
+                  <IconPlus className="h-3.5 w-3.5" />
+                  New chat
+                </Button>
+              }
+            >
+              Pick a thread in the sidebar, or start a new one.
+            </EmptyState>
+          ) : projection.blocks.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center gap-1 text-center">
+              <div className="text-[15px] font-medium text-text">
+                {agentName}
+              </div>
+              <div className="text-[13px] text-muted">
+                {ready
+                  ? "What can I help you with?"
+                  : "Start the agent (or switch to Deployed) to chat."}
+              </div>
             </div>
-          </div>
-        ) : (
-          projection.blocks.map((b) => (
-            <BlockView
-              key={b.id}
-              block={b}
-              agentName={agentName}
-              onRespond={(r, o) => respond(r, o)}
-            />
-          ))
-        )}
-        {chatStatus === "error" ? (
-          <div className="text-xs text-danger">Turn failed — see the agent logs.</div>
-        ) : null}
-        <div ref={bottomRef} />
-       </div>
+          ) : (
+            projection.blocks.map((b) => (
+              <BlockView
+                key={b.id}
+                block={b}
+                agentName={agentName}
+                onRespond={(r, o) => respond(r, o)}
+              />
+            ))
+          )}
+          {chatStatus === "error" ? (
+            <div className="text-xs text-danger">
+              Turn failed — see the agent logs.
+            </div>
+          ) : null}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
       <div className="mx-auto w-full max-w-3xl px-5 pb-5 pt-1">

@@ -27,7 +27,7 @@ export class ChatController {
 
   constructor(
     private readonly emitEvent: (threadId: string, event: EveEvent) => void,
-    private readonly emitStatus: (msg: ChatStatusMessage) => void
+    private readonly emitStatus: (msg: ChatStatusMessage) => void,
   ) {}
 
   isBusy(threadId: string): boolean {
@@ -43,7 +43,7 @@ export class ChatController {
     conn: SessionConn,
     requestId: string,
     optionId?: string,
-    text?: string
+    text?: string,
   ): Promise<void> {
     return this.runTurn(threadId, conn, {
       inputResponses: [{ requestId, optionId, text }],
@@ -57,7 +57,7 @@ export class ChatController {
   private async runTurn(
     threadId: string,
     conn: SessionConn,
-    payload: TurnPayload
+    payload: TurnPayload,
   ): Promise<void> {
     if (this.active.has(threadId)) {
       return;
@@ -108,7 +108,7 @@ export class ChatController {
         conn,
         sessionId,
         startIndex,
-        abort.signal
+        abort.signal,
       )) {
         store.appendEvent(threadId, event);
         this.emitEvent(threadId, event);

@@ -59,12 +59,7 @@ export interface ChatEventMessage {
 }
 
 export type ChatStatus =
-  | "idle"
-  | "streaming"
-  | "waiting"
-  | "completed"
-  | "failed"
-  | "error";
+  "idle" | "streaming" | "waiting" | "completed" | "failed" | "error";
 
 export interface ChatStatusMessage {
   threadId: string;
@@ -316,7 +311,8 @@ export interface ToolInput {
 }
 
 /** A path-based capability whose source files can be opened, edited, deleted. */
-export type CapabilityKind = "tool" | "skill" | "subagent" | "hook" | "schedule";
+export type CapabilityKind =
+  "tool" | "skill" | "subagent" | "hook" | "schedule";
 export interface CapabilityFile {
   relPath: string;
   content: string;

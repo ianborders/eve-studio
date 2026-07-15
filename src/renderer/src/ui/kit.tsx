@@ -30,7 +30,7 @@ export function Kicker({
     <div
       className={cx(
         "font-spacemono text-[10px] uppercase leading-none tracking-[0.18em] text-faint",
-        className
+        className,
       )}
     >
       {children}
@@ -90,7 +90,7 @@ export function IconButton({
       type="button"
       className={cx(
         "no-drag inline-flex h-7 w-7 items-center justify-center rounded-md text-faint transition-colors hover:bg-black/[0.05] hover:text-text disabled:opacity-40",
-        className
+        className,
       )}
       {...rest}
     >
@@ -101,13 +101,7 @@ export function IconButton({
 
 // --- Badge (mono pill) ---
 type Tone =
-  | "default"
-  | "accent"
-  | "success"
-  | "warn"
-  | "danger"
-  | "info"
-  | "violet";
+  "default" | "accent" | "success" | "warn" | "danger" | "info" | "violet";
 const TONE: Record<Tone, string> = {
   default: "bg-black/[0.045] text-muted",
   accent: "bg-accent/10 text-accent",
@@ -132,7 +126,7 @@ export function Badge({
       className={cx(
         "inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-spacemono text-[10px] uppercase leading-none tracking-wider",
         TONE[tone],
-        className
+        className,
       )}
     >
       {children}
@@ -183,7 +177,7 @@ export function Card({
       className={cx(
         "rounded-xl border border-border bg-panel",
         raised && "shadow-pop",
-        className
+        className,
       )}
     >
       {children}
@@ -193,28 +187,28 @@ export function Card({
 
 // --- Inputs ---
 export function Input(
-  props: InputHTMLAttributes<HTMLInputElement>
+  props: InputHTMLAttributes<HTMLInputElement>,
 ): JSX.Element {
   return (
     <input
       {...props}
       className={cx(
         "no-drag w-full rounded-lg border border-border bg-bg px-2.5 py-1.5 text-[13px] text-text outline-none transition-colors placeholder:text-faint focus:border-border-strong",
-        props.className
+        props.className,
       )}
     />
   );
 }
 
 export function Textarea(
-  props: TextareaHTMLAttributes<HTMLTextAreaElement>
+  props: TextareaHTMLAttributes<HTMLTextAreaElement>,
 ): JSX.Element {
   return (
     <textarea
       {...props}
       className={cx(
         "no-drag w-full rounded-lg border border-border bg-bg px-3 py-2 text-[13px] leading-relaxed text-text outline-none transition-colors placeholder:text-faint focus:border-border-strong",
-        props.className
+        props.className,
       )}
     />
   );
@@ -251,7 +245,14 @@ export function Spinner({ className }: { className?: string }): JSX.Element {
       fill="none"
       aria-hidden="true"
     >
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" opacity="0.15" />
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        opacity="0.15"
+      />
       <path
         d="M21 12a9 9 0 0 0-9-9"
         stroke="currentColor"
@@ -280,7 +281,9 @@ export function EmptyState({
     <div className="flex h-full flex-col items-center justify-center px-6 text-center">
       {icon ? <div className="mb-4 text-border-strong">{icon}</div> : null}
       {kicker ? <Kicker className="mb-2.5">{kicker}</Kicker> : null}
-      <div className="text-[19px] font-semibold tracking-tight text-text">{title}</div>
+      <div className="text-[19px] font-semibold tracking-tight text-text">
+        {title}
+      </div>
       {children ? (
         <div className="mt-2 max-w-sm text-[13px] leading-relaxed text-muted">
           {children}
@@ -316,7 +319,9 @@ export function ViewHeader({
           ) : null}
         </div>
       </div>
-      {right ? <div className="flex shrink-0 items-center gap-1.5">{right}</div> : null}
+      {right ? (
+        <div className="flex shrink-0 items-center gap-1.5">{right}</div>
+      ) : null}
     </div>
   );
 }
@@ -345,7 +350,7 @@ export function ListRow({
       {...(onClick ? { type: "button" as const, onClick } : {})}
       className={cx(
         "group flex w-full items-start gap-3 px-3 py-3 text-left transition-colors",
-        onClick && "hover:bg-black/[0.02]"
+        onClick && "hover:bg-black/[0.02]",
       )}
     >
       {icon ? (
@@ -355,7 +360,9 @@ export function ListRow({
       ) : null}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate font-mono text-[13px] text-text">{title}</span>
+          <span className="truncate font-mono text-[13px] text-text">
+            {title}
+          </span>
           {badge}
         </div>
         {desc ? (
@@ -410,11 +417,13 @@ export function Tabs({
             onClick={() => onChange(t.id)}
             className={cx(
               "relative flex h-11 shrink-0 items-center gap-2 px-3 text-[13px] font-medium transition-colors",
-              on ? "text-text" : "text-faint hover:text-muted"
+              on ? "text-text" : "text-faint hover:text-muted",
             )}
           >
             {Ico ? (
-              <Ico className={cx("h-4 w-4", on ? "opacity-100" : "opacity-60")} />
+              <Ico
+                className={cx("h-4 w-4", on ? "opacity-100" : "opacity-60")}
+              />
             ) : null}
             {t.label}
             {typeof t.count === "number" ? (
@@ -452,11 +461,11 @@ export function Modal({
       />
       <div
         className={cx(
-          "relative w-full animate-slide-up rounded-2xl border border-border bg-elevated shadow-pop",
-          width
+          "relative flex max-h-[88vh] w-full animate-slide-up flex-col rounded-2xl border border-border bg-elevated shadow-pop",
+          width,
         )}
       >
-        <div className="flex items-center justify-between px-5 pb-3 pt-4">
+        <div className="flex shrink-0 items-center justify-between px-5 pb-3 pt-4">
           <div>
             <Kicker className="mb-1">Eve Studio</Kicker>
             <span className="text-[15px] font-semibold tracking-tight text-text">
@@ -468,12 +477,20 @@ export function Modal({
             onClick={onClose}
             className="rounded-md p-1 text-faint hover:bg-black/[0.05] hover:text-text"
           >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.75}
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
               <path d="M6 6l12 12M18 6 6 18" />
             </svg>
           </button>
         </div>
-        {children}
+        <div className="min-h-0 overflow-y-auto">{children}</div>
       </div>
     </div>
   );
@@ -506,7 +523,7 @@ export function SubNav({
             onClick={() => onChange(t.id)}
             className={cx(
               "relative flex h-10 shrink-0 items-center gap-1.5 text-[13px] font-medium transition-colors",
-              on ? "text-text" : "text-faint hover:text-muted"
+              on ? "text-text" : "text-faint hover:text-muted",
             )}
           >
             {t.label}

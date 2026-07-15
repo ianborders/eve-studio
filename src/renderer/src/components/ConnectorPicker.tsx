@@ -50,12 +50,14 @@ export function ConnectorPicker({
       return;
     }
     setCreating(true);
-    setOutput(`$ vercel connect create ${service} --name ${newName || "my-agent"} --triggers\n`);
+    setOutput(
+      `$ vercel connect create ${service} --name ${newName || "my-agent"} --triggers\n`,
+    );
     const r = await window.studio.vercel.connectorCreate(
       agentId,
       service,
       newName || "my-agent",
-      true
+      true,
     );
     setCreating(false);
     setOutput((o) => o + r.output);
@@ -111,7 +113,12 @@ export function ConnectorPicker({
             placeholder={`new ${service} connector name`}
             className="flex-1 font-mono"
           />
-          <Button variant="secondary" size="sm" onClick={create} disabled={creating}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={create}
+            disabled={creating}
+          >
             <IconPlus className="h-3.5 w-3.5" />
             {creating ? "Creating…" : "Create"}
           </Button>

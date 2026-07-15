@@ -13,11 +13,23 @@ import {
 } from "../ui/icons";
 import { Badge, Card, EmptyState, IconButton, Spinner } from "../ui/kit";
 
-function Meta({ label, value, tone }: { label: string; value: string; tone?: string }): JSX.Element {
+function Meta({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: string;
+}): JSX.Element {
   return (
     <div className="flex flex-col">
-      <span className="text-2xs uppercase tracking-wide text-faint">{label}</span>
-      <span className={`font-mono text-[13px] ${tone ?? "text-text"}`}>{value}</span>
+      <span className="text-2xs uppercase tracking-wide text-faint">
+        {label}
+      </span>
+      <span className={`font-mono text-[13px] ${tone ?? "text-text"}`}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -51,7 +63,15 @@ function Group({
   );
 }
 
-function Item({ name, tag, desc }: { name: string; tag?: string; desc?: string }): JSX.Element {
+function Item({
+  name,
+  tag,
+  desc,
+}: {
+  name: string;
+  tag?: string;
+  desc?: string;
+}): JSX.Element {
   return (
     <div className="px-3.5 py-2">
       <div className="flex items-center gap-2">
@@ -59,7 +79,9 @@ function Item({ name, tag, desc }: { name: string; tag?: string; desc?: string }
         {tag ? <Badge>{tag}</Badge> : null}
       </div>
       {desc ? (
-        <div className="mt-0.5 line-clamp-2 text-2xs leading-snug text-muted">{desc}</div>
+        <div className="mt-0.5 line-clamp-2 text-2xs leading-snug text-muted">
+          {desc}
+        </div>
       ) : null}
     </div>
   );
@@ -84,50 +106,94 @@ function Body({ s }: { s: AgentStructure }): JSX.Element {
       </Card>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <Group icon={<IconWrench className="h-4 w-4" />} title="Tools" count={s.tools.length}>
+        <Group
+          icon={<IconWrench className="h-4 w-4" />}
+          title="Tools"
+          count={s.tools.length}
+        >
           {s.tools.map((t) => (
             <Item key={t.name} name={t.name} desc={t.description} />
           ))}
         </Group>
-        <Group icon={<IconPlug className="h-4 w-4" />} title="Connections" count={s.connections.length}>
+        <Group
+          icon={<IconPlug className="h-4 w-4" />}
+          title="Connections"
+          count={s.connections.length}
+        >
           {s.connections.map((c) => (
-            <Item key={c.name} name={c.name} tag={c.protocol} desc={c.description} />
+            <Item
+              key={c.name}
+              name={c.name}
+              tag={c.protocol}
+              desc={c.description}
+            />
           ))}
         </Group>
-        <Group icon={<IconWand className="h-4 w-4" />} title="Skills" count={s.skills.length}>
+        <Group
+          icon={<IconWand className="h-4 w-4" />}
+          title="Skills"
+          count={s.skills.length}
+        >
           {s.skills.map((k) => (
             <Item key={k.name} name={k.name} desc={k.description} />
           ))}
         </Group>
-        <Group icon={<IconBot className="h-4 w-4" />} title="Subagents" count={s.subagents.length}>
+        <Group
+          icon={<IconBot className="h-4 w-4" />}
+          title="Subagents"
+          count={s.subagents.length}
+        >
           {s.subagents.map((a) => (
-            <Item key={a.name} name={a.name} tag="subagent" desc={a.description} />
+            <Item
+              key={a.name}
+              name={a.name}
+              tag="subagent"
+              desc={a.description}
+            />
           ))}
         </Group>
-        <Group icon={<IconServer className="h-4 w-4" />} title="Channels" count={s.channels.length}>
+        <Group
+          icon={<IconServer className="h-4 w-4" />}
+          title="Channels"
+          count={s.channels.length}
+        >
           {s.channels.map((c) => (
             <Item
               key={c.name}
               name={c.name}
               tag={c.kind}
-              desc={c.method && c.urlPath ? `${c.method} ${c.urlPath}` : undefined}
+              desc={
+                c.method && c.urlPath ? `${c.method} ${c.urlPath}` : undefined
+              }
             />
           ))}
         </Group>
-        <Group icon={<IconCalendar className="h-4 w-4" />} title="Schedules" count={s.schedules.length}>
+        <Group
+          icon={<IconCalendar className="h-4 w-4" />}
+          title="Schedules"
+          count={s.schedules.length}
+        >
           {s.schedules.map((sch) => (
             <Item key={sch.name} name={sch.name} tag={sch.cron} />
           ))}
         </Group>
         {s.remoteAgents.length > 0 ? (
-          <Group icon={<IconServer className="h-4 w-4" />} title="Remote agents" count={s.remoteAgents.length}>
+          <Group
+            icon={<IconServer className="h-4 w-4" />}
+            title="Remote agents"
+            count={s.remoteAgents.length}
+          >
             {s.remoteAgents.map((r) => (
               <Item key={r.name} name={r.name} desc={r.url} />
             ))}
           </Group>
         ) : null}
         {s.hooks.length > 0 ? (
-          <Group icon={<IconBolt className="h-4 w-4" />} title="Hooks" count={s.hooks.length}>
+          <Group
+            icon={<IconBolt className="h-4 w-4" />}
+            title="Hooks"
+            count={s.hooks.length}
+          >
             {s.hooks.map((h) => (
               <Item key={h} name={h} />
             ))}
@@ -155,7 +221,10 @@ export function Structure(): JSX.Element {
             <Spinner /> Reading manifest…
           </div>
         ) : structure?.error ? (
-          <EmptyState icon={<IconServer className="h-5 w-5" />} title="Can't read structure">
+          <EmptyState
+            icon={<IconServer className="h-5 w-5" />}
+            title="Can't read structure"
+          >
             {structure.error}
           </EmptyState>
         ) : structure ? (

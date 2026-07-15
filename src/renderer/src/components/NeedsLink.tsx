@@ -9,7 +9,11 @@ import { Button, Kicker } from "../ui/kit";
  * Shown in Chat when an agent has no model credential (not linked to Vercel).
  * One click links it + pulls the AI Gateway token — no terminal.
  */
-export function NeedsLink({ agentId }: { agentId: string }): JSX.Element | null {
+export function NeedsLink({
+  agentId,
+}: {
+  agentId: string;
+}): JSX.Element | null {
   const runtime = useStore((s) => s.runtime[agentId]);
   const stopAgent = useStore((s) => s.stopAgent);
   const startAgent = useStore((s) => s.startAgent);
@@ -36,7 +40,9 @@ export function NeedsLink({ agentId }: { agentId: string }): JSX.Element | null 
   const connect = async (): Promise<void> => {
     setBusy(true);
     setErr(null);
-    setOutput("Connecting to Vercel — creating/linking the project and pulling the AI Gateway credential…\n");
+    setOutput(
+      "Connecting to Vercel — creating/linking the project and pulling the AI Gateway credential…\n",
+    );
     const r = await window.studio.vercel.link(agentId);
     setOutput(r.output);
     const now = await window.studio.vercel.modelReadiness(agentId);
@@ -89,7 +95,9 @@ export function NeedsLink({ agentId }: { agentId: string }): JSX.Element | null 
         </Button>
       </div>
       {err ? <div className="mt-2 text-2xs text-danger">{err}</div> : null}
-      {output && (busy || err) ? <Console text={output} className="mt-2 max-h-40" /> : null}
+      {output && (busy || err) ? (
+        <Console text={output} className="mt-2 max-h-40" />
+      ) : null}
     </div>
   );
 }

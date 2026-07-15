@@ -29,13 +29,17 @@ function UseConnectorModal({
 }): JSX.Element {
   const canChannel = CHANNEL_TYPES.has(connector.type);
   const [mode, setMode] = useState<"channel" | "connection">(
-    canChannel ? "channel" : "connection"
+    canChannel ? "channel" : "connection",
   );
   const [connName, setConnName] = useState(connector.type);
   const [url, setUrl] = useState(MCP_URL[connector.type] ?? "");
-  const [scope, setScope] = useState<"connect-app" | "connect-user">("connect-app");
+  const [scope, setScope] = useState<"connect-app" | "connect-user">(
+    "connect-app",
+  );
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<{ what: string; channel?: boolean } | null>(null);
+  const [done, setDone] = useState<{ what: string; channel?: boolean } | null>(
+    null,
+  );
   const [attaching, setAttaching] = useState(false);
   const [attachOut, setAttachOut] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -49,7 +53,10 @@ function UseConnectorModal({
     });
     setBusy(false);
     if (r.ok) {
-      setDone({ what: r.relPath ?? `channels/${connector.type}.ts`, channel: true });
+      setDone({
+        what: r.relPath ?? `channels/${connector.type}.ts`,
+        channel: true,
+      });
     } else {
       setErr(r.error ?? "Failed.");
     }
@@ -58,12 +65,12 @@ function UseConnectorModal({
   const attach = async (): Promise<void> => {
     setAttaching(true);
     setAttachOut(
-      `$ vercel connect attach ${connector.uid} --triggers --trigger-path /eve/v1/${connector.type}\n`
+      `$ vercel connect attach ${connector.uid} --triggers --trigger-path /eve/v1/${connector.type}\n`,
     );
     const r = await window.studio.vercel.connectorAttach(
       agentId,
       connector.uid,
-      connector.type
+      connector.type,
     );
     setAttaching(false);
     setAttachOut((o) => o + r.output);
@@ -89,7 +96,11 @@ function UseConnectorModal({
   };
 
   return (
-    <Modal title={`Use ${connector.name} in the agent`} onClose={onClose} width="max-w-xl">
+    <Modal
+      title={`Use ${connector.name} in the agent`}
+      onClose={onClose}
+      width="max-w-xl"
+    >
       {done ? (
         <div className="space-y-3 p-4">
           <div className="rounded-lg bg-success/10 px-3 py-2 text-[13px] text-success">
@@ -99,12 +110,20 @@ function UseConnectorModal({
             <div className="space-y-2">
               <p className="text-2xs leading-relaxed text-muted">
                 Attach the connector so the platform delivers events to
-                <span className="font-mono"> /eve/v1/{connector.type}</span>, then deploy.
+                <span className="font-mono"> /eve/v1/{connector.type}</span>,
+                then deploy.
               </p>
-              <Button variant="secondary" size="sm" onClick={attach} disabled={attaching}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={attach}
+                disabled={attaching}
+              >
                 {attaching ? "Attaching…" : "Attach for triggers"}
               </Button>
-              {attachOut ? <Console text={attachOut} className="max-h-40" /> : null}
+              {attachOut ? (
+                <Console text={attachOut} className="max-h-40" />
+              ) : null}
             </div>
           ) : (
             <p className="text-2xs leading-relaxed text-muted">
@@ -128,9 +147,9 @@ function UseConnectorModal({
             You already attached this connector to the project in Vercel — that
             grants permission to mint tokens. This step writes the{" "}
             <b className="text-text">agent code</b> that actually uses it: as a{" "}
-            <b className="text-text">connection</b> (the agent gets this provider's
-            tools) or a <b className="text-text">channel</b> (the agent talks where
-            its events arrive).
+            <b className="text-text">connection</b> (the agent gets this
+            provider's tools) or a <b className="text-text">channel</b> (the
+            agent talks where its events arrive).
           </div>
 
           {canChannel ? (
@@ -155,12 +174,16 @@ function UseConnectorModal({
           {mode === "channel" && canChannel ? (
             <>
               <p className="text-2xs leading-relaxed text-muted">
-                Adds <span className="font-mono">channels/{connector.type}.ts</span> wired
-                to this connector — the agent replies where {connector.type} events arrive.
+                Adds{" "}
+                <span className="font-mono">channels/{connector.type}.ts</span>{" "}
+                wired to this connector — the agent replies where{" "}
+                {connector.type} events arrive.
               </p>
               {err ? <div className="text-xs text-danger">{err}</div> : null}
               <div className="flex justify-end gap-2">
-                <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                <Button variant="ghost" onClick={onClose}>
+                  Cancel
+                </Button>
                 <Button variant="primary" onClick={addChannel} disabled={busy}>
                   {busy ? "Adding…" : `Add ${connector.type} channel`}
                 </Button>
@@ -170,21 +193,36 @@ function UseConnectorModal({
             <>
               {canChannel ? (
                 <div className="rounded-lg border border-warn/40 bg-warn/[0.06] p-2.5 text-2xs leading-relaxed text-muted">
-                  Heads up: <span className="font-mono text-text">{connector.uid}</span> is
-                  the <b className="text-text">managed {connector.type}</b> connector,
-                  built for the {connector.type} <b className="text-text">channel</b>. For
-                  MCP <b className="text-text">tools</b> you usually need a separate{" "}
-                  <b className="text-text">Custom OAuth</b> connector for the provider's MCP
-                  host (e.g. <span className="font-mono">mcp.linear.app</span>). If tools
-                  return "authorization required", that's why — create that connector in
-                  Vercel Connect and use it here instead.
+                  Heads up:{" "}
+                  <span className="font-mono text-text">{connector.uid}</span>{" "}
+                  is the <b className="text-text">managed {connector.type}</b>{" "}
+                  connector, built for the {connector.type}{" "}
+                  <b className="text-text">channel</b>. For MCP{" "}
+                  <b className="text-text">tools</b> you usually need a separate{" "}
+                  <b className="text-text">Custom OAuth</b> connector for the
+                  provider's MCP host (e.g.{" "}
+                  <span className="font-mono">mcp.linear.app</span>). If tools
+                  return "authorization required", that's why — create that
+                  connector in Vercel Connect and use it here instead.
                 </div>
               ) : null}
-              <Field label="Connection name" hint="becomes connections/<name>.ts">
-                <Input value={connName} onChange={(e) => setConnName(e.target.value)} className="font-mono" />
+              <Field
+                label="Connection name"
+                hint="becomes connections/<name>.ts"
+              >
+                <Input
+                  value={connName}
+                  onChange={(e) => setConnName(e.target.value)}
+                  className="font-mono"
+                />
               </Field>
               <Field label="MCP URL">
-                <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://mcp.example.com/mcp" className="font-mono" />
+                <Input
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://mcp.example.com/mcp"
+                  className="font-mono"
+                />
               </Field>
               <Field label="Scope">
                 <div className="flex gap-1.5">
@@ -202,8 +240,14 @@ function UseConnectorModal({
               </Field>
               {err ? <div className="text-xs text-danger">{err}</div> : null}
               <div className="flex justify-end gap-2">
-                <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                <Button variant="primary" onClick={addConnection} disabled={busy || !connName || !url}>
+                <Button variant="ghost" onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={addConnection}
+                  disabled={busy || !connName || !url}
+                >
                   {busy ? "Adding…" : "Add connection"}
                 </Button>
               </div>
@@ -240,7 +284,11 @@ function Logo({ name, type }: { name: string; type: string }): JSX.Element {
   );
 }
 
-export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element {
+export function ConnectorsGallery({
+  agentId,
+}: {
+  agentId: string;
+}): JSX.Element {
   const [list, setList] = useState<ConnectorItem[] | null>(null);
   const [usage, setUsage] = useState<ConnectorUsage[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -263,8 +311,8 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
     setUsage(
       await window.studio.agents.connectorUsage(
         agentId,
-        connectors.map((c) => c.uid)
-      )
+        connectors.map((c) => c.uid),
+      ),
     );
   }, [agentId]);
 
@@ -292,11 +340,17 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
         <div>
           <Kicker className="mb-1.5">Vercel Connect</Kicker>
           <div className="text-[13px] leading-relaxed text-muted">
-            The providers your agent can connect to (managed OAuth &amp; API keys).
+            The providers your agent can connect to (managed OAuth &amp; API
+            keys).
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <Button variant="primary" size="sm" onClick={() => openGallery(true)} disabled={opening}>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => openGallery(true)}
+            disabled={opening}
+          >
             <IconExternal className="h-3.5 w-3.5" />
             {opening ? "Opening…" : "Add connection"}
           </Button>
@@ -312,7 +366,8 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
         </div>
       ) : err ? (
         <div className="rounded-lg border border-border bg-subtle px-3 py-3 text-2xs leading-relaxed text-muted">
-          {err.toLowerCase().includes("link") || err.toLowerCase().includes("project")
+          {err.toLowerCase().includes("link") ||
+          err.toLowerCase().includes("project")
             ? "Link this project to Vercel first (Environment tab), then reload."
             : err.toLowerCase().includes("enoent")
               ? "The Vercel CLI isn't installed. Install it: npm i -g vercel"
@@ -321,10 +376,15 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
       ) : list.length === 0 ? (
         <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
           <div className="max-w-sm text-[13px] leading-relaxed text-muted">
-            No connections yet. Browse the full provider catalog — Slack, GitHub,
-            Notion, Figma, Shopify, and hundreds more — and add one.
+            No connections yet. Browse the full provider catalog — Slack,
+            GitHub, Notion, Figma, Shopify, and hundreds more — and add one.
           </div>
-          <Button variant="primary" size="sm" onClick={() => openGallery(true)} disabled={opening}>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => openGallery(true)}
+            disabled={opening}
+          >
             <IconExternal className="h-3.5 w-3.5" />
             Add connection
           </Button>
@@ -343,15 +403,23 @@ export function ConnectorsGallery({ agentId }: { agentId: string }): JSX.Element
                 <Logo name={c.name} type={c.type} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="truncate text-[13px] font-medium text-text">{c.name}</span>
+                    <span className="truncate text-[13px] font-medium text-text">
+                      {c.name}
+                    </span>
                     <Badge tone="accent">{c.type}</Badge>
-                    {asConnection ? <Badge tone="success">✓ connection</Badge> : null}
+                    {asConnection ? (
+                      <Badge tone="success">✓ connection</Badge>
+                    ) : null}
                     {asChannel ? <Badge tone="success">✓ channel</Badge> : null}
                   </div>
-                  <div className="mt-0.5 truncate font-mono text-2xs text-faint">{c.uid}</div>
+                  <div className="mt-0.5 truncate font-mono text-2xs text-faint">
+                    {c.uid}
+                  </div>
                 </div>
                 <IconButton
-                  onClick={() => window.studio.vercel.openConnectorPage(agentId, c.uid)}
+                  onClick={() =>
+                    window.studio.vercel.openConnectorPage(agentId, c.uid)
+                  }
                   title="Open in Vercel (authorize / manage)"
                 >
                   <IconExternal className="h-3.5 w-3.5" />

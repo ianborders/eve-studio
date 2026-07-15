@@ -31,7 +31,7 @@ export interface SessionConn {
  * 401/403 = eve route auth rejected the token.
  */
 export async function checkHealth(
-  conn: SessionConn
+  conn: SessionConn,
 ): Promise<{ ok: boolean; status: number; protected: boolean }> {
   try {
     const res = await fetch(`${conn.baseUrl}/eve/v1/info`, {
@@ -39,7 +39,10 @@ export async function checkHealth(
       redirect: "manual",
       signal: AbortSignal.timeout(9000),
     });
-    if (res.type === "opaqueredirect" || (res.status >= 300 && res.status < 400)) {
+    if (
+      res.type === "opaqueredirect" ||
+      (res.status >= 300 && res.status < 400)
+    ) {
       return { ok: false, status: 302, protected: true };
     }
     return { ok: res.ok, status: res.status, protected: false };
@@ -51,7 +54,7 @@ export async function checkHealth(
 /** GET /eve/v1/info — the running agent's runtime surface. */
 export async function getAgentInfo(
   baseUrl: string,
-  headers?: Record<string, string>
+  headers?: Record<string, string>,
 ): Promise<unknown> {
   const res = await fetch(`${baseUrl}/eve/v1/info`, {
     headers,
@@ -67,7 +70,7 @@ export async function getAgentInfo(
 export async function postSession(
   conn: SessionConn,
   sessionId: string | null,
-  body: PostBody
+  body: PostBody,
 ): Promise<SessionResponse> {
   const url = sessionId
     ? `${conn.baseUrl}/eve/v1/session/${sessionId}`
@@ -90,11 +93,11 @@ export async function* streamSession(
   conn: SessionConn,
   sessionId: string,
   startIndex: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): AsyncGenerator<EveEvent> {
   const res = await fetch(
     `${conn.baseUrl}/eve/v1/session/${sessionId}/stream?startIndex=${startIndex}`,
-    { headers: { accept: "application/x-ndjson", ...conn.headers }, signal }
+    { headers: { accept: "application/x-ndjson", ...conn.headers }, signal },
   );
   if (!(res.ok && res.body)) {
     throw new Error(`stream ${res.status}`);

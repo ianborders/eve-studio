@@ -62,7 +62,7 @@ const ENVCH: Record<
   twilio: {
     factory: "twilioChannel",
     mod: "eve/channels/twilio",
-    body: 'twilioChannel({ allowFrom: [] })',
+    body: "twilioChannel({ allowFrom: [] })",
     env: ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"],
   },
 };
@@ -78,13 +78,15 @@ export const CHANNEL_CATALOG = { CONNECT, ENVCH };
 /** Write `channels/<kind>.ts` for the given kind. */
 export function writeChannel(
   agentPath: string,
-  input: ChannelAddInput
+  input: ChannelAddInput,
 ): { relPath: string; envVars?: string[]; connect?: boolean } {
   const dir = join(agentRoot(agentPath), "channels");
   mkdirSync(dir, { recursive: true });
 
   if (input.kind === "custom") {
-    const slug = (input.name ?? "intake").toLowerCase().replace(/[^a-z0-9-]/g, "");
+    const slug = (input.name ?? "intake")
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "");
     const file = join(dir, `${slug || "intake"}.ts`);
     if (existsSync(file)) {
       throw new Error(`channels/${slug}.ts already exists.`);
@@ -117,7 +119,7 @@ export default defineChannel({
     },
   },
 });
-`
+`,
     );
     return { relPath: `${nested(agentPath)}channels/${slug || "intake"}.ts` };
   }
@@ -142,9 +144,12 @@ import { ${c.factory} } from "${c.mod}";
 export default ${c.factory}({
   credentials: ${c.cred}(${JSON.stringify(uid)}),
 });
-`
+`,
     );
-    return { relPath: `${nested(agentPath)}channels/${input.kind}.ts`, connect: true };
+    return {
+      relPath: `${nested(agentPath)}channels/${input.kind}.ts`,
+      connect: true,
+    };
   }
 
   const e = ENVCH[input.kind];
@@ -157,9 +162,12 @@ export default ${c.factory}({
  * ${e.factory} — reads credentials from env (${e.env.join(", ")}). Added by Eve Studio.
  */
 export default ${e.body};
-`
+`,
     );
-    return { relPath: `${nested(agentPath)}channels/${input.kind}.ts`, envVars: e.env };
+    return {
+      relPath: `${nested(agentPath)}channels/${input.kind}.ts`,
+      envVars: e.env,
+    };
   }
 
   throw new Error(`Unknown channel kind: ${input.kind}`);

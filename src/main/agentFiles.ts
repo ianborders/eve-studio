@@ -63,9 +63,13 @@ const SLUG_RE = /[^a-z0-9-]/g;
 /** Create a load-on-demand skill at `skills/<name>/SKILL.md`. */
 export function createSkill(
   agentPath: string,
-  input: SkillInput
+  input: SkillInput,
 ): { relPath: string } {
-  const slug = input.name.trim().toLowerCase().replace(/\s+/g, "-").replace(SLUG_RE, "");
+  const slug = input.name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(SLUG_RE, "");
   if (!slug) {
     throw new Error("Invalid skill name.");
   }
@@ -87,9 +91,13 @@ export function createSkill(
  */
 export function addConnection(
   agentPath: string,
-  input: ConnectionInput
+  input: ConnectionInput,
 ): { relPath: string; envVar?: string } {
-  const slug = input.name.trim().toLowerCase().replace(/\s+/g, "-").replace(SLUG_RE, "");
+  const slug = input.name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(SLUG_RE, "");
   if (!slug) {
     throw new Error("Invalid connection name.");
   }
@@ -101,7 +109,9 @@ export function addConnection(
 
   const imports: string[] = [];
   const factory =
-    kind === "openapi" ? "defineOpenAPIConnection" : "defineMcpClientConnection";
+    kind === "openapi"
+      ? "defineOpenAPIConnection"
+      : "defineMcpClientConnection";
   imports.push(`import { ${factory} } from "eve/connections";`);
   if (authMode === "connect-user" || authMode === "connect-app") {
     imports.push(`import { connect } from "@vercel/connect/eve";`);
@@ -138,7 +148,7 @@ export function addConnection(
     authBlock = `  auth: connect(${JSON.stringify(input.connector ?? "connector/uid")}),`;
   } else if (authMode === "connect-app") {
     authBlock = `  auth: connect({ connector: ${JSON.stringify(
-      input.connector ?? "connector/uid"
+      input.connector ?? "connector/uid",
     )}, principalType: "app" }),`;
   }
 
@@ -160,7 +170,10 @@ ${endpoint}
 `;
   writeFileSync(file, src);
   const nested = existsSync(join(agentPath, "agent"));
-  return { relPath: `${nested ? "agent/" : ""}connections/${slug}.ts`, envVar: usedEnvVar };
+  return {
+    relPath: `${nested ? "agent/" : ""}connections/${slug}.ts`,
+    envVar: usedEnvVar,
+  };
 }
 
 function connectionFile(agentPath: string, name: string): string {
@@ -171,7 +184,7 @@ function connectionFile(agentPath: string, name: string): string {
 /** Read a connection file's source for viewing/editing. */
 export function readConnectionFile(
   agentPath: string,
-  name: string
+  name: string,
 ): { relPath: string; content: string; exists: boolean } {
   const file = connectionFile(agentPath, name);
   const exists = existsSync(file);
@@ -187,7 +200,7 @@ export function readConnectionFile(
 export function writeConnectionFile(
   agentPath: string,
   name: string,
-  content: string
+  content: string,
 ): void {
   const file = connectionFile(agentPath, name);
   if (!existsSync(file)) {
@@ -212,7 +225,7 @@ export function deleteConnectionFile(agentPath: string, name: string): void {
  */
 export function scanConnectorUsage(
   agentPath: string,
-  uids: string[]
+  uids: string[],
 ): ConnectorUsage[] {
   const root = agentRoot(agentPath);
   const wanted = uids.filter(Boolean);

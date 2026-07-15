@@ -9,7 +9,10 @@ export function eveBin(cwd: string): { cmd: string; pre: string[] } {
   if (existsSync(local)) {
     return { cmd: local, pre: [] };
   }
-  return { cmd: process.platform === "win32" ? "npx.cmd" : "npx", pre: ["eve"] };
+  return {
+    cmd: process.platform === "win32" ? "npx.cmd" : "npx",
+    pre: ["eve"],
+  };
 }
 
 const CLEAN_ENV = { NO_COLOR: "1", FORCE_COLOR: "0" };
@@ -23,7 +26,7 @@ export class CliRunner {
 
   constructor(
     private readonly onChunk: (runId: string, data: string) => void,
-    private readonly onExit: (runId: string, code: number | null) => void
+    private readonly onExit: (runId: string, code: number | null) => void,
   ) {}
 
   /** Spawn `eve <args>` in `cwd`, streaming output under `runId`. */
@@ -144,7 +147,7 @@ export function addChannel(cwd: string, kind: "slack" | "web"): CmdResult {
         encoding: "utf8",
         timeout: 180_000,
         env: { ...process.env, ...CLEAN_ENV },
-      }
+      },
     );
     if (res.error) {
       return { ok: false, output: res.error.message };
@@ -169,7 +172,7 @@ export function initAgent(
   runId: string,
   parentDir: string,
   name: string,
-  webChat: boolean
+  webChat: boolean,
 ): void {
   const args = ["init", name];
   if (webChat) {

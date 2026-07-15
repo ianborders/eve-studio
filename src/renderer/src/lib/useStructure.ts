@@ -11,7 +11,9 @@ export function useActiveStructure(): {
 } {
   const id = useStore((s) => s.activeAgentId);
   const structure = useStore((s) => (id ? s.structure[id] : undefined));
-  const loading = useStore((s) => (id ? Boolean(s.structureLoading[id]) : false));
+  const loading = useStore((s) =>
+    id ? Boolean(s.structureLoading[id]) : false,
+  );
   const load = useStore((s) => s.loadStructure);
 
   // Force a fresh read on open — capability files change on disk (edits,

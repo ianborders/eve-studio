@@ -75,9 +75,15 @@ export function projectEvents(events: EveEvent[]): Projection {
       curAssistant = null;
       curReasoning = null;
     } else if (e.type === "message.appended") {
-      const soFar = typeof data.messageSoFar === "string" ? data.messageSoFar : "";
+      const soFar =
+        typeof data.messageSoFar === "string" ? data.messageSoFar : "";
       if (curAssistant === null) {
-        blocks.push({ kind: "assistant", id: `a${n}`, text: soFar, streaming: true });
+        blocks.push({
+          kind: "assistant",
+          id: `a${n}`,
+          text: soFar,
+          streaming: true,
+        });
         curAssistant = blocks.length - 1;
       } else {
         const b = blocks[curAssistant];
@@ -96,14 +102,24 @@ export function projectEvents(events: EveEvent[]): Projection {
           b.streaming = false;
         }
       } else if (msg) {
-        blocks.push({ kind: "assistant", id: `a${n}`, text: msg, streaming: false });
+        blocks.push({
+          kind: "assistant",
+          id: `a${n}`,
+          text: msg,
+          streaming: false,
+        });
       }
       curAssistant = null;
     } else if (e.type === "reasoning.appended") {
       const soFar =
         typeof data.reasoningSoFar === "string" ? data.reasoningSoFar : "";
       if (curReasoning === null) {
-        blocks.push({ kind: "reasoning", id: `r${n}`, text: soFar, streaming: true });
+        blocks.push({
+          kind: "reasoning",
+          id: `r${n}`,
+          text: soFar,
+          streaming: true,
+        });
         curReasoning = blocks.length - 1;
       } else {
         const b = blocks[curReasoning];
@@ -131,11 +147,16 @@ export function projectEvents(events: EveEvent[]): Projection {
             kind: "subagent",
             id: `s${callId}`,
             callId,
-            name: String(a.subagentName ?? a.remoteAgentName ?? a.name ?? "subagent"),
+            name: String(
+              a.subagentName ?? a.remoteAgentName ?? a.name ?? "subagent",
+            ),
             status: "pending",
           });
         } else {
-          const name = a.kind === "load-skill" ? "load_skill" : String(a.toolName ?? "tool");
+          const name =
+            a.kind === "load-skill"
+              ? "load_skill"
+              : String(a.toolName ?? "tool");
           blocks.push({
             kind: "tool",
             id: `t${callId}`,
@@ -216,7 +237,8 @@ export function projectEvents(events: EveEvent[]): Projection {
         name: String(data.name ?? "connection"),
         url: auth.url as string | undefined,
         userCode: auth.userCode as string | undefined,
-        instructions: (auth.instructions ?? data.description) as string | undefined,
+        instructions: (auth.instructions ?? data.description) as
+          string | undefined,
       });
     } else if (e.type === "step.completed") {
       const usage = (data.usage ?? {}) as Any;

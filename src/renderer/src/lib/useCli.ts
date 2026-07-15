@@ -11,7 +11,9 @@ export function useCliRun(): {
 } {
   const [output, setOutput] = useState("");
   const [running, setRunning] = useState(false);
-  const [exitCode, setExitCode] = useState<number | null | undefined>(undefined);
+  const [exitCode, setExitCode] = useState<number | null | undefined>(
+    undefined,
+  );
   const runIdRef = useRef<string | null>(null);
 
   useEffect(() => {

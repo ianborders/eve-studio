@@ -51,10 +51,10 @@ function EnvEditor({ agentId }: { agentId: string }): JSX.Element {
       e
         ? {
             files: e.files.map((f) =>
-              f.name === active ? { ...f, content: draft, exists: true } : f
+              f.name === active ? { ...f, content: draft, exists: true } : f,
             ),
           }
-        : e
+        : e,
     );
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
@@ -121,7 +121,10 @@ function VercelPanel({ agentId }: { agentId: string }): JSX.Element {
     void load();
   }, [load]);
 
-  const run = async (label: string, fn: () => Promise<{ output: string }>): Promise<void> => {
+  const run = async (
+    label: string,
+    fn: () => Promise<{ output: string }>,
+  ): Promise<void> => {
     setBusy(label);
     setOutput(`$ ${label}\n`);
     const r = await fn();
@@ -153,7 +156,9 @@ function VercelPanel({ agentId }: { agentId: string }): JSX.Element {
               variant="secondary"
               size="sm"
               disabled={busy !== null}
-              onClick={() => run("vercel env ls", () => window.studio.vercel.envLs(agentId))}
+              onClick={() =>
+                run("vercel env ls", () => window.studio.vercel.envLs(agentId))
+              }
             >
               List remote env
             </Button>
@@ -161,7 +166,11 @@ function VercelPanel({ agentId }: { agentId: string }): JSX.Element {
               variant="secondary"
               size="sm"
               disabled={busy !== null}
-              onClick={() => run("vercel env pull", () => window.studio.vercel.envPull(agentId))}
+              onClick={() =>
+                run("vercel env pull", () =>
+                  window.studio.vercel.envPull(agentId),
+                )
+              }
             >
               Pull env → .env.local
             </Button>
@@ -170,8 +179,19 @@ function VercelPanel({ agentId }: { agentId: string }): JSX.Element {
           <div className="mt-3 rounded-lg border border-border p-3">
             <Kicker className="mb-2">Add production env var</Kicker>
             <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="NAME" className="font-mono" />
-              <Input value={value} onChange={(e) => setValue(e.target.value)} type="password" placeholder="value" className="font-mono" />
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="NAME"
+                className="font-mono"
+              />
+              <Input
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                type="password"
+                placeholder="value"
+                className="font-mono"
+              />
               <select
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
@@ -189,11 +209,13 @@ function VercelPanel({ agentId }: { agentId: string }): JSX.Element {
                 disabled={busy !== null || !name || !value}
                 onClick={() =>
                   run(`vercel env add ${name} ${target}`, () =>
-                    window.studio.vercel.envAdd(agentId, name, value, target)
+                    window.studio.vercel.envAdd(agentId, name, value, target),
                   )
                 }
               >
-                {busy?.startsWith("vercel env add") ? "Adding…" : "Add & encrypt"}
+                {busy?.startsWith("vercel env add")
+                  ? "Adding…"
+                  : "Add & encrypt"}
               </Button>
             </div>
           </div>
@@ -207,8 +229,11 @@ function VercelPanel({ agentId }: { agentId: string }): JSX.Element {
           <code className="rounded bg-black/[0.05] px-1 font-mono text-xs">
             vercel link
           </code>{" "}
-          (or <code className="rounded bg-black/[0.05] px-1 font-mono text-xs">eve link</code>,
-          which also pulls AI Gateway creds). Then reload.
+          (or{" "}
+          <code className="rounded bg-black/[0.05] px-1 font-mono text-xs">
+            eve link
+          </code>
+          , which also pulls AI Gateway creds). Then reload.
         </div>
       )}
     </Card>
@@ -218,7 +243,11 @@ function VercelPanel({ agentId }: { agentId: string }): JSX.Element {
 export function Environment(): JSX.Element {
   const id = useStore((s) => s.activeAgentId);
   if (!id) {
-    return <div className="flex h-full items-center justify-center"><Spinner /></div>;
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Spinner />
+      </div>
+    );
   }
   return (
     <div className="flex h-full flex-col">
