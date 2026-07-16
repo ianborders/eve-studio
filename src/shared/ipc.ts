@@ -481,6 +481,8 @@ export interface EvolveDetectResult {
   suggestions: EvolveSuggestion[];
   error?: string;
 }
+/** Name of the opt-in tool the agent calls to propose a change to itself. */
+export const PROPOSE_TOOL_NAME = "propose_change";
 
 export const IPC = {
   appInfo: "app:info",
@@ -537,6 +539,8 @@ export const IPC = {
   evolveDraft: "evolve:draft",
   evolveApply: "evolve:apply",
   evolveDetect: "evolve:detect",
+  evolveGetProposeTool: "evolve:getProposeTool",
+  evolveSetProposeTool: "evolve:setProposeTool",
   deployGet: "agent:deployGet",
   deploySet: "agent:deploySet",
   deployHealth: "agent:deployHealth",

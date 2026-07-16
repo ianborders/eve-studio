@@ -4,6 +4,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
@@ -543,4 +544,69 @@ export async function applyProposal(
     committed,
     needsRebuild: proposal.needsRebuild,
   };
+}
+
+// ---------------- agent-initiated proposals (opt-in tool) ----------------
+
+/** The Studio-managed tool the agent calls to propose a change to itself. */
+export const PROPOSE_TOOL = "propose_change";
+
+function proposeToolFile(agentPath: string): string {
+  return join(agentRoot(agentPath), "tools", `${PROPOSE_TOOL}.ts`);
+}
+
+const PROPOSE_TOOL_SOURCE = `import { defineTool } from "eve/tools";
+import { z } from "zod";
+
+/**
+ * propose_change — let the agent ask to change itself. Managed by Eve Studio.
+ *
+ * @remarks
+ * The agent cannot edit its own files. When the user asks it to change how it
+ * works or what it knows, it calls this tool; Eve Studio catches the call and
+ * shows the user a diff to approve. Do not hand-edit — toggle it from Studio's
+ * Evolve tab.
+ */
+export default defineTool({
+  description:
+    "Propose a change to yourself — a new skill, tool, or schedule, an edit to your instructions, or a fact to remember — when the user asks you to change how you work or what you know. You cannot edit your own files; the operator approves a diff in Eve Studio. Call this instead of claiming you already changed yourself.",
+  inputSchema: z.object({
+    kind: z
+      .enum(["skill", "tool", "schedule", "instructions", "memory"])
+      .describe("What kind of change this is."),
+    title: z.string().describe("A short label for the change."),
+    intent: z
+      .string()
+      .describe(
+        "A concrete, first-person instruction describing exactly what to create or change, phrased as the user would ask for it."
+      ),
+  }),
+  // biome-ignore lint/suspicious/useAwait: the operator applies the change in Studio; no async work here
+  async execute({ title }) {
+    return {
+      status: "pending_approval",
+      message: \`Proposed “\${title}”. It’s waiting for the user to approve it in Eve Studio.\`,
+    };
+  },
+});
+`;
+
+/** Whether the opt-in propose_change tool is installed in the agent. */
+export function getProposeTool(agentPath: string): boolean {
+  return existsSync(proposeToolFile(agentPath));
+}
+
+/** Install or remove the opt-in propose_change tool. */
+export function setProposeTool(
+  agentPath: string,
+  enabled: boolean,
+): { enabled: boolean } {
+  const file = proposeToolFile(agentPath);
+  if (enabled) {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, PROPOSE_TOOL_SOURCE);
+  } else if (existsSync(file)) {
+    rmSync(file);
+  }
+  return { enabled: getProposeTool(agentPath) };
 }

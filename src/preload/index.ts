@@ -256,6 +256,13 @@ const api = {
       ipcRenderer.invoke(IPC.evolveApply, id, proposal),
     detect: (id: string): Promise<EvolveDetectResult> =>
       ipcRenderer.invoke(IPC.evolveDetect, id),
+    getProposeTool: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC.evolveGetProposeTool, id),
+    setProposeTool: (
+      id: string,
+      enabled: boolean,
+    ): Promise<{ enabled: boolean }> =>
+      ipcRenderer.invoke(IPC.evolveSetProposeTool, id, enabled),
   },
 
   dialog: {

@@ -1,3 +1,4 @@
+import { PROPOSE_TOOL_NAME } from "@shared/ipc";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProposalReview } from "../components/ProposalReview";
 import { type Block, projectEvents } from "../lib/events";
@@ -214,6 +215,7 @@ export function Chat(): JSX.Element {
     ev.reset();
     setEvolveOpen(false);
   };
+  const handledProposals = useRef<Set<string>>(new Set());
 
   const threadEvents = activeThreadId ? (events[activeThreadId] ?? []) : [];
   const projection = useMemo(() => projectEvents(threadEvents), [threadEvents]);
@@ -222,6 +224,29 @@ export function Chat(): JSX.Element {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [projection.blocks]);
+
+  // Catch the agent's own `propose_change` tool call in the live stream and open
+  // the same diff/approve flow, seeded from what it proposed.
+  useEffect(() => {
+    for (const b of projection.blocks) {
+      if (b.kind !== "tool" || b.name !== PROPOSE_TOOL_NAME) {
+        continue;
+      }
+      if (handledProposals.current.has(b.callId)) {
+        continue;
+      }
+      const intent = (b.input as { intent?: string } | null)?.intent?.trim();
+      if (!intent) {
+        continue;
+      }
+      handledProposals.current.add(b.callId);
+      setEvolveText(intent);
+      setEvolveOpen(true);
+      void ev.draft(intent);
+      break;
+    }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: only react to new stream blocks; ev handlers are stable
   }, [projection.blocks]);
 
   if (!activeAgentId) {

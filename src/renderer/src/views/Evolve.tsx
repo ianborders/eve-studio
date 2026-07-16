@@ -1,5 +1,5 @@
 import type { EvolveSuggestion } from "@shared/ipc";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KIND_LABEL, ProposalReview } from "../components/ProposalReview";
 import { useActiveStructure } from "../lib/useStructure";
 import { useEvolve } from "../lib/useEvolve";
@@ -29,6 +29,24 @@ export function Evolve(): JSX.Element {
   const [suggestions, setSuggestions] = useState<EvolveSuggestion[] | null>(
     null,
   );
+  const [proposeOn, setProposeOn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (id) {
+      setProposeOn(null);
+      void window.studio.evolve.getProposeTool(id).then(setProposeOn);
+    }
+  }, [id]);
+
+  const togglePropose = async (): Promise<void> => {
+    if (!id || proposeOn === null) {
+      return;
+    }
+    const next = !proposeOn;
+    setProposeOn(next);
+    const r = await window.studio.evolve.setProposeTool(id, next);
+    setProposeOn(r.enabled);
+  };
 
   const busy = ev.phase === "drafting" || ev.phase === "applying";
 
@@ -197,6 +215,34 @@ export function Evolve(): JSX.Element {
                       ))}
                     </div>
                   ) : null}
+                </div>
+
+                <div className="flex items-center justify-between border-border border-t pt-4">
+                  <div className="pr-4">
+                    <div className="font-medium text-[13px] text-foreground">
+                      Let the agent propose its own changes
+                    </div>
+                    <div className="text-2xs text-muted">
+                      Adds a tool so the agent can offer changes mid-chat — you
+                      still approve every diff. Restart the agent after
+                      enabling.
+                    </div>
+                  </div>
+                  <button
+                    aria-pressed={proposeOn === true}
+                    className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${
+                      proposeOn ? "bg-text" : "bg-black/[0.12]"
+                    } ${proposeOn === null ? "opacity-40" : ""}`}
+                    disabled={proposeOn === null}
+                    onClick={togglePropose}
+                    type="button"
+                  >
+                    <span
+                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                        proposeOn ? "translate-x-4" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
                 </div>
               </>
             ) : null}
