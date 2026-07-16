@@ -16,8 +16,9 @@ import { app } from "electron";
  * bundle and doesn't affect notarization.
  */
 
-const NODE_VERSION = "22.12.0";
-const MIN_MAJOR = 20;
+// Eve requires Node >= 24, so we provision (and require) Node 24.
+const NODE_VERSION = "24.18.0";
+const MIN_MAJOR = 24;
 
 function runtimeRoot(): string {
   return join(app.getPath("userData"), "runtime");

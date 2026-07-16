@@ -11,6 +11,11 @@ import type { ChannelItem, CmdResult, EvalItem } from "../shared/ipc";
  * without the interactive "Ok to proceed?" prompt — our child processes run with
  * stdin ignored and can't answer it, which otherwise aborts `eve init` on a
  * machine that has never installed eve (surfacing as "No package.json").
+ *
+ * It also pins `eve@latest`: a bare `npx eve` lets npm's engine-aware version
+ * picker fall back to an ancient, unrelated `eve@0.5.4` (no bin → "could not
+ * determine executable to run") when the current Node is older than what the
+ * real Eve requires. Pinning forces the real, current package.
  */
 export function eveBin(cwd: string): { cmd: string; pre: string[] } {
   const local = join(cwd, "node_modules", ".bin", "eve");
@@ -19,7 +24,7 @@ export function eveBin(cwd: string): { cmd: string; pre: string[] } {
   }
   return {
     cmd: process.platform === "win32" ? "npx.cmd" : "npx",
-    pre: ["--yes", "eve"],
+    pre: ["--yes", "eve@latest"],
   };
 }
 
