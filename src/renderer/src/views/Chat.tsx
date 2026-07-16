@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ProposalReview } from "../components/ProposalReview";
 import { type Block, projectEvents } from "../lib/events";
+import { looksLikeEvolveIntent } from "../lib/evolveIntent";
+import { useEvolve } from "../lib/useEvolve";
 import { useStore } from "../store";
 import {
   IconArrowUp,
   IconChat,
   IconExternal,
   IconPlus,
+  IconWand,
   IconWrench,
 } from "../ui/icons";
-import { Badge, Button, EmptyState, Spinner } from "../ui/kit";
+import { Badge, Button, EmptyState, Modal, Spinner } from "../ui/kit";
 import { NeedsLink } from "../components/NeedsLink";
 import { ChatTargetBar } from "./ChatTargetBar";
 
@@ -189,6 +193,28 @@ export function Chat(): JSX.Element {
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const ev = useEvolve(activeAgentId);
+  const [evolveOpen, setEvolveOpen] = useState(false);
+  const [evolveText, setEvolveText] = useState("");
+
+  const openEvolve = (): void => {
+    const text = draft.trim();
+    if (!text) {
+      return;
+    }
+    setEvolveText(text);
+    setEvolveOpen(true);
+    void ev.draft(text);
+  };
+
+  const closeEvolve = (): void => {
+    if (ev.result?.ok) {
+      setDraft("");
+    }
+    ev.reset();
+    setEvolveOpen(false);
+  };
+
   const threadEvents = activeThreadId ? (events[activeThreadId] ?? []) : [];
   const projection = useMemo(() => projectEvents(threadEvents), [threadEvents]);
   const chatStatus = activeThreadId ? statusMap[activeThreadId] : undefined;
@@ -219,6 +245,7 @@ export function Chat(): JSX.Element {
 
   const canSend =
     !streaming && draft.trim().length > 0 && ready && !!activeThreadId;
+  const showEvolveChip = ready && !streaming && looksLikeEvolveIntent(draft);
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col">
@@ -275,6 +302,18 @@ export function Chat(): JSX.Element {
       </div>
 
       <div className="mx-auto w-full max-w-3xl px-5 pb-5 pt-1">
+        {showEvolveChip ? (
+          <div className="mb-2 flex justify-center">
+            <button
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-canvas px-3 py-1 text-2xs text-muted transition-colors hover:border-border-strong hover:text-foreground"
+              onClick={openEvolve}
+              type="button"
+            >
+              <IconWand className="h-3.5 w-3.5" />
+              Turn this into a change to the agent
+            </button>
+          </div>
+        ) : null}
         <div className="flex items-end gap-2.5 rounded-[18px] border border-border bg-panel px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.12)]">
           <textarea
             value={draft}
@@ -328,6 +367,26 @@ export function Chat(): JSX.Element {
           </div>
         ) : null}
       </div>
+
+      {evolveOpen ? (
+        <Modal onClose={closeEvolve} title="Evolve this" width="max-w-xl">
+          <div className="space-y-3 p-4">
+            <div className="rounded-lg bg-canvas px-3 py-2 text-[13px] text-muted">
+              “{evolveText}”
+            </div>
+            {ev.phase === "drafting" ? (
+              <div className="flex items-center gap-2 text-[13px] text-muted">
+                <Spinner />
+                Drafting the change…
+              </div>
+            ) : null}
+            {ev.error ? (
+              <div className="text-xs text-danger">{ev.error}</div>
+            ) : null}
+            <ProposalReview doneLabel="Close" ev={ev} onDone={closeEvolve} />
+          </div>
+        </Modal>
+      ) : null}
     </div>
   );
 }
