@@ -3,7 +3,15 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { ChannelItem, CmdResult, EvalItem } from "../shared/ipc";
 
-/** Resolve the eve CLI: prefer the project-local bin, else fall back to npx. */
+/**
+ * Resolve the eve CLI: prefer the project-local bin, else fall back to npx.
+ *
+ * @remarks
+ * The npx fallback passes `--yes` so npx auto-installs the public `eve` package
+ * without the interactive "Ok to proceed?" prompt — our child processes run with
+ * stdin ignored and can't answer it, which otherwise aborts `eve init` on a
+ * machine that has never installed eve (surfacing as "No package.json").
+ */
 export function eveBin(cwd: string): { cmd: string; pre: string[] } {
   const local = join(cwd, "node_modules", ".bin", "eve");
   if (existsSync(local)) {
@@ -11,7 +19,7 @@ export function eveBin(cwd: string): { cmd: string; pre: string[] } {
   }
   return {
     cmd: process.platform === "win32" ? "npx.cmd" : "npx",
-    pre: ["eve"],
+    pre: ["--yes", "eve"],
   };
 }
 

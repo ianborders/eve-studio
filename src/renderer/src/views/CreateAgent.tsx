@@ -56,9 +56,12 @@ export function CreateAgent({ onClose }: { onClose: () => void }): JSX.Element {
         setPhase("done");
         onClose();
       } else {
+        const noProject = res.error?.includes("No package.json");
         setError(
-          res.error ??
-            "Scaffolding finished but the agent could not be registered.",
+          noProject
+            ? "Couldn't scaffold the agent — `eve init` didn't finish. Check the log below: make sure Node.js is installed and you're online (Eve is downloaded automatically on first use)."
+            : (res.error ??
+                "Scaffolding finished but the agent could not be registered."),
         );
         setPhase("error");
       }
@@ -119,6 +122,13 @@ export function CreateAgent({ onClose }: { onClose: () => void }): JSX.Element {
                 {webChat ? " --channel-web-nextjs" : ""}
                 <span className="text-faint"> · in {parentDir}</span>
               </div>
+            </div>
+          ) : null}
+
+          {phase === "error" && output ? (
+            <div>
+              <Kicker className="mb-1.5">eve init log</Kicker>
+              <Console text={output} className="h-40" />
             </div>
           ) : null}
 
