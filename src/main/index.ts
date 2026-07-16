@@ -4,6 +4,7 @@ import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import { BrowserWindow, app, nativeImage, shell } from "electron";
 import { hydratePath } from "./env";
 import { type IpcHandles, registerIpc } from "./ipc";
+import { ensureNodeRuntime } from "./runtime";
 import { initStore } from "./store";
 import { setupAutoUpdater } from "./updater";
 
@@ -68,6 +69,12 @@ app.whenReady().then(() => {
   hydratePath();
   initStore();
   handles = registerIpc();
+
+  // Kick off the Node runtime check early (memoized) so a fresh machine starts
+  // downloading before the user tries to create an agent.
+  void ensureNodeRuntime().catch(() => {
+    // surfaced on demand in the create/start flows
+  });
 
   createWindow();
   setupAutoUpdater(() => mainWindow);

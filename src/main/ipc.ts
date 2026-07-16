@@ -45,6 +45,7 @@ import {
   deleteCapability,
   writeCapabilityFile,
 } from "./agentCapabilities";
+import { ensureNodeRuntime } from "./runtime";
 import {
   arcanaQuery,
   arcanaStats,
@@ -275,13 +276,28 @@ export function registerIpc(): IpcHandles {
       input: import("../shared/ipc").CreateAgentInput,
     ) => {
       const runId = store.rid();
-      initAgent(
-        cli,
-        runId,
-        input.parentDir,
-        input.name,
-        Boolean(input.webChat),
-      );
+      void (async () => {
+        try {
+          // Make sure Node/npm exist first (downloads a runtime on a fresh
+          // machine), streaming setup progress into the same console.
+          await ensureNodeRuntime((msg) =>
+            broadcast(IPC.cliChunk, { runId, data: msg }),
+          );
+          initAgent(
+            cli,
+            runId,
+            input.parentDir,
+            input.name,
+            Boolean(input.webChat),
+          );
+        } catch (err) {
+          broadcast(IPC.cliChunk, {
+            runId,
+            data: `\n[setup failed] ${err instanceof Error ? err.message : String(err)}\n`,
+          });
+          broadcast(IPC.cliExit, { runId, code: -1 });
+        }
+      })();
       return runId;
     },
   );
@@ -291,11 +307,13 @@ export function registerIpc(): IpcHandles {
   );
 
   // --- runtime ---
-  ipcMain.handle(IPC.agentStart, (_e: IpcMainInvokeEvent, id: string) => {
+  ipcMain.handle(IPC.agentStart, async (_e: IpcMainInvokeEvent, id: string) => {
     const a = store.getAgent(id);
     if (!a) {
       throw new Error("Unknown agent.");
     }
+    // Running an agent needs `node` on PATH too.
+    await ensureNodeRuntime();
     return agents.start(id, a.path);
   });
   ipcMain.handle(IPC.agentStop, (_e: IpcMainInvokeEvent, id: string) => {

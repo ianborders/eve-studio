@@ -59,7 +59,7 @@ export function CreateAgent({ onClose }: { onClose: () => void }): JSX.Element {
         const noProject = res.error?.includes("No package.json");
         setError(
           noProject
-            ? "Couldn't scaffold the agent — `eve init` didn't finish. Check the log below: make sure Node.js is installed and you're online (Eve is downloaded automatically on first use)."
+            ? "Couldn't scaffold the agent — setup didn't finish. Check the log below and make sure you're online: Eve and its runtime download automatically on first use."
             : (res.error ??
                 "Scaffolding finished but the agent could not be registered."),
         );
