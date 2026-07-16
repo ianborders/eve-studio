@@ -9,14 +9,16 @@ import {
 import { dirname, join, resolve, sep } from "node:path";
 import type {
   EvolveApplyResult,
+  EvolveDetectResult,
   EvolveDraftResult,
   EvolveProposal,
+  EvolveSuggestion,
   ProposalFileChange,
   ProposalKind,
 } from "../shared/ipc";
 import { agentRoot, nested, readModelConfig } from "./agentAuthoring";
 import { readInstructions, writeInstructions } from "./agentFiles";
-import { arcanaRemember } from "./arcana";
+import { arcanaRemember, arcanaTimeline } from "./arcana";
 import { vercelEnvPull } from "./vercel";
 
 const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
@@ -320,6 +322,104 @@ Change request: ${trimmed}`;
     needsRebuild: kind !== "memory",
   };
   return { ok: true, proposal };
+}
+
+const DETECT_SYSTEM = `You analyze an Eve agent's recent activity to find recurring work worth turning into a reusable capability. Eve capabilities: a skill (a repeatable procedure/knowledge), a tool (a typed action), or a schedule (recurring proactive work).
+
+Find at most 3 patterns that recur often enough to be worth automating. Be strict — a one-off is not a pattern. Skip anything already covered by the agent's existing capabilities.
+
+For each, return:
+- "title": short label
+- "rationale": what recurs and why a capability helps (reference the evidence)
+- "kind": "skill" | "tool" | "schedule"
+- "intent": a concrete, first-person instruction that could create it, phrased like the user asking for it (e.g. "Create a skill that drafts a weekly investor update from my notes.")
+
+Reply with ONLY a JSON object: {"suggestions":[{"title","rationale","kind","intent"}]}. Return {"suggestions":[]} if nothing clearly recurs.`;
+
+/**
+ * Emergent detection: scan recent chat + memory activity for recurring tasks
+ * that would be better as a skill, tool, or schedule.
+ */
+export async function detectPatterns(
+  agentPath: string,
+  threadTitles: string[],
+  brain?: { workspace: string; key: string } | null,
+): Promise<EvolveDetectResult> {
+  const model = readModelConfig(agentPath).model || DEFAULT_MODEL;
+  const inv = inventory(agentPath);
+
+  let timeline: string[] = [];
+  if (brain) {
+    const t = await arcanaTimeline(brain.workspace, brain.key, 40);
+    if (t.ok && t.data) {
+      timeline = t.data.map((e) => e.title).filter(Boolean);
+    }
+  }
+
+  if (threadTitles.length === 0 && timeline.length === 0) {
+    return {
+      ok: false,
+      suggestions: [],
+      error:
+        "Not enough activity yet. Chat with the agent (or connect its brain) so Studio has patterns to learn from.",
+    };
+  }
+
+  const user = `Existing skills: ${inv.skills.join(", ") || "(none)"}
+Existing tools: ${inv.tools.join(", ") || "(none)"}
+Existing schedules: ${inv.schedules.join(", ") || "(none)"}
+
+Recent conversation topics (newest first):
+${
+  threadTitles
+    .slice(0, 30)
+    .map((t) => `- ${t}`)
+    .join("\n") || "(none)"
+}
+
+Recent things the agent did (from memory, newest first):
+${
+  timeline
+    .slice(0, 40)
+    .map((t) => `- ${t}`)
+    .join("\n") || "(none)"
+}`;
+
+  const reply = await callGateway(agentPath, model, DETECT_SYSTEM, user);
+  if (!reply.ok || !reply.content) {
+    return { ok: false, suggestions: [], error: reply.error ?? "Scan failed." };
+  }
+  const raw = extractJson(reply.content);
+  if (!raw) {
+    return {
+      ok: false,
+      suggestions: [],
+      error: "The model returned no usable result.",
+    };
+  }
+  let parsed: { suggestions?: unknown };
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return {
+      ok: false,
+      suggestions: [],
+      error: "The model returned malformed JSON.",
+    };
+  }
+  const kinds = new Set(["skill", "tool", "schedule"]);
+  const suggestions: EvolveSuggestion[] = Array.isArray(parsed.suggestions)
+    ? parsed.suggestions
+        .filter(
+          (s): s is EvolveSuggestion =>
+            Boolean(s) &&
+            typeof (s as EvolveSuggestion).intent === "string" &&
+            typeof (s as EvolveSuggestion).title === "string" &&
+            kinds.has((s as EvolveSuggestion).kind),
+        )
+        .slice(0, 3)
+    : [];
+  return { ok: true, suggestions };
 }
 
 /**

@@ -86,7 +86,7 @@ import {
   vercelWhoami,
 } from "./vercel";
 import { modelReadiness } from "./vercel";
-import { applyProposal, draftProposal } from "./evolve";
+import { applyProposal, detectPatterns, draftProposal } from "./evolve";
 import type { EvolveProposal } from "../shared/ipc";
 
 /** Read a variable from an agent's .env.local (for deployed route auth). */
@@ -929,6 +929,13 @@ export function registerIpc(): IpcHandles {
     IPC.evolveApply,
     (_e: IpcMainInvokeEvent, id: string, proposal: EvolveProposal) =>
       applyProposal(agentPathOf(id), proposal, store.getBrain(id) ?? null),
+  );
+  ipcMain.handle(IPC.evolveDetect, (_e: IpcMainInvokeEvent, id: string) =>
+    detectPatterns(
+      agentPathOf(id),
+      store.listThreads(id).map((t) => t.title),
+      store.getBrain(id) ?? null,
+    ),
   );
   ipcMain.handle(
     IPC.vercelLink,

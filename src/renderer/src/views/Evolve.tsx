@@ -1,13 +1,14 @@
 import type {
   EvolveApplyResult,
   EvolveProposal,
+  EvolveSuggestion,
   ProposalFileChange,
   ProposalKind,
 } from "@shared/ipc";
 import { useState } from "react";
 import { useActiveStructure } from "../lib/useStructure";
 import { useStore } from "../store";
-import { IconRocket, IconWand } from "../ui/icons";
+import { IconRefresh, IconRocket, IconWand } from "../ui/icons";
 import {
   Badge,
   Button,
@@ -131,6 +132,11 @@ export function Evolve(): JSX.Element {
   const [result, setResult] = useState<EvolveApplyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [restarting, setRestarting] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<EvolveSuggestion[] | null>(
+    null,
+  );
 
   const reset = (): void => {
     setPhase("idle");
@@ -139,13 +145,14 @@ export function Evolve(): JSX.Element {
     setError(null);
   };
 
-  const draft = async (): Promise<void> => {
-    if (!(id && intent.trim())) {
+  const draft = async (from?: string): Promise<void> => {
+    const text = (from ?? intent).trim();
+    if (!(id && text)) {
       return;
     }
     setPhase("drafting");
     setError(null);
-    const r = await window.studio.evolve.draft(id, intent);
+    const r = await window.studio.evolve.draft(id, text);
     if (r.ok && r.proposal) {
       setProposal(r.proposal);
       setPhase("review");
@@ -153,6 +160,27 @@ export function Evolve(): JSX.Element {
       setError(r.error ?? "Couldn't draft a change.");
       setPhase("idle");
     }
+  };
+
+  const scan = async (): Promise<void> => {
+    if (!id) {
+      return;
+    }
+    setScanning(true);
+    setScanError(null);
+    const r = await window.studio.evolve.detect(id);
+    setScanning(false);
+    if (r.ok) {
+      setSuggestions(r.suggestions);
+    } else {
+      setScanError(r.error ?? "Scan failed.");
+      setSuggestions([]);
+    }
+  };
+
+  const draftFrom = (s: EvolveSuggestion): void => {
+    setIntent(s.intent);
+    void draft(s.intent);
   };
 
   const apply = async (): Promise<void> => {
@@ -240,7 +268,7 @@ export function Evolve(): JSX.Element {
                   </span>
                   <Button
                     variant="primary"
-                    onClick={draft}
+                    onClick={() => draft()}
                     disabled={phase === "drafting" || !intent.trim()}
                   >
                     {phase === "drafting" ? (
@@ -255,6 +283,81 @@ export function Evolve(): JSX.Element {
                       </>
                     )}
                   </Button>
+                </div>
+
+                <div className="border-border border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-[13px] text-foreground">
+                        Learn from what you do
+                      </div>
+                      <div className="text-2xs text-muted">
+                        Scan recent chats and memory for repeated tasks worth
+                        automating.
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={scan}
+                      disabled={scanning}
+                    >
+                      {scanning ? (
+                        <>
+                          <Spinner />
+                          Scanning…
+                        </>
+                      ) : (
+                        <>
+                          <IconRefresh className="h-3.5 w-3.5" />
+                          Scan for patterns
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {scanError ? (
+                    <div className="mt-2 text-2xs text-muted">{scanError}</div>
+                  ) : null}
+
+                  {suggestions && suggestions.length === 0 && !scanError ? (
+                    <div className="mt-2 text-2xs text-muted">
+                      No clear repeated patterns yet — keep using the agent and
+                      scan again later.
+                    </div>
+                  ) : null}
+
+                  {suggestions && suggestions.length > 0 ? (
+                    <div className="mt-3 space-y-2">
+                      {suggestions.map((s) => (
+                        <div
+                          key={s.intent}
+                          className="rounded-lg border border-border bg-canvas p-3"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Badge>{KIND_LABEL[s.kind]}</Badge>
+                            <span className="font-medium text-[13px] text-foreground">
+                              {s.title}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-2xs leading-relaxed text-muted">
+                            {s.rationale}
+                          </p>
+                          <div className="mt-2 flex justify-end">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => draftFrom(s)}
+                              disabled={phase === "drafting"}
+                            >
+                              <IconWand className="h-3.5 w-3.5" />
+                              Draft this
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </>
             ) : null}

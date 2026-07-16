@@ -465,6 +465,22 @@ export interface EvolveApplyResult {
   note?: string;
   error?: string;
 }
+/** An emergent suggestion: a recurring task worth turning into a capability. */
+export interface EvolveSuggestion {
+  /** Short label, e.g. "Draft weekly investor update". */
+  title: string;
+  /** Why Studio thinks this recurs and is worth automating. */
+  rationale: string;
+  /** The capability kind this should become. */
+  kind: "skill" | "tool" | "schedule";
+  /** A ready-to-draft intent phrase — feeds straight into the draft flow. */
+  intent: string;
+}
+export interface EvolveDetectResult {
+  ok: boolean;
+  suggestions: EvolveSuggestion[];
+  error?: string;
+}
 
 export const IPC = {
   appInfo: "app:info",
@@ -520,6 +536,7 @@ export const IPC = {
   modelReadiness: "vercel:modelReadiness",
   evolveDraft: "evolve:draft",
   evolveApply: "evolve:apply",
+  evolveDetect: "evolve:detect",
   deployGet: "agent:deployGet",
   deploySet: "agent:deploySet",
   deployHealth: "agent:deployHealth",

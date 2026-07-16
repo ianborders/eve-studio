@@ -31,6 +31,7 @@ import {
   type EvalItem,
   type EveEvent,
   type EvolveApplyResult,
+  type EvolveDetectResult,
   type EvolveDraftResult,
   type EvolveProposal,
   type FileWriteResult,
@@ -253,6 +254,8 @@ const api = {
       ipcRenderer.invoke(IPC.evolveDraft, id, intent),
     apply: (id: string, proposal: EvolveProposal): Promise<EvolveApplyResult> =>
       ipcRenderer.invoke(IPC.evolveApply, id, proposal),
+    detect: (id: string): Promise<EvolveDetectResult> =>
+      ipcRenderer.invoke(IPC.evolveDetect, id),
   },
 
   dialog: {
