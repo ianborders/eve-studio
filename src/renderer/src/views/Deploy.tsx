@@ -91,6 +91,7 @@ export function Deploy(): JSX.Element {
           </Kicker>
           <Console
             text={output}
+            busy={running}
             placeholder="Run Build or Deploy to see output. Deploy links to Vercel and may open a browser for the first run."
             className="min-h-0 flex-1"
           />

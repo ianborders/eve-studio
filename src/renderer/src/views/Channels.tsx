@@ -238,11 +238,17 @@ function AddChannelModal({
                 {attaching ? "Attaching…" : "Attach for triggers"}
               </Button>
               {attachOut ? (
-                <Console text={attachOut} className="max-h-40" />
+                <Console
+                  text={attachOut}
+                  busy={attaching}
+                  className="max-h-40"
+                />
               ) : null}
             </div>
           ) : null}
-          {output ? <Console text={output} className="max-h-40" /> : null}
+          {output ? (
+            <Console text={output} busy={busy} className="max-h-40" />
+          ) : null}
           <div className="flex justify-end">
             <Button
               variant="primary"

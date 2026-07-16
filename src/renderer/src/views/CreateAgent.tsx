@@ -156,6 +156,7 @@ export function CreateAgent({ onClose }: { onClose: () => void }): JSX.Element {
           </div>
           <Console
             text={output}
+            busy={phase === "running"}
             className="h-64"
             placeholder="Starting eve init…"
           />

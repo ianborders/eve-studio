@@ -122,7 +122,11 @@ function UseConnectorModal({
                 {attaching ? "Attaching…" : "Attach for triggers"}
               </Button>
               {attachOut ? (
-                <Console text={attachOut} className="max-h-40" />
+                <Console
+                  text={attachOut}
+                  busy={attaching}
+                  className="max-h-40"
+                />
               ) : null}
             </div>
           ) : (

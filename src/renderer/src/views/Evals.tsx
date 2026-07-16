@@ -137,6 +137,7 @@ export function Evals(): JSX.Element {
           <Kicker className="mb-1.5">Output</Kicker>
           <Console
             text={output}
+            busy={running}
             placeholder="Run evals to see results. They execute against a live model, so a run can take a while."
             className="min-h-0 flex-1"
           />

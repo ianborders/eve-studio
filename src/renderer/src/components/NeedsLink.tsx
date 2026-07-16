@@ -214,13 +214,13 @@ export function NeedsLink({
             Follow the steps in the email Vercel just sent — this updates
             automatically once you confirm.
           </div>
-          <Console text={login.output} className="max-h-40" />
+          <Console text={login.output} busy={signingIn} className="max-h-40" />
         </div>
       ) : null}
 
       {err ? <div className="mt-2 text-2xs text-danger">{err}</div> : null}
       {output && busy ? (
-        <Console text={output} className="mt-2 max-h-40" />
+        <Console text={output} busy={busy} className="mt-2 max-h-40" />
       ) : null}
     </div>
   );

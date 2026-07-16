@@ -138,7 +138,7 @@ export function ConnectorPicker({
               Open to finish authorizing in the browser
             </a>
           ) : null}
-          <Console text={output} className="max-h-40" />
+          <Console text={output} busy={creating} className="max-h-40" />
         </>
       ) : null}
 

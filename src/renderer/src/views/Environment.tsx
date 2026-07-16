@@ -220,7 +220,13 @@ function VercelPanel({ agentId }: { agentId: string }): JSX.Element {
             </div>
           </div>
 
-          {output ? <Console text={output} className="mt-3 max-h-52" /> : null}
+          {output ? (
+            <Console
+              text={output}
+              busy={busy !== null}
+              className="mt-3 max-h-52"
+            />
+          ) : null}
         </>
       ) : (
         <div className="text-[13px] leading-relaxed text-muted">
