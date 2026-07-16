@@ -30,6 +30,9 @@ import {
   type EnvState,
   type EvalItem,
   type EveEvent,
+  type EvolveApplyResult,
+  type EvolveDraftResult,
+  type EvolveProposal,
   type FileWriteResult,
   IPC,
   type InstructionsFile,
@@ -243,6 +246,13 @@ const api = {
       connector: string,
     ): Promise<{ ok: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC.connectorOpenPage, id, connector),
+  },
+
+  evolve: {
+    draft: (id: string, intent: string): Promise<EvolveDraftResult> =>
+      ipcRenderer.invoke(IPC.evolveDraft, id, intent),
+    apply: (id: string, proposal: EvolveProposal): Promise<EvolveApplyResult> =>
+      ipcRenderer.invoke(IPC.evolveApply, id, proposal),
   },
 
   dialog: {

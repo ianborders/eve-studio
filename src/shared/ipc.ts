@@ -415,6 +415,57 @@ export interface ConnectorUsage {
   name: string;
 }
 
+// --- evolve (self-improving loop) ---
+/**
+ * What kind of self-change a natural-language request maps to.
+ *
+ * @remarks
+ * `memory` is a durable fact about the user (belongs in the agent's brain, no
+ * rebuild); the others are file changes to the agent's source that require a
+ * rebuild (local) or redeploy (production).
+ */
+export type ProposalKind =
+  "memory" | "instructions" | "skill" | "tool" | "schedule";
+/** One file the proposal would create or overwrite. `before === null` = new file. */
+export interface ProposalFileChange {
+  relPath: string;
+  language: "ts" | "md" | "text";
+  before: string | null;
+  after: string;
+}
+/** A reviewed, human-approvable change the agent proposes to make to itself. */
+export interface EvolveProposal {
+  kind: ProposalKind;
+  /** Short label, e.g. "Add skill: morning-brief". */
+  title: string;
+  /** Why this kind, and what the change does. */
+  rationale: string;
+  /** File writes to apply (empty for `memory`). */
+  files: ProposalFileChange[];
+  /** For `kind: "memory"`: the fact to remember. */
+  memory?: string;
+  /** Blocking setup the change depends on, e.g. "Slack channel not connected". */
+  prereqs: string[];
+  /** File kinds need a rebuild/redeploy to take effect; memory does not. */
+  needsRebuild: boolean;
+}
+export interface EvolveDraftResult {
+  ok: boolean;
+  proposal?: EvolveProposal;
+  error?: string;
+}
+export interface EvolveApplyResult {
+  ok: boolean;
+  /** Repo-relative paths written. */
+  written: string[];
+  /** Whether the change was captured as a git commit (revert point). */
+  committed: boolean;
+  needsRebuild: boolean;
+  /** Present when `kind: "memory"` couldn't be persisted (no brain-write yet). */
+  note?: string;
+  error?: string;
+}
+
 export const IPC = {
   appInfo: "app:info",
 
@@ -467,6 +518,8 @@ export const IPC = {
   vercelWhoami: "vercel:whoami",
   vercelLogin: "vercel:login",
   modelReadiness: "vercel:modelReadiness",
+  evolveDraft: "evolve:draft",
+  evolveApply: "evolve:apply",
   deployGet: "agent:deployGet",
   deploySet: "agent:deploySet",
   deployHealth: "agent:deployHealth",

@@ -9,12 +9,12 @@ import type {
   ToolInput,
 } from "../shared/ipc";
 
-function agentRoot(agentPath: string): string {
+export function agentRoot(agentPath: string): string {
   return existsSync(join(agentPath, "agent"))
     ? join(agentPath, "agent")
     : agentPath;
 }
-function nested(agentPath: string): string {
+export function nested(agentPath: string): string {
   return existsSync(join(agentPath, "agent")) ? "agent/" : "";
 }
 const SLUG = /[^a-z0-9-]/g;

@@ -19,6 +19,7 @@ import {
   IconSettings,
   IconStop,
   IconTrash,
+  IconWand,
   IconWrench,
 } from "./ui/icons";
 import { EveLogo } from "./ui/EveLogo";
@@ -26,6 +27,7 @@ import { Button, Modal, StatusDot, type TabItem, Tabs } from "./ui/kit";
 import { Chat } from "./views/Chat";
 import { CreateAgent } from "./views/CreateAgent";
 import { Evals } from "./views/Evals";
+import { Evolve } from "./views/Evolve";
 import {
   CapabilitiesGroup,
   DeployGroup,
@@ -40,6 +42,7 @@ import { Welcome } from "./views/Welcome";
 
 const TABS: TabItem[] = [
   { id: "chat", label: "Chat", icon: IconChat },
+  { id: "evolve", label: "Evolve", icon: IconWand },
   { id: "instructions", label: "Instructions", icon: IconFile },
   { id: "capabilities", label: "Capabilities", icon: IconWrench },
   { id: "integrations", label: "Integrations", icon: IconPlug },
@@ -179,6 +182,8 @@ function AgentWorkspace(): JSX.Element {
       <div className="min-h-0 flex-1 overflow-hidden">
         {section === "chat" ? (
           <Chat />
+        ) : section === "evolve" ? (
+          <Evolve />
         ) : section === "instructions" ? (
           <InstructionsGroup />
         ) : section === "capabilities" ? (
