@@ -81,6 +81,7 @@ import {
   vercelLink,
   vercelProdInfo,
   vercelStatus,
+  vercelTeams,
 } from "./vercel";
 import { modelReadiness } from "./vercel";
 
@@ -915,8 +916,19 @@ export function registerIpc(): IpcHandles {
   ipcMain.handle(IPC.modelReadiness, (_e: IpcMainInvokeEvent, id: string) =>
     modelReadiness(agentPathOf(id)),
   );
-  ipcMain.handle(IPC.vercelLink, (_e: IpcMainInvokeEvent, id: string) =>
-    vercelLink(agentPathOf(id)),
+  ipcMain.handle(
+    IPC.vercelLink,
+    async (_e: IpcMainInvokeEvent, id: string, team?: string) => {
+      await ensureNodeRuntime();
+      return vercelLink(agentPathOf(id), team);
+    },
+  );
+  ipcMain.handle(
+    IPC.vercelTeams,
+    async (_e: IpcMainInvokeEvent, id: string) => {
+      await ensureNodeRuntime();
+      return vercelTeams(agentPathOf(id));
+    },
   );
   ipcMain.handle(
     IPC.deployHealth,

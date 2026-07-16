@@ -285,6 +285,16 @@ export interface VercelStatus {
   projectId?: string | null;
   orgId?: string | null;
 }
+/** A Vercel team/scope the signed-in user belongs to. */
+export interface VercelTeam {
+  id: string;
+  name: string;
+}
+export interface VercelTeamsResult {
+  ok: boolean;
+  teams: VercelTeam[];
+  error?: string;
+}
 /** Whether an agent can actually run its model locally. */
 export interface ModelReadiness {
   linked: boolean;
@@ -448,6 +458,7 @@ export const IPC = {
   vercelEnvAdd: "vercel:envAdd",
   vercelProdInfo: "vercel:prodInfo",
   vercelLink: "vercel:link",
+  vercelTeams: "vercel:teams",
   modelReadiness: "vercel:modelReadiness",
   deployGet: "agent:deployGet",
   deploySet: "agent:deploySet",

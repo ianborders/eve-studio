@@ -1,4 +1,4 @@
-import type { ModelReadiness } from "@shared/ipc";
+import type { ModelReadiness, VercelTeam } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
@@ -23,6 +23,8 @@ export function NeedsLink({
   const [output, setOutput] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [linked, setLinked] = useState(false);
+  const [teams, setTeams] = useState<VercelTeam[]>([]);
+  const [team, setTeam] = useState("");
 
   const check = useCallback(async () => {
     setReady(await window.studio.vercel.modelReadiness(agentId));
@@ -31,7 +33,14 @@ export function NeedsLink({
   useEffect(() => {
     setLinked(false);
     void check();
-  }, [check]);
+    // Load the user's Vercel teams so we can disambiguate multi-team accounts.
+    void window.studio.vercel.teams(agentId).then((r) => {
+      if (r.ok) {
+        setTeams(r.teams);
+        setTeam((t) => t || r.teams[0]?.id || "");
+      }
+    });
+  }, [check, agentId]);
 
   if (!ready || ready.hasCredential) {
     return null;
@@ -43,7 +52,7 @@ export function NeedsLink({
     setOutput(
       "Connecting to Vercel — creating/linking the project and pulling the AI Gateway credential…\n",
     );
-    const r = await window.studio.vercel.link(agentId);
+    const r = await window.studio.vercel.link(agentId, team || undefined);
     setOutput(r.output);
     const now = await window.studio.vercel.modelReadiness(agentId);
     setReady(now);
@@ -90,6 +99,21 @@ export function NeedsLink({
             respond until it's linked. One click sets it up — no terminal.
           </div>
         </div>
+        {teams.length > 1 ? (
+          <select
+            value={team}
+            onChange={(e) => setTeam(e.target.value)}
+            disabled={busy}
+            title="Vercel team"
+            className="no-drag shrink-0 rounded-lg border border-border bg-panel px-2.5 py-1.5 text-[13px] text-text outline-none hover:border-border-strong focus:border-border-strong"
+          >
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
         <Button variant="primary" size="sm" onClick={connect} disabled={busy}>
           {busy ? "Connecting…" : "Connect to Vercel"}
         </Button>

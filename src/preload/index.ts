@@ -47,6 +47,7 @@ import {
   type ToolInput,
   type UpdateState,
   type VercelStatus,
+  type VercelTeamsResult,
   type WireBrainInput,
   type WireBrainResult,
 } from "../shared/ipc";
@@ -204,8 +205,10 @@ const api = {
       ipcRenderer.invoke(IPC.vercelProdInfo, id),
     modelReadiness: (id: string): Promise<ModelReadiness> =>
       ipcRenderer.invoke(IPC.modelReadiness, id),
-    link: (id: string): Promise<CmdResult> =>
-      ipcRenderer.invoke(IPC.vercelLink, id),
+    link: (id: string, team?: string): Promise<CmdResult> =>
+      ipcRenderer.invoke(IPC.vercelLink, id, team),
+    teams: (id: string): Promise<VercelTeamsResult> =>
+      ipcRenderer.invoke(IPC.vercelTeams, id),
     connectorList: (
       id: string,
       service?: string,

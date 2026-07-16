@@ -7,6 +7,8 @@ import type {
   ModelReadiness,
   ProdInfo,
   VercelStatus,
+  VercelTeam,
+  VercelTeamsResult,
 } from "../shared/ipc";
 
 function vercelBin(): string {
@@ -128,13 +130,39 @@ export function modelReadiness(agentPath: string): ModelReadiness {
  * `vercel link --yes` creates/links a project under the default team; `env pull`
  * drops VERCEL_OIDC_TOKEN into .env.local so the model can run locally.
  */
-export function vercelLink(agentPath: string): CmdResult {
-  const link = run(agentPath, ["link", "--yes"]);
-  const pull = run(agentPath, ["env", "pull", ".env.local", "--yes"]);
+export function vercelLink(agentPath: string, team?: string): CmdResult {
+  // Accounts with >1 team can't be auto-selected non-interactively, so pass the
+  // chosen team explicitly (from the UI's team picker) to both commands.
+  const scope = team ? ["--team", team] : [];
+  const link = run(agentPath, ["link", "--yes", ...scope]);
+  const pull = run(agentPath, ["env", "pull", ".env.local", "--yes", ...scope]);
   return {
     ok: link.ok && pull.ok,
-    output: `$ vercel link --yes\n${link.output}\n\n$ vercel env pull\n${pull.output}`,
+    output: `$ vercel link --yes${team ? ` --team ${team}` : ""}\n${link.output}\n\n$ vercel env pull\n${pull.output}`,
   };
+}
+
+/** List the teams/scopes the signed-in user belongs to (`vercel teams ls`). */
+export function vercelTeams(agentPath: string): VercelTeamsResult {
+  const r = run(agentPath, ["teams", "ls"]);
+  if (!r.ok) {
+    return { ok: false, teams: [], error: r.output };
+  }
+  const teams: VercelTeam[] = [];
+  for (const raw of r.output.split("\n")) {
+    // Strip a leading "current team" marker (● / > / *) and normalize.
+    const line = raw.replace(/^\s*[●>*]\s*/, "").trim();
+    if (!line || /vercel cli|fetching|^id\b/i.test(line)) {
+      continue;
+    }
+    const parts = line.split(/\s{2,}/);
+    const id = parts[0]?.trim();
+    // Team slugs never contain spaces — guards against stray output lines.
+    if (id && !id.includes(" ")) {
+      teams.push({ id, name: (parts[1] ?? id).trim() });
+    }
+  }
+  return { ok: true, teams };
 }
 
 /** Latest production deployment for the linked project, from `vercel ls --prod`. */
