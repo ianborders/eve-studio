@@ -78,10 +78,12 @@ import {
   vercelEnvLs,
   vercelEnvPull,
   vercelEnvSetAll,
+  startVercelLogin,
   vercelLink,
   vercelProdInfo,
   vercelStatus,
   vercelTeams,
+  vercelWhoami,
 } from "./vercel";
 import { modelReadiness } from "./vercel";
 
@@ -928,6 +930,35 @@ export function registerIpc(): IpcHandles {
     async (_e: IpcMainInvokeEvent, id: string) => {
       await ensureNodeRuntime();
       return vercelTeams(agentPathOf(id));
+    },
+  );
+  ipcMain.handle(
+    IPC.vercelWhoami,
+    async (_e: IpcMainInvokeEvent, id: string) => {
+      await ensureNodeRuntime();
+      return vercelWhoami(agentPathOf(id));
+    },
+  );
+  ipcMain.handle(
+    IPC.vercelLogin,
+    async (_e: IpcMainInvokeEvent, id: string, email: string) => {
+      await ensureNodeRuntime();
+      const runId = store.rid();
+      const child = startVercelLogin(
+        agentPathOf(id),
+        email,
+        (data) => broadcast(IPC.cliChunk, { runId, data }),
+        (code) => broadcast(IPC.cliExit, { runId, code }),
+      );
+      // Don't leave a login process hanging if the user never finishes.
+      setTimeout(() => {
+        try {
+          child.kill("SIGTERM");
+        } catch {
+          // already gone
+        }
+      }, 5 * 60_000);
+      return runId;
     },
   );
   ipcMain.handle(

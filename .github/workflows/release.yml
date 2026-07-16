@@ -39,6 +39,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref || github.ref }}
+          # Full history + tags so the changelog step can diff against the
+          # previous tag.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         # pnpm version comes from packageManager in package.json
@@ -66,3 +69,24 @@ jobs:
           # Public repo → the default token can create the Release here.
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # CSC_* and APPLE_* inherited from job env (signing + notarize:true).
+
+      # Set the release body to a changelog of commits since the previous tag
+      # (excludes the version-bump commit). Runs only for real tag pushes.
+      - name: Write release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          PREV="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo '')"
+          RANGE="${TAG}"
+          [ -n "$PREV" ] && RANGE="${PREV}..${TAG}"
+          CHANGES="$(git log --no-merges --invert-grep --grep='^release: v' --pretty='- %s' "$RANGE")"
+          [ -z "$CHANGES" ] && CHANGES="- Maintenance release."
+          {
+            echo "## What's changed in ${TAG}"
+            echo
+            echo "$CHANGES"
+            echo
+            [ -n "$PREV" ] && echo "**Full changelog:** https://github.com/${GITHUB_REPOSITORY}/compare/${PREV}...${TAG}"
+          } | gh release edit "$TAG" --notes-file -

@@ -295,6 +295,11 @@ export interface VercelTeamsResult {
   teams: VercelTeam[];
   error?: string;
 }
+/** Vercel CLI auth state. */
+export interface VercelWhoami {
+  authed: boolean;
+  user?: string;
+}
 /** Whether an agent can actually run its model locally. */
 export interface ModelReadiness {
   linked: boolean;
@@ -459,6 +464,8 @@ export const IPC = {
   vercelProdInfo: "vercel:prodInfo",
   vercelLink: "vercel:link",
   vercelTeams: "vercel:teams",
+  vercelWhoami: "vercel:whoami",
+  vercelLogin: "vercel:login",
   modelReadiness: "vercel:modelReadiness",
   deployGet: "agent:deployGet",
   deploySet: "agent:deploySet",

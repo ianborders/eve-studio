@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type {
@@ -9,6 +9,7 @@ import type {
   VercelStatus,
   VercelTeam,
   VercelTeamsResult,
+  VercelWhoami,
 } from "../shared/ipc";
 
 function vercelBin(): string {
@@ -16,6 +17,23 @@ function vercelBin(): string {
 }
 function npxBin(): string {
   return process.platform === "win32" ? "npx.cmd" : "npx";
+}
+
+/**
+ * Resolve how to invoke the Vercel CLI once: a global `vercel` if on PATH, else
+ * `npx vercel@latest` on our provisioned Node. Cached so we probe only once.
+ */
+let vcResolved: { cmd: string; pre: string[] } | null = null;
+function resolveVercel(): { cmd: string; pre: string[] } {
+  if (vcResolved) {
+    return vcResolved;
+  }
+  const probe = spawnSync(vercelBin(), ["--version"], { timeout: 15_000 });
+  vcResolved =
+    (probe.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT"
+      ? { cmd: npxBin(), pre: ["--yes", "vercel@latest"] }
+      : { cmd: vercelBin(), pre: [] };
+  return vcResolved;
 }
 
 /** Read link state from .vercel/project.json. */
@@ -41,35 +59,16 @@ export function vercelStatus(agentPath: string): VercelStatus {
   }
 }
 
-function spawnVercel(
-  cmd: string,
-  args: string[],
-  agentPath: string,
-  input?: string,
-) {
-  return spawnSync(cmd, args, {
-    cwd: agentPath,
-    encoding: "utf8",
-    timeout: 180_000,
-    input,
-    env: { ...process.env, NO_COLOR: "1" },
-  });
-}
-
 function run(agentPath: string, args: string[], input?: string): CmdResult {
   try {
-    let res = spawnVercel(vercelBin(), args, agentPath, input);
-    // No global vercel? Fall back to `npx vercel@latest` on our provisioned
-    // Node — no `npm i -g vercel`, no terminal. (Pre-warmed at startup so this
-    // is normally a cache hit; see prewarmVercel.)
-    if ((res.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") {
-      res = spawnVercel(
-        npxBin(),
-        ["--yes", "vercel@latest", ...args],
-        agentPath,
-        input,
-      );
-    }
+    const v = resolveVercel();
+    const res = spawnSync(v.cmd, [...v.pre, ...args], {
+      cwd: agentPath,
+      encoding: "utf8",
+      timeout: 180_000,
+      input,
+      env: { ...process.env, NO_COLOR: "1" },
+    });
     if (res.error) {
       const msg =
         (res.error as NodeJS.ErrnoException).code === "ENOENT"
@@ -163,6 +162,55 @@ export function vercelTeams(agentPath: string): VercelTeamsResult {
     }
   }
   return { ok: true, teams };
+}
+
+/** Who is signed in to the Vercel CLI, if anyone (`vercel whoami`). */
+export function vercelWhoami(agentPath: string): VercelWhoami {
+  const r = run(agentPath, ["whoami"]);
+  if (
+    !r.ok ||
+    /no existing credentials|not authenticated|vercel login/i.test(r.output)
+  ) {
+    return { authed: false };
+  }
+  const user = r.output
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(
+      (l) =>
+        l &&
+        !/vercel cli|fetching|telemetry|learn more|^>|^error|https?:\/\//i.test(
+          l,
+        ),
+    )
+    .pop();
+  return user ? { authed: true, user } : { authed: false };
+}
+
+/**
+ * Start `vercel login <email>`, streaming the CLI's real output (email/security
+ * code instructions). The caller detects success by polling {@link vercelWhoami}.
+ * Returns the child process so the caller can kill it on cancel/timeout.
+ */
+export function startVercelLogin(
+  agentPath: string,
+  email: string,
+  onData: (s: string) => void,
+  onExit: (code: number | null) => void,
+): ChildProcess {
+  const v = resolveVercel();
+  const child = spawn(v.cmd, [...v.pre, "login", email], {
+    cwd: agentPath,
+    env: { ...process.env, NO_COLOR: "1" },
+  });
+  child.stdout?.on("data", (b: Buffer) => onData(b.toString()));
+  child.stderr?.on("data", (b: Buffer) => onData(b.toString()));
+  child.on("error", (e) => {
+    onData(`\n[failed to launch] ${e.message}\n`);
+    onExit(-1);
+  });
+  child.on("exit", (code) => onExit(code));
+  return child;
 }
 
 /** Latest production deployment for the linked project, from `vercel ls --prod`. */

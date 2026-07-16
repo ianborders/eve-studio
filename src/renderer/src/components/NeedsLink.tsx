@@ -1,13 +1,17 @@
-import type { ModelReadiness, VercelTeam } from "@shared/ipc";
+import type { ModelReadiness, VercelTeam, VercelWhoami } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
+import { useCliRun } from "../lib/useCli";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
 import { IconPlug } from "../ui/icons";
 import { Button, Kicker } from "../ui/kit";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /**
  * Shown in Chat when an agent has no model credential (not linked to Vercel).
- * One click links it + pulls the AI Gateway token — no terminal.
+ * Handles the whole no-terminal path: sign in to Vercel (email verification) →
+ * pick a team → link + pull the AI Gateway token.
  */
 export function NeedsLink({
   agentId,
@@ -18,33 +22,78 @@ export function NeedsLink({
   const stopAgent = useStore((s) => s.stopAgent);
   const startAgent = useStore((s) => s.startAgent);
   const bumpDeploy = useStore((s) => s.bumpDeploy);
+
   const [ready, setReady] = useState<ModelReadiness | null>(null);
+  const [auth, setAuth] = useState<VercelWhoami | null>(null);
+  const [teams, setTeams] = useState<VercelTeam[]>([]);
+  const [team, setTeam] = useState("");
+  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
   const [output, setOutput] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [linked, setLinked] = useState(false);
-  const [teams, setTeams] = useState<VercelTeam[]>([]);
-  const [team, setTeam] = useState("");
 
-  const check = useCallback(async () => {
-    setReady(await window.studio.vercel.modelReadiness(agentId));
+  const login = useCliRun();
+
+  const loadTeams = useCallback(async () => {
+    const t = await window.studio.vercel.teams(agentId);
+    if (t.ok) {
+      setTeams(t.teams);
+      setTeam((cur) => cur || t.teams[0]?.id || "");
+    }
   }, [agentId]);
+
+  const refresh = useCallback(async () => {
+    const rd = await window.studio.vercel.modelReadiness(agentId);
+    setReady(rd);
+    if (rd.hasCredential) {
+      return; // already linked — no need to probe Vercel auth/teams
+    }
+    const who = await window.studio.vercel.whoami(agentId);
+    setAuth(who);
+    if (who.authed) {
+      await loadTeams();
+    }
+  }, [agentId, loadTeams]);
 
   useEffect(() => {
     setLinked(false);
-    void check();
-    // Load the user's Vercel teams so we can disambiguate multi-team accounts.
-    void window.studio.vercel.teams(agentId).then((r) => {
-      if (r.ok) {
-        setTeams(r.teams);
-        setTeam((t) => t || r.teams[0]?.id || "");
+    void refresh();
+  }, [refresh]);
+
+  // While the email sign-in is in flight, poll whoami — the CLI writes the auth
+  // once the user confirms in their email, so this is how we detect success.
+  useEffect(() => {
+    if (!signingIn) {
+      return;
+    }
+    const iv = setInterval(async () => {
+      const who = await window.studio.vercel.whoami(agentId);
+      if (who.authed) {
+        setSigningIn(false);
+        setAuth(who);
+        await loadTeams();
       }
-    });
-  }, [check, agentId]);
+    }, 3000);
+    return () => clearInterval(iv);
+  }, [signingIn, agentId, loadTeams]);
 
   if (!ready || ready.hasCredential) {
     return null;
   }
+
+  const signIn = async (): Promise<void> => {
+    if (!EMAIL_RE.test(email.trim())) {
+      setErr("Enter the email for your Vercel account.");
+      return;
+    }
+    setErr(null);
+    setSigningIn(true);
+    await login.start(() =>
+      window.studio.vercel.loginStart(agentId, email.trim()),
+    );
+  };
 
   const connect = async (): Promise<void> => {
     setBusy(true);
@@ -59,8 +108,7 @@ export function NeedsLink({
     setBusy(false);
     if (now.hasCredential) {
       setLinked(true);
-      bumpDeploy(); // refresh the header's linked/deployed badges
-      // reload so eve dev picks up the new .env.local
+      bumpDeploy();
       if (runtime?.status === "running") {
         await stopAgent(agentId);
         await startAgent(agentId);
@@ -86,6 +134,8 @@ export function NeedsLink({
     );
   }
 
+  const authed = auth?.authed === true;
+
   return (
     <div className="border-b border-border bg-subtle px-5 py-3">
       <div className="flex items-center gap-3">
@@ -93,33 +143,83 @@ export function NeedsLink({
           <IconPlug className="h-3.5 w-3.5" />
         </div>
         <div className="min-w-0 flex-1">
-          <Kicker className="mb-1">Not connected to Vercel</Kicker>
+          <Kicker className="mb-1">
+            {authed ? "Not connected to Vercel" : "Sign in to Vercel"}
+          </Kicker>
           <div className="text-[13px] leading-snug text-muted">
-            This agent's model runs through the Vercel AI Gateway, so it can't
-            respond until it's linked. One click sets it up — no terminal.
+            {authed
+              ? "This agent's model runs through the Vercel AI Gateway — pick a team and connect. No terminal."
+              : "This agent's model runs through the Vercel AI Gateway. Sign in with your Vercel email to continue — no terminal."}
           </div>
         </div>
-        {teams.length > 1 ? (
-          <select
-            value={team}
-            onChange={(e) => setTeam(e.target.value)}
-            disabled={busy}
-            title="Vercel team"
-            className="no-drag shrink-0 rounded-lg border border-border bg-panel px-2.5 py-1.5 text-[13px] text-text outline-none hover:border-border-strong focus:border-border-strong"
-          >
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        ) : null}
-        <Button variant="primary" size="sm" onClick={connect} disabled={busy}>
-          {busy ? "Connecting…" : "Connect to Vercel"}
-        </Button>
+
+        {auth === null ? (
+          <span className="shrink-0 text-2xs text-faint">Checking…</span>
+        ) : authed ? (
+          <>
+            {teams.length > 1 ? (
+              <select
+                value={team}
+                onChange={(e) => setTeam(e.target.value)}
+                disabled={busy}
+                title="Vercel team"
+                className="no-drag shrink-0 rounded-lg border border-border bg-panel px-2.5 py-1.5 text-[13px] text-text outline-none hover:border-border-strong focus:border-border-strong"
+              >
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={connect}
+              disabled={busy}
+            >
+              {busy ? "Connecting…" : "Connect to Vercel"}
+            </Button>
+          </>
+        ) : (
+          <>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  void signIn();
+                }
+              }}
+              placeholder="you@email.com"
+              disabled={signingIn}
+              className="no-drag w-52 shrink-0 rounded-lg border border-border bg-panel px-2.5 py-1.5 text-[13px] text-text outline-none placeholder:text-faint hover:border-border-strong focus:border-border-strong disabled:opacity-60"
+            />
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={signIn}
+              disabled={signingIn}
+            >
+              {signingIn ? "Waiting…" : "Sign in"}
+            </Button>
+          </>
+        )}
       </div>
+
+      {!authed && (signingIn || login.output) ? (
+        <div className="mt-2.5">
+          <div className="mb-1.5 text-2xs text-muted">
+            Follow the steps in the email Vercel just sent — this updates
+            automatically once you confirm.
+          </div>
+          <Console text={login.output} className="max-h-40" />
+        </div>
+      ) : null}
+
       {err ? <div className="mt-2 text-2xs text-danger">{err}</div> : null}
-      {output && (busy || err) ? (
+      {output && busy ? (
         <Console text={output} className="mt-2 max-h-40" />
       ) : null}
     </div>
