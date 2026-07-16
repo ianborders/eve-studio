@@ -12,6 +12,9 @@ import type {
 function vercelBin(): string {
   return process.platform === "win32" ? "vercel.cmd" : "vercel";
 }
+function npxBin(): string {
+  return process.platform === "win32" ? "npx.cmd" : "npx";
+}
 
 /** Read link state from .vercel/project.json. */
 export function vercelStatus(agentPath: string): VercelStatus {
@@ -36,19 +39,39 @@ export function vercelStatus(agentPath: string): VercelStatus {
   }
 }
 
+function spawnVercel(
+  cmd: string,
+  args: string[],
+  agentPath: string,
+  input?: string,
+) {
+  return spawnSync(cmd, args, {
+    cwd: agentPath,
+    encoding: "utf8",
+    timeout: 180_000,
+    input,
+    env: { ...process.env, NO_COLOR: "1" },
+  });
+}
+
 function run(agentPath: string, args: string[], input?: string): CmdResult {
   try {
-    const res = spawnSync(vercelBin(), args, {
-      cwd: agentPath,
-      encoding: "utf8",
-      timeout: 90_000,
-      input,
-      env: { ...process.env, NO_COLOR: "1" },
-    });
+    let res = spawnVercel(vercelBin(), args, agentPath, input);
+    // No global vercel? Fall back to `npx vercel@latest` on our provisioned
+    // Node — no `npm i -g vercel`, no terminal. (Pre-warmed at startup so this
+    // is normally a cache hit; see prewarmVercel.)
+    if ((res.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") {
+      res = spawnVercel(
+        npxBin(),
+        ["--yes", "vercel@latest", ...args],
+        agentPath,
+        input,
+      );
+    }
     if (res.error) {
       const msg =
         (res.error as NodeJS.ErrnoException).code === "ENOENT"
-          ? "The Vercel CLI isn't installed or on PATH. Install it: npm i -g vercel"
+          ? "Couldn't run Vercel — the runtime isn't ready yet. Try again in a moment."
           : res.error.message;
       return { ok: false, output: msg };
     }

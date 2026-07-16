@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { app } from "electron";
@@ -110,4 +110,31 @@ export function ensureNodeRuntime(
     }
   })();
   return pending;
+}
+
+let vercelWarmed = false;
+
+/**
+ * Warm the npx cache for the Vercel CLI in the background so the first
+ * link/deploy isn't a blocking download. Fire-and-forget; safe to call repeatedly.
+ */
+export function prewarmVercel(): void {
+  if (vercelWarmed) {
+    return;
+  }
+  vercelWarmed = true;
+  try {
+    const npx = process.platform === "win32" ? "npx.cmd" : "npx";
+    const child = spawn(npx, ["--yes", "vercel@latest", "--version"], {
+      stdio: "ignore",
+      detached: true,
+      env: { ...process.env, NO_COLOR: "1" },
+    });
+    child.on("error", () => {
+      // npx/node not ready — the on-demand fallback in vercel.ts still covers it
+    });
+    child.unref();
+  } catch {
+    // ignore
+  }
 }

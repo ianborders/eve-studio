@@ -6,14 +6,21 @@ import { BrowserWindow, shell } from "electron";
 function vercelBin(): string {
   return process.platform === "win32" ? "vercel.cmd" : "vercel";
 }
+function npxBin(): string {
+  return process.platform === "win32" ? "npx.cmd" : "npx";
+}
 
 function vc(agentPath: string, args: string[]): string {
-  const res = spawnSync(vercelBin(), args, {
+  const opts = {
     cwd: agentPath,
-    encoding: "utf8",
-    timeout: 60_000,
+    encoding: "utf8" as const,
+    timeout: 180_000,
     env: { ...process.env, NO_COLOR: "1" },
-  });
+  };
+  let res = spawnSync(vercelBin(), args, opts);
+  if ((res.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") {
+    res = spawnSync(npxBin(), ["--yes", "vercel@latest", ...args], opts);
+  }
   return `${res.stdout ?? ""}`;
 }
 
