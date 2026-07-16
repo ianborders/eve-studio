@@ -1,9 +1,11 @@
 import type { AgentRunStatus } from "@shared/ipc";
-import type {
-  ButtonHTMLAttributes,
-  InputHTMLAttributes,
-  ReactNode,
-  TextareaHTMLAttributes,
+import {
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type TextareaHTMLAttributes,
+  useEffect,
+  useState,
 } from "react";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
@@ -236,30 +238,81 @@ export function Field({
   );
 }
 
-// --- Spinner ---
+// --- Spinner (braille "columns" loader) ---
+// Procedurally generated braille frames: fill each of 6 columns bottom-up, then
+// flash full/empty. Adapted from gunnargray-dev/unicode-animations.
+const BRAILLE_FRAMES: string[] = (() => {
+  const DOT_MAP = [
+    [0x01, 0x08],
+    [0x02, 0x10],
+    [0x04, 0x20],
+    [0x40, 0x80],
+  ];
+  const W = 6;
+  const H = 4;
+  const grid = (): boolean[][] =>
+    Array.from({ length: H }, () => Array<boolean>(W).fill(false));
+  const toBraille = (g: boolean[][]): string => {
+    let result = "";
+    for (let c = 0; c < Math.ceil(W / 2); c++) {
+      let code = 0x2800;
+      for (let r = 0; r < H; r++) {
+        for (let d = 0; d < 2; d++) {
+          const col = c * 2 + d;
+          if (g[r][col]) {
+            code |= DOT_MAP[r][d];
+          }
+        }
+      }
+      result += String.fromCodePoint(code);
+    }
+    return result;
+  };
+  const frames: string[] = [];
+  for (let col = 0; col < W; col++) {
+    for (let fillTo = H - 1; fillTo >= 0; fillTo--) {
+      const g = grid();
+      for (let pc = 0; pc < col; pc++) {
+        for (let r = 0; r < H; r++) {
+          g[r][pc] = true;
+        }
+      }
+      for (let r = fillTo; r < H; r++) {
+        g[r][col] = true;
+      }
+      frames.push(toBraille(g));
+    }
+  }
+  const full = grid();
+  for (let r = 0; r < H; r++) {
+    for (let c = 0; c < W; c++) {
+      full[r][c] = true;
+    }
+  }
+  frames.push(toBraille(full));
+  frames.push(toBraille(grid()));
+  return frames;
+})();
+
 export function Spinner({ className }: { className?: string }): JSX.Element {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(
+      () => setFrame((f) => (f + 1) % BRAILLE_FRAMES.length),
+      60,
+    );
+    return () => clearInterval(iv);
+  }, []);
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className={cx("h-4 w-4 animate-spin", className)}
-      fill="none"
+    <span
+      className={cx(
+        "inline-block select-none font-spacemono leading-none tracking-[1px]",
+        className,
+      )}
       aria-hidden="true"
     >
-      <circle
-        cx="12"
-        cy="12"
-        r="9"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        opacity="0.15"
-      />
-      <path
-        d="M21 12a9 9 0 0 0-9-9"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-    </svg>
+      {BRAILLE_FRAMES[frame]}
+    </span>
   );
 }
 
