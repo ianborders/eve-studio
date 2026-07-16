@@ -45,6 +45,7 @@ import {
   type ThreadRecord,
   type TimelineEvent,
   type ToolInput,
+  type UpdateState,
   type VercelStatus,
   type WireBrainInput,
   type WireBrainResult,
@@ -327,6 +328,17 @@ const api = {
       sub(IPC.chatEvent, cb),
     onStatus: (cb: (m: ChatStatusMessage) => void): (() => void) =>
       sub(IPC.chatStatus, cb),
+  },
+
+  updates: {
+    getState: (): Promise<UpdateState> =>
+      ipcRenderer.invoke(IPC.updaterGetState),
+    check: (): Promise<WriteResult> => ipcRenderer.invoke(IPC.updaterCheck),
+    download: (): Promise<WriteResult> =>
+      ipcRenderer.invoke(IPC.updaterDownload),
+    install: (): Promise<void> => ipcRenderer.invoke(IPC.updaterInstall),
+    onState: (cb: (s: UpdateState) => void): (() => void) =>
+      sub(IPC.updaterState, cb),
   },
 };
 

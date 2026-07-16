@@ -35,6 +35,7 @@ import {
 import { Memory } from "./views/Memory";
 import { Schedules } from "./views/Schedules";
 import { Settings } from "./views/Settings";
+import { UpdateBadge } from "./components/UpdateBadge";
 import { Welcome } from "./views/Welcome";
 
 const TABS: TabItem[] = [
@@ -454,6 +455,7 @@ export function App(): JSX.Element {
         </nav>
 
         <div className="no-drag border-t border-border p-2">
+          <UpdateBadge />
           <button
             type="button"
             onClick={() => setSection("settings")}

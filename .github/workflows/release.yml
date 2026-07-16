@@ -1,0 +1,68 @@
+name: release
+
+# Builds, signs, notarizes, and publishes the macOS app to a GitHub Release on
+# THIS (public) repo. electron-updater in the shipped app polls that release's
+# latest-mac.yml (publish target: package.json build.publish → github). Once
+# assets land, running apps on a lower version show the in-app UPDATE → RESTART
+# flow.
+#
+# Trigger: push a tag `vX.Y.Z` matching package.json "version" (e.g. v0.0.2).
+# workflow_dispatch is provided for manual re-runs of a given ref.
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Tag/ref to build (defaults to the triggering ref)
+        required: false
+
+permissions:
+  contents: write # create the Release + upload assets on this repo
+
+jobs:
+  release-mac:
+    # Apple silicon runner — matches the arm64 mac target in package.json build.
+    runs-on: macos-14
+    timeout-minutes: 60
+    env:
+      # Hoisted to job level so signing/notarization can gate on presence.
+      # All optional — absent secrets ⇒ an unsigned build that still publishes.
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      CSC_LINK: ${{ secrets.CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - uses: pnpm/action-setup@v4
+        # pnpm version comes from packageManager in package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.18.3
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # Skip notarization when Apple secrets aren't configured, so the build
+      # still succeeds (just un-notarized) instead of failing hard.
+      - name: Disable notarization (no Apple secrets)
+        if: ${{ env.APPLE_ID == '' }}
+        run: echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+
+      - name: Build, sign, notarize & publish
+        run: pnpm run release:mac
+        env:
+          # Public repo → the default token can create the Release here.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # CSC_* and APPLE_* inherited from job env (signing + notarize:true).

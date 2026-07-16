@@ -30,6 +30,17 @@ export interface AgentRuntimeState {
   error: string | null;
 }
 
+/** In-app auto-update status, pushed from main on every transition. */
+export interface UpdateState {
+  status:
+    "idle" | "checking" | "available" | "downloading" | "downloaded" | "error";
+  /** The available/downloaded version, when known. */
+  version: string | null;
+  /** Download progress 0–100 while status is "downloading". */
+  percent?: number;
+  error?: string;
+}
+
 export interface ThreadRecord {
   id: string;
   agentId: string;
@@ -474,8 +485,15 @@ export const IPC = {
   chatSend: "chat:send",
   chatRespond: "chat:respond",
 
+  // auto-update (electron-updater)
+  updaterGetState: "updater:getState",
+  updaterCheck: "updater:check",
+  updaterDownload: "updater:download",
+  updaterInstall: "updater:install",
+
   // push channels (main -> renderer)
   chatEvent: "chat:event",
   chatStatus: "chat:status",
   agentStatusChanged: "agent:statusChanged",
+  updaterState: "updater:state",
 } as const;

@@ -16,14 +16,19 @@
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "format": "prettier --write .",
-    "package": "electron-vite build && electron-builder"
+    "package": "electron-vite build && electron-builder",
+    "release": "npm version patch -m \"release: v%s\" && git push --follow-tags",
+    "release:minor": "npm version minor -m \"release: v%s\" && git push --follow-tags",
+    "release:mac": "electron-vite build && electron-builder --mac --publish always"
   },
+  "packageManager": "pnpm@10.31.0",
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
     "@fontsource-variable/geist": "^5.2.9",
     "@fontsource-variable/geist-mono": "^5.2.8",
     "@fontsource/space-mono": "^5.2.9",
+    "electron-updater": "^6.8.9",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
@@ -55,13 +60,37 @@
     ],
     "mac": {
       "icon": "build/icon.icns",
-      "category": "public.app-category.developer-tools"
+      "category": "public.app-category.developer-tools",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
     },
     "win": {
       "icon": "build/icon.png"
     },
     "linux": {
       "icon": "build/icon.png"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "ianborders",
+      "repo": "eve-studio"
     }
   },
   "pnpm": {

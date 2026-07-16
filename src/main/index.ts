@@ -5,11 +5,13 @@ import { BrowserWindow, app, nativeImage, shell } from "electron";
 import { hydratePath } from "./env";
 import { type IpcHandles, registerIpc } from "./ipc";
 import { initStore } from "./store";
+import { setupAutoUpdater } from "./updater";
 
 let handles: IpcHandles | null = null;
+let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1320,
     height: 860,
     minWidth: 980,
@@ -26,7 +28,10 @@ function createWindow(): void {
     },
   });
 
-  mainWindow.on("ready-to-show", () => mainWindow.show());
+  mainWindow.on("ready-to-show", () => mainWindow?.show());
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
@@ -65,6 +70,7 @@ app.whenReady().then(() => {
   handles = registerIpc();
 
   createWindow();
+  setupAutoUpdater(() => mainWindow);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

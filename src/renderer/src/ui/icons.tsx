@@ -97,6 +97,7 @@ export const IconSettings = make(
 );
 export const IconPlus = make(<path d="M12 5v14M5 12h14" />);
 export const IconArrowUp = make(<path d="M12 20V5M5 12l7-7 7 7" />);
+export const IconDownload = make(<path d="M12 3v12M7 11l5 5 5-5M5 21h14" />);
 export const IconArchive = make(
   <>
     <rect x="3" y="4" width="18" height="4" rx="1" />
