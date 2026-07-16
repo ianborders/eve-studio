@@ -16,6 +16,7 @@ import type {
 } from "../shared/ipc";
 import { agentRoot, nested, readModelConfig } from "./agentAuthoring";
 import { readInstructions, writeInstructions } from "./agentFiles";
+import { arcanaRemember } from "./arcana";
 import { vercelEnvPull } from "./vercel";
 
 const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
@@ -368,18 +369,48 @@ function commit(agentPath: string, paths: string[], title: string): boolean {
   return done.status === 0;
 }
 
-/** Apply an approved proposal: write the files, then git-commit them. */
-export function applyProposal(
+/** A resolved Arcana brain credential for memory writes. */
+export interface BrainCred {
+  workspace: string;
+  key: string;
+}
+
+/** Apply an approved proposal: write the files (or remember the fact), then commit. */
+export async function applyProposal(
   agentPath: string,
   proposal: EvolveProposal,
-): EvolveApplyResult {
+  brain?: BrainCred | null,
+): Promise<EvolveApplyResult> {
   if (proposal.kind === "memory") {
+    const text = proposal.memory?.trim();
+    if (!text) {
+      return {
+        ok: false,
+        written: [],
+        committed: false,
+        needsRebuild: false,
+        error: "No fact to remember.",
+      };
+    }
+    if (!brain) {
+      return {
+        ok: true,
+        written: [],
+        committed: false,
+        needsRebuild: false,
+        note: "This is a fact for the agent's memory, but no brain is configured. Set one up in the Memory tab, then try again.",
+      };
+    }
+    const r = await arcanaRemember(brain.workspace, brain.key, text);
     return {
-      ok: true,
+      ok: r.ok,
       written: [],
       committed: false,
       needsRebuild: false,
-      note: "This is a fact for the agent's memory. Writing to the agent's Arcana brain from Studio isn't wired up yet — coming next. For now, rephrase as a behavior change if you want it in instructions.",
+      note: r.ok
+        ? `Remembered — added to the “${brain.workspace}” brain.`
+        : undefined,
+      error: r.ok ? undefined : r.error,
     };
   }
   const written: string[] = [];

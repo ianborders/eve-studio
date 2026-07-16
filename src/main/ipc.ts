@@ -928,7 +928,7 @@ export function registerIpc(): IpcHandles {
   ipcMain.handle(
     IPC.evolveApply,
     (_e: IpcMainInvokeEvent, id: string, proposal: EvolveProposal) =>
-      applyProposal(agentPathOf(id), proposal),
+      applyProposal(agentPathOf(id), proposal, store.getBrain(id) ?? null),
   );
   ipcMain.handle(
     IPC.vercelLink,
