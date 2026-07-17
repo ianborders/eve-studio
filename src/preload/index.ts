@@ -40,6 +40,7 @@ import {
   type InstructionsFile,
   type LogChunk,
   type ModelConfig,
+  type GatewayModelsResult,
   type ModelReadiness,
   type ProdInfo,
   type QueryHit,
@@ -225,6 +226,8 @@ const api = {
       ipcRenderer.invoke(IPC.vercelProdInfo, id),
     modelReadiness: (id: string): Promise<ModelReadiness> =>
       ipcRenderer.invoke(IPC.modelReadiness, id),
+    gatewayModels: (id: string): Promise<GatewayModelsResult> =>
+      ipcRenderer.invoke(IPC.gatewayModels, id),
     link: (id: string, team?: string): Promise<CmdResult> =>
       ipcRenderer.invoke(IPC.vercelLink, id, team),
     teams: (id: string): Promise<VercelTeamsResult> =>
