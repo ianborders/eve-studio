@@ -102,6 +102,7 @@ import {
   draftProposal,
   getProposeTool,
   listQueuedProposals,
+  type ProposalQueue,
   resolveQueuedProposal,
   setProposeTool,
 } from "./evolve";
@@ -183,6 +184,24 @@ function resolveBrainCred(agentId: string): store.BrainCred | null {
     }
   }
   return null;
+}
+
+/**
+ * Where to look for proposals the agent queued while deployed.
+ *
+ * @remarks
+ * Mirrors the backend baked into the generated tool: an Arcana brain when the
+ * agent has one, else Vercel Blob. The Blob token has to be the static
+ * `BLOB_READ_WRITE_TOKEN` — Studio runs outside Vercel, where OIDC is refused —
+ * and arrives via `vercel env pull`.
+ */
+function resolveQueue(agentId: string): ProposalQueue | null {
+  const brain = resolveBrainCred(agentId);
+  if (brain) {
+    return { kind: "arcana", brain };
+  }
+  const token = keyFromEnv(agentPathOf(agentId), "BLOB_READ_WRITE_TOKEN");
+  return token ? { kind: "blob", token } : null;
 }
 
 function broadcast(channel: string, payload: unknown): void {
@@ -1064,24 +1083,24 @@ export function registerIpc(): IpcHandles {
   ipcMain.handle(
     IPC.evolveListProposals,
     async (_e: IpcMainInvokeEvent, id: string) => {
-      const brain = resolveBrainCred(id);
-      if (!brain) {
+      const queue = resolveQueue(id);
+      if (!queue) {
         return {
           ok: false,
           proposals: [],
           error:
-            "No Arcana brain on this agent — the proposal queue needs one.",
+            "Can't reach this agent's proposal queue. Deploy the agent, then run Pull env in the Deploy tab so Studio has its BLOB_READ_WRITE_TOKEN.",
         };
       }
-      return { ok: true, proposals: await listQueuedProposals(brain) };
+      return { ok: true, proposals: await listQueuedProposals(queue) };
     },
   );
   ipcMain.handle(
     IPC.evolveResolveProposal,
     async (_e: IpcMainInvokeEvent, id: string, note: string) => {
-      const brain = resolveBrainCred(id);
-      if (brain) {
-        await resolveQueuedProposal(brain, note);
+      const queue = resolveQueue(id);
+      if (queue) {
+        await resolveQueuedProposal(queue, note);
       }
       return { ok: true };
     },

@@ -342,7 +342,9 @@ export function Evolve(): JSX.Element {
                     <div className="text-2xs text-muted">
                       Adds a tool so the agent can offer changes mid-chat — you
                       still approve every diff. Restart the agent after
-                      enabling.
+                      enabling. To propose from Slack, the agent has to be
+                      deployed: it queues to its own storage, and Studio picks
+                      it up here.
                     </div>
                   </div>
                   <button
