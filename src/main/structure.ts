@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentStructure } from "../shared/ipc";
+import { eveBin } from "./cli";
 
 function agentRootOf(agentPath: string): string {
   return existsSync(join(agentPath, "agent"))
@@ -223,11 +224,11 @@ export function readStructure(agentPath: string): AgentStructure {
     return mergeAuthored(agentPath, existing);
   }
 
-  // No compiled artifact yet — build once, then read.
-  const bin = join(agentPath, "node_modules", ".bin", "eve");
-  const useLocal = existsSync(bin);
+  // No compiled artifact yet — build once, then read. Go through eveBin: a bare
+  // `npx eve` can hang on npx's install prompt or resolve an unrelated eve@0.5.4.
+  const { cmd, pre } = eveBin(agentPath);
   try {
-    spawnSync(useLocal ? bin : "npx", useLocal ? ["build"] : ["eve", "build"], {
+    spawnSync(cmd, [...pre, "build"], {
       cwd: agentPath,
       encoding: "utf8",
       timeout: 180_000,
