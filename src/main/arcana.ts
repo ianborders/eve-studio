@@ -110,9 +110,10 @@ export async function arcanaValidate(
 const MCP_URL = "https://mcp.arcana.kybernesis.ai/mcp";
 
 /** Parse an MCP HTTP reply that may be raw JSON or an SSE `data:` frame. */
-function parseMcp(
-  text: string,
-): { result?: { isError?: boolean }; error?: { message?: string } } | null {
+function parseMcp(text: string): {
+  result?: { isError?: boolean; content?: { text?: string }[] };
+  error?: { message?: string };
+} | null {
   const trimmed = text.trimStart();
   if (trimmed.startsWith("{")) {
     try {
@@ -135,15 +136,13 @@ function parseMcp(
   return null;
 }
 
-/**
- * Persist a fact to the agent's brain via the Arcana MCP `arcana_remember`
- * tool (event-sourced — the sleep agent extracts entities/facts from it).
- */
-export async function arcanaRemember(
+/** One MCP `tools/call` against a brain — returns the first text content. */
+async function mcpCall(
   workspace: string,
   key: string,
-  text: string,
-): Promise<ArcanaResult<null>> {
+  toolName: string,
+  args: Record<string, unknown>,
+): Promise<ArcanaResult<string>> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   const headers: Record<string, string> = {
@@ -188,14 +187,7 @@ export async function arcanaRemember(
         jsonrpc: "2.0",
         id: 2,
         method: "tools/call",
-        params: {
-          name: "arcana_remember",
-          arguments: {
-            text,
-            channel: "eve-studio",
-            tags: ["eve-studio", "evolve"],
-          },
-        },
+        params: { name: toolName, arguments: args },
       },
       session,
     );
@@ -203,13 +195,13 @@ export async function arcanaRemember(
     if (parsed?.error) {
       return {
         ok: false,
-        error: parsed.error.message || "Arcana remember failed.",
+        error: parsed.error.message || `${toolName} failed.`,
       };
     }
     if (!res.ok || parsed?.result?.isError) {
-      return { ok: false, error: "Arcana rejected the memory." };
+      return { ok: false, error: `Arcana rejected ${toolName}.` };
     }
-    return { ok: true, data: null };
+    return { ok: true, data: parsed?.result?.content?.[0]?.text ?? "" };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return {
@@ -219,4 +211,77 @@ export async function arcanaRemember(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Persist a fact to the agent's brain (event-sourced) via `arcana_remember`. */
+export async function arcanaRemember(
+  workspace: string,
+  key: string,
+  text: string,
+): Promise<ArcanaResult<null>> {
+  const r = await mcpCall(workspace, key, "arcana_remember", {
+    text,
+    channel: "eve-studio",
+    tags: ["eve-studio", "evolve"],
+  });
+  return r.ok ? { ok: true, data: null } : { ok: false, error: r.error };
+}
+
+/** Read a brain note's body; missing note → empty string. */
+export async function arcanaBrainRead(
+  workspace: string,
+  key: string,
+  name: string,
+): Promise<ArcanaResult<string>> {
+  const r = await mcpCall(workspace, key, "arcana_brain_read", { name });
+  if (!r.ok) {
+    // A not-yet-created note reads as empty rather than an error.
+    if (/not found|does not exist|no such/i.test(r.error ?? "")) {
+      return { ok: true, data: "" };
+    }
+    return r;
+  }
+  try {
+    const j = JSON.parse(r.data ?? "") as { content?: string };
+    return { ok: true, data: String(j.content ?? "") };
+  } catch {
+    return { ok: true, data: r.data ?? "" };
+  }
+}
+
+/** List brain note names. */
+export async function arcanaBrainList(
+  workspace: string,
+  key: string,
+): Promise<ArcanaResult<string[]>> {
+  const r = await mcpCall(workspace, key, "arcana_brain_list", {});
+  if (!r.ok) {
+    return { ok: false, error: r.error };
+  }
+  try {
+    const j = JSON.parse(r.data ?? "") as {
+      notes?: { name?: string }[];
+      results?: { name?: string }[];
+    };
+    const names = (j.notes ?? j.results ?? [])
+      .map((n) => String(n.name ?? ""))
+      .filter(Boolean);
+    return { ok: true, data: names };
+  } catch {
+    return { ok: true, data: [] };
+  }
+}
+
+/** Create or overwrite a brain note. */
+export async function arcanaBrainWrite(
+  workspace: string,
+  key: string,
+  name: string,
+  content: string,
+): Promise<ArcanaResult<null>> {
+  const r = await mcpCall(workspace, key, "arcana_brain_write", {
+    name,
+    content,
+  });
+  return r.ok ? { ok: true, data: null } : { ok: false, error: r.error };
 }

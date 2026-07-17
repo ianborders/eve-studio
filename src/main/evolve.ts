@@ -16,10 +16,18 @@ import type {
   EvolveSuggestion,
   ProposalFileChange,
   ProposalKind,
+  QueuedProposal,
 } from "../shared/ipc";
 import { agentRoot, nested, readModelConfig } from "./agentAuthoring";
 import { readInstructions, writeInstructions } from "./agentFiles";
-import { arcanaRemember, arcanaTimeline } from "./arcana";
+import {
+  arcanaBrainList,
+  arcanaBrainRead,
+  arcanaBrainWrite,
+  arcanaRemember,
+  arcanaTimeline,
+} from "./arcana";
+import { brainFromConnection } from "./arcanaWire";
 import { vercelEnvNames, vercelEnvPull } from "./vercel";
 
 const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
@@ -608,58 +616,147 @@ function proposeToolFile(agentPath: string): string {
   return join(agentRoot(agentPath), "tools", `${PROPOSE_TOOL}.ts`);
 }
 
-const PROPOSE_TOOL_SOURCE = `import { defineTool } from "eve/tools";
+/** Brain note that backs a single queued proposal. */
+const PROPOSAL_NOTE_PREFIX = "eve-studio-proposal-";
+
+/**
+ * Generate the propose_change tool. When the agent has an Arcana brain, the
+ * tool queues each proposal into a brain note so Studio can pick it up even
+ * when the agent runs deployed (Slack, prod) with Studio not watching.
+ */
+function proposeToolSource(workspace: string, keyEnv: string): string {
+  return `import { defineTool } from "eve/tools";
 import { z } from "zod";
+
+const ARCANA_WORKSPACE = ${JSON.stringify(workspace)};
+const ARCANA_KEY_ENV = ${JSON.stringify(keyEnv)};
+const ARCANA_MCP = "https://mcp.arcana.kybernesis.ai/mcp";
+
+/** Queue a proposal into an Arcana brain note for Eve Studio to review. */
+async function queueProposal(proposal) {
+  const key = ARCANA_KEY_ENV ? process.env[ARCANA_KEY_ENV] : undefined;
+  if (!(key && ARCANA_WORKSPACE)) return false;
+  const headers = {
+    Authorization: "Bearer " + key,
+    "X-Kyberagent-Agent": ARCANA_WORKSPACE,
+    "Content-Type": "application/json",
+    Accept: "application/json, text/event-stream",
+  };
+  const rpc = (body, extra) =>
+    fetch(ARCANA_MCP, { method: "POST", headers: { ...headers, ...(extra || {}) }, body: JSON.stringify(body) });
+  const init = await rpc({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "eve", version: "1" } } });
+  if (!init.ok) return false;
+  const sid = init.headers.get("mcp-session-id");
+  await init.text();
+  const session = sid ? { "Mcp-Session-Id": sid } : undefined;
+  await rpc({ jsonrpc: "2.0", method: "notifications/initialized" }, session);
+  const res = await rpc({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "arcana_brain_write", arguments: { name: "${PROPOSAL_NOTE_PREFIX}" + proposal.id + ".md", content: JSON.stringify(proposal) } } }, session);
+  return res.ok;
+}
 
 /**
  * propose_change — let the agent ask to change itself. Managed by Eve Studio.
  *
  * @remarks
  * The agent cannot edit its own files. When the user asks it to change how it
- * works or what it knows, it calls this tool; Eve Studio catches the call and
- * shows the user a diff to approve. Do not hand-edit — toggle it from Studio's
+ * works or what it knows, it calls this tool; the proposal is queued for the
+ * operator to approve in Eve Studio. Do not hand-edit — toggle it from Studio's
  * Evolve tab.
  */
 export default defineTool({
   description:
     "Propose a change to yourself — a new skill, tool, or schedule, an edit to your instructions, or a fact to remember — when the user asks you to change how you work or what you know. You cannot edit your own files; the operator approves a diff in Eve Studio. Call this instead of claiming you already changed yourself.",
   inputSchema: z.object({
-    kind: z
-      .enum(["skill", "tool", "schedule", "instructions", "memory"])
-      .describe("What kind of change this is."),
+    kind: z.enum(["skill", "tool", "schedule", "instructions", "memory"]).describe("What kind of change this is."),
     title: z.string().describe("A short label for the change."),
-    intent: z
-      .string()
-      .describe(
-        "A concrete, first-person instruction describing exactly what to create or change, phrased as the user would ask for it."
-      ),
+    intent: z.string().describe("A concrete, first-person instruction describing exactly what to create or change, phrased as the user would ask for it."),
   }),
-  // biome-ignore lint/suspicious/useAwait: the operator applies the change in Studio; no async work here
-  async execute({ title }) {
-    return {
-      status: "pending_approval",
-      message: \`Proposed “\${title}”. It’s waiting for the user to approve it in Eve Studio.\`,
-    };
+  async execute({ kind, title, intent }) {
+    const proposal = { id: String(Date.now()), kind, title, intent, ts: new Date().toISOString(), status: "pending" };
+    const queued = await queueProposal(proposal).catch(() => false);
+    return queued
+      ? { status: "queued", message: "Proposed \\"" + title + "\\" — approve it in Eve Studio's Proposals inbox." }
+      : { status: "pending", message: "Proposed \\"" + title + "\\". Approve it in Eve Studio." };
   },
 });
 `;
+}
 
 /** Whether the opt-in propose_change tool is installed in the agent. */
 export function getProposeTool(agentPath: string): boolean {
   return existsSync(proposeToolFile(agentPath));
 }
 
-/** Install or remove the opt-in propose_change tool. */
+/** Install or remove the opt-in propose_change tool (brain-queue baked in). */
 export function setProposeTool(
   agentPath: string,
   enabled: boolean,
 ): { enabled: boolean } {
   const file = proposeToolFile(agentPath);
   if (enabled) {
+    const brain = brainFromConnection(agentPath);
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, PROPOSE_TOOL_SOURCE);
+    writeFileSync(
+      file,
+      proposeToolSource(brain.workspace ?? "", brain.envVar ?? ""),
+    );
   } else if (existsSync(file)) {
     rmSync(file);
   }
   return { enabled: getProposeTool(agentPath) };
+}
+
+/** Read pending proposals the agent queued into its brain (e.g. from Slack). */
+export async function listQueuedProposals(
+  brain: BrainCred,
+): Promise<QueuedProposal[]> {
+  const list = await arcanaBrainList(brain.workspace, brain.key);
+  if (!(list.ok && list.data)) {
+    return [];
+  }
+  const notes = list.data.filter((n) => n.startsWith(PROPOSAL_NOTE_PREFIX));
+  const out: QueuedProposal[] = [];
+  for (const note of notes) {
+    const rd = await arcanaBrainRead(brain.workspace, brain.key, note);
+    if (!(rd.ok && rd.data)) {
+      continue;
+    }
+    try {
+      const p = JSON.parse(rd.data) as Partial<QueuedProposal> & {
+        status?: string;
+      };
+      if (p.status === "pending" && p.intent && p.kind) {
+        out.push({
+          id: String(p.id ?? note),
+          kind: p.kind,
+          title: p.title ?? "Proposed change",
+          intent: p.intent,
+          ts: p.ts ?? "",
+          note,
+        });
+      }
+    } catch {
+      // skip a malformed note
+    }
+  }
+  out.sort((a, b) => (a.ts < b.ts ? 1 : -1));
+  return out;
+}
+
+/** Mark a queued proposal resolved so it stops showing in the inbox. */
+export async function resolveQueuedProposal(
+  brain: BrainCred,
+  note: string,
+): Promise<void> {
+  const rd = await arcanaBrainRead(brain.workspace, brain.key, note);
+  if (!(rd.ok && rd.data)) {
+    return;
+  }
+  try {
+    const p = JSON.parse(rd.data) as Record<string, unknown>;
+    p.status = "resolved";
+    await arcanaBrainWrite(brain.workspace, brain.key, note, JSON.stringify(p));
+  } catch {
+    // leave it as-is if unparseable
+  }
 }

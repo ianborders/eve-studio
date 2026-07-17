@@ -1,4 +1,4 @@
-import type { EvolveSuggestion } from "@shared/ipc";
+import type { EvolveSuggestion, QueuedProposal } from "@shared/ipc";
 import { useEffect, useState } from "react";
 import { KIND_LABEL, ProposalReview } from "../components/ProposalReview";
 import { useActiveStructure } from "../lib/useStructure";
@@ -30,13 +30,45 @@ export function Evolve(): JSX.Element {
     null,
   );
   const [proposeOn, setProposeOn] = useState<boolean | null>(null);
+  const [proposals, setProposals] = useState<QueuedProposal[]>([]);
+  const [activeNote, setActiveNote] = useState<string | null>(null);
+
+  const loadProposals = (): void => {
+    if (id) {
+      void window.studio.evolve
+        .listProposals(id)
+        .then((r) => setProposals(r.ok ? r.proposals : []));
+    }
+  };
 
   useEffect(() => {
     if (id) {
       setProposeOn(null);
+      setProposals([]);
+      setActiveNote(null);
       void window.studio.evolve.getProposeTool(id).then(setProposeOn);
+      void window.studio.evolve
+        .listProposals(id)
+        .then((r) => setProposals(r.ok ? r.proposals : []));
     }
   }, [id]);
+
+  // When a queued proposal is approved, mark it resolved + refresh the inbox.
+  useEffect(() => {
+    if (ev.phase === "done" && ev.result?.ok && activeNote && id) {
+      void window.studio.evolve.resolveProposal(id, activeNote).then(() => {
+        setActiveNote(null);
+        loadProposals();
+      });
+    }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: run on apply completion
+  }, [ev.phase, ev.result]);
+
+  const reviewProposal = (p: QueuedProposal): void => {
+    setActiveNote(p.note);
+    setIntent(p.intent);
+    void ev.draft(p.intent);
+  };
 
   const togglePropose = async (): Promise<void> => {
     if (!id || proposeOn === null) {
@@ -90,6 +122,43 @@ export function Evolve(): JSX.Element {
       <div className="flex-1 overflow-auto">
         {id ? (
           <div className="mx-auto max-w-2xl space-y-4 px-4 py-5">
+            {idle && proposals.length > 0 ? (
+              <div className="space-y-2 rounded-xl border border-accent/30 bg-accent/[0.04] p-3">
+                <div className="flex items-center gap-2">
+                  <Badge tone="accent">Proposals</Badge>
+                  <span className="text-2xs text-muted">
+                    the agent proposed {proposals.length} change
+                    {proposals.length > 1 ? "s" : ""} (e.g. from Slack) — review
+                    to apply
+                  </span>
+                </div>
+                {proposals.map((p) => (
+                  <div
+                    className="flex items-center gap-2 rounded-lg border border-border bg-surface p-2.5"
+                    key={p.note}
+                  >
+                    <Badge>{KIND_LABEL[p.kind]}</Badge>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium text-[13px] text-foreground">
+                        {p.title}
+                      </div>
+                      <div className="truncate text-2xs text-muted">
+                        {p.intent}
+                      </div>
+                    </div>
+                    <Button
+                      disabled={ev.phase === "drafting"}
+                      onClick={() => reviewProposal(p)}
+                      size="sm"
+                      variant="primary"
+                    >
+                      Review
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
             <p className="text-[13px] leading-relaxed text-muted">
               Tell the agent what to change about itself — a new skill, a
               scheduled job, or how it behaves. Studio drafts the change with
