@@ -942,8 +942,8 @@ export function registerIpc(): IpcHandles {
   );
   ipcMain.handle(
     IPC.evolveDraft,
-    (_e: IpcMainInvokeEvent, id: string, intent: string) =>
-      draftProposal(agentPathOf(id), intent),
+    (_e: IpcMainInvokeEvent, id: string, intent: string, timezone?: string) =>
+      draftProposal(agentPathOf(id), intent, timezone),
   );
   ipcMain.handle(
     IPC.evolveApply,

@@ -1,7 +1,8 @@
 import type { ProposalFileChange, ProposalKind } from "@shared/ipc";
+import { useEffect, useState } from "react";
 import type { UseEvolve } from "../lib/useEvolve";
 import { IconRocket } from "../ui/icons";
-import { Badge, Button, Spinner } from "../ui/kit";
+import { Badge, Button, Spinner, Textarea } from "../ui/kit";
 
 export const KIND_LABEL: Record<ProposalKind, string> = {
   memory: "Memory",
@@ -111,15 +112,44 @@ export function ProposalReview({
   doneLabel?: string;
 }): JSX.Element | null {
   const { phase, proposal, result } = ev;
+  const [editing, setEditing] = useState(false);
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [memoryEdit, setMemoryEdit] = useState("");
+
+  // Reset edit state whenever a new proposal arrives.
+  const proposalKey = proposal ? `${proposal.kind}:${proposal.title}` : null;
+  useEffect(() => {
+    setEditing(false);
+    setEdits({});
+    setMemoryEdit(proposal?.memory ?? "");
+  }, [proposalKey, proposal?.memory]);
 
   if (phase === "review" && proposal) {
+    const applyEdited = (): void => {
+      const edited = {
+        ...proposal,
+        memory: proposal.kind === "memory" ? memoryEdit : proposal.memory,
+        files: proposal.files.map((f) => ({
+          ...f,
+          after: edits[f.relPath] ?? f.after,
+        })),
+      };
+      void ev.apply(editing ? edited : proposal);
+    };
     return (
       <div className="space-y-3 rounded-xl border border-border bg-surface p-4">
         <div className="flex items-center gap-2">
           <Badge>{KIND_LABEL[proposal.kind]}</Badge>
-          <span className="font-medium text-[14px] text-foreground">
+          <span className="flex-1 font-medium text-[14px] text-foreground">
             {proposal.title}
           </span>
+          <Button
+            onClick={() => setEditing((e) => !e)}
+            size="sm"
+            variant="ghost"
+          >
+            {editing ? "Preview" : "Edit"}
+          </Button>
         </div>
         {proposal.rationale ? (
           <p className="text-[13px] leading-relaxed text-muted">
@@ -139,15 +169,50 @@ export function ProposalReview({
         ) : null}
 
         {proposal.kind === "memory" ? (
-          <div className="rounded-lg bg-canvas px-3 py-2 text-[13px] text-muted">
-            <span className="text-faint">Fact to remember: </span>
-            {proposal.memory}
-          </div>
+          editing ? (
+            <Textarea
+              className="w-full"
+              onChange={(e) => setMemoryEdit(e.target.value)}
+              rows={2}
+              value={memoryEdit}
+            />
+          ) : (
+            <div className="rounded-lg bg-canvas px-3 py-2 text-[13px] text-muted">
+              <span className="text-faint">Fact to remember: </span>
+              {proposal.memory}
+            </div>
+          )
         ) : (
           <div className="space-y-2">
-            {proposal.files.map((f) => (
-              <FileDiff file={f} key={f.relPath} />
-            ))}
+            {proposal.files.map((f) =>
+              editing ? (
+                <div
+                  className="overflow-hidden rounded-lg border border-border"
+                  key={f.relPath}
+                >
+                  <div className="border-border border-b bg-canvas px-3 py-1.5 font-mono text-2xs text-muted">
+                    {f.relPath}
+                  </div>
+                  <textarea
+                    className="no-drag block w-full resize-y bg-surface px-3 py-2 font-mono text-2xs text-text outline-none"
+                    onChange={(e) =>
+                      setEdits((prev) => ({
+                        ...prev,
+                        [f.relPath]: e.target.value,
+                      }))
+                    }
+                    rows={Math.min(
+                      18,
+                      (edits[f.relPath] ?? f.after).split("\n").length + 1,
+                    )}
+                    spellCheck={false}
+                    value={edits[f.relPath] ?? f.after}
+                  />
+                </div>
+              ) : (
+                <FileDiff file={f} key={f.relPath} />
+              ),
+            )}
           </div>
         )}
 
@@ -155,7 +220,7 @@ export function ProposalReview({
           <Button onClick={ev.reset} variant="ghost">
             Discard
           </Button>
-          <Button onClick={ev.apply} variant="primary">
+          <Button onClick={applyEdited} variant="primary">
             Approve &amp; apply
           </Button>
         </div>
