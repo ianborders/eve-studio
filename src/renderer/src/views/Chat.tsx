@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ProposalReview } from "../components/ProposalReview";
 import { type Block, projectEvents } from "../lib/events";
 import { looksLikeEvolveIntent } from "../lib/evolveIntent";
+import { useActiveStructure } from "../lib/useStructure";
 import { useEvolve } from "../lib/useEvolve";
 import { useStore } from "../store";
 import {
@@ -195,6 +196,8 @@ export function Chat(): JSX.Element {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const ev = useEvolve(activeAgentId);
+  const { structure } = useActiveStructure();
+  const model = structure?.model ?? null;
   const [evolveOpen, setEvolveOpen] = useState(false);
   const [evolveText, setEvolveText] = useState("");
 
@@ -391,8 +394,16 @@ export function Chat(): JSX.Element {
             )}
           </button>
         </div>
-        {projection.costUsd > 0 || projection.outputTokens > 0 ? (
+        {model || projection.costUsd > 0 || projection.outputTokens > 0 ? (
           <div className="mt-2.5 flex items-center gap-3 px-1">
+            {model ? (
+              <span
+                className="shrink-0 truncate font-spacemono text-[10px] tracking-wider text-faint"
+                title={`Model configured for this agent: ${model}`}
+              >
+                {model}
+              </span>
+            ) : null}
             <div className="h-1 flex-1 overflow-hidden rounded-full bg-black/[0.05]">
               <div
                 className="h-full rounded-full bg-text/25 transition-[width] duration-500"
@@ -401,11 +412,13 @@ export function Chat(): JSX.Element {
                 }}
               />
             </div>
-            <span className="shrink-0 font-spacemono text-[10px] uppercase tracking-wider text-faint">
-              ${projection.costUsd.toFixed(4)} ·{" "}
-              {projection.inputTokens.toLocaleString()}↑{" "}
-              {projection.outputTokens.toLocaleString()}↓
-            </span>
+            {projection.costUsd > 0 || projection.outputTokens > 0 ? (
+              <span className="shrink-0 font-spacemono text-[10px] uppercase tracking-wider text-faint">
+                ${projection.costUsd.toFixed(4)} ·{" "}
+                {projection.inputTokens.toLocaleString()}↑{" "}
+                {projection.outputTokens.toLocaleString()}↓
+              </span>
+            ) : null}
           </div>
         ) : null}
       </div>
