@@ -331,6 +331,17 @@ export function registerIpc(): IpcHandles {
     agents.stop(id);
     return agents.state(id);
   });
+  ipcMain.handle(
+    IPC.agentRestart,
+    async (_e: IpcMainInvokeEvent, id: string) => {
+      const a = store.getAgent(id);
+      if (!a) {
+        throw new Error("Unknown agent.");
+      }
+      await ensureNodeRuntime();
+      return agents.restart(id, a.path);
+    },
+  );
   ipcMain.handle(IPC.agentStatus, (_e: IpcMainInvokeEvent, id: string) =>
     agents.state(id),
   );

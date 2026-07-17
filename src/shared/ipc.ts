@@ -493,6 +493,7 @@ export const IPC = {
 
   agentStart: "agent:start",
   agentStop: "agent:stop",
+  agentRestart: "agent:restart",
   agentStatus: "agent:status",
   agentInfo: "agent:info",
   agentStructure: "agent:structure",

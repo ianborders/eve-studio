@@ -26,8 +26,6 @@ export interface UseEvolve {
  * both drive the same draft → review → apply → restart flow.
  */
 export function useEvolve(agentId: string | null): UseEvolve {
-  const startAgent = useStore((s) => s.startAgent);
-  const stopAgent = useStore((s) => s.stopAgent);
   const loadStructure = useStore((s) => s.loadStructure);
   const running = useStore((s) =>
     agentId ? s.runtime[agentId]?.status === "running" : false,
@@ -89,8 +87,12 @@ export function useEvolve(agentId: string | null): UseEvolve {
       return;
     }
     setRestarting(true);
-    await stopAgent(agentId);
-    await startAgent(agentId);
+    // Atomic restart in the main process (stop → wait for exit → start); the
+    // store's status subscription reflects the new state.
+    await window.studio.agents.restart(agentId);
+    // eve dev recompiles the manifest on restart — reload so newly authored
+    // schedules/tools/skills show up instead of a stale count.
+    void loadStructure(agentId, true);
     setRestarting(false);
   };
 
