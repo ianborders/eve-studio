@@ -64,6 +64,7 @@ export function SlackSetup({
     const r = await window.studio.agents.channelWrite(agentId, {
       kind: "slack",
       connector,
+      overwrite: true,
     });
     setWriting(false);
     if (r.ok || r.error?.includes("already exists")) {

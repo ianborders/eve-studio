@@ -13,6 +13,7 @@ import {
   type ChatStatusMessage,
   type ChannelAddInput,
   type ChannelItem,
+  type ChannelWiring,
   type ChannelWriteResult,
   type ChatTarget,
   type CliChunk,
@@ -194,6 +195,8 @@ const api = {
       name: string,
     ): Promise<{ ok: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC.channelDelete, id, name),
+    channelWiring: (id: string): Promise<ChannelWiring[]> =>
+      ipcRenderer.invoke(IPC.channelWiring, id),
     onStatusChanged: (cb: (s: AgentRuntimeState) => void): (() => void) =>
       sub(IPC.agentStatusChanged, cb),
     onLog: (cb: (m: LogChunk) => void): (() => void) => sub(IPC.agentLog, cb),

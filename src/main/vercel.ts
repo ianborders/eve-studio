@@ -417,6 +417,42 @@ export function vercelConnectCreate(
   return runAsync(agentPath, args, 120_000);
 }
 
+/** Map each Connect connector UID → the Vercel project ids it's attached to. */
+export async function vercelConnectProjectsMap(
+  agentPath: string,
+): Promise<Record<string, string[]>> {
+  const map: Record<string, string[]> = {};
+  const r = await runAsync(agentPath, [
+    "connect",
+    "list",
+    "--format",
+    "json",
+    "--non-interactive",
+    "--all-projects",
+  ]);
+  if (!r.ok) {
+    return map;
+  }
+  const start = r.output.indexOf("{");
+  const end = r.output.lastIndexOf("}");
+  if (start < 0 || end < start) {
+    return map;
+  }
+  try {
+    const parsed = JSON.parse(r.output.slice(start, end + 1)) as {
+      connectors?: { uid?: string; projects?: { id?: string }[] }[];
+    };
+    for (const c of parsed.connectors ?? []) {
+      if (c.uid) {
+        map[String(c.uid)] = (c.projects ?? []).map((p) => String(p.id));
+      }
+    }
+  } catch {
+    // leave the map as-is
+  }
+  return map;
+}
+
 /** Attach the current project to a connector (with an eve trigger path for channels). */
 export function vercelConnectAttach(
   agentPath: string,

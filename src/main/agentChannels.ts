@@ -1,6 +1,40 @@
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import type { ChannelAddInput, ChannelKind } from "../shared/ipc";
+
+/**
+ * The Vercel Connect UID each channel file references, so the UI can show which
+ * bot a channel is wired to (e.g. `slack/eve-health`) instead of just "added".
+ */
+export function channelConnectors(
+  agentPath: string,
+): { name: string; connector: string | null }[] {
+  const dir = join(agentRoot(agentPath), "channels");
+  let files: string[];
+  try {
+    files = readdirSync(dir).filter((f) => f.endsWith(".ts"));
+  } catch {
+    return [];
+  }
+  const re =
+    /connect\w*Credentials\(\s*(?:process\.env\.\w+\s*\?\?\s*)?["']([^"']+)["']/;
+  return files.map((f) => {
+    let connector: string | null = null;
+    try {
+      connector = re.exec(readFileSync(join(dir, f), "utf8"))?.[1] ?? null;
+    } catch {
+      // unreadable — leave connector null
+    }
+    return { name: f.slice(0, -3), connector };
+  });
+}
 
 function agentRoot(agentPath: string): string {
   return existsSync(join(agentPath, "agent"))
@@ -125,7 +159,7 @@ export default defineChannel({
   }
 
   const file = join(dir, `${input.kind}.ts`);
-  if (existsSync(file)) {
+  if (existsSync(file) && !input.overwrite) {
     throw new Error(`channels/${input.kind}.ts already exists.`);
   }
 

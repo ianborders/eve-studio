@@ -392,6 +392,16 @@ export interface ChannelAddInput {
   connector?: string;
   /** File name for a custom channel. */
   name?: string;
+  /** Rewrite the channel file if it already exists (e.g. to change the bot). */
+  overwrite?: boolean;
+}
+/** Live wiring for one channel: which connector it uses + attachment state. */
+export interface ChannelWiring {
+  name: string;
+  /** Connector UID the channel file references, if any. */
+  connector: string | null;
+  /** Whether that connector is attached to this agent's Vercel project. */
+  attached: boolean | null;
 }
 export interface ChannelWriteResult {
   ok: boolean;
@@ -527,6 +537,7 @@ export const IPC = {
   channelAdd: "agent:channelAdd",
   channelWrite: "agent:channelWrite",
   channelDelete: "agent:channelDelete",
+  channelWiring: "agent:channelWiring",
 
   vercelStatus: "vercel:status",
   vercelEnvLs: "vercel:envLs",
