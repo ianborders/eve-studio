@@ -20,7 +20,7 @@ import type {
 import { agentRoot, nested, readModelConfig } from "./agentAuthoring";
 import { readInstructions, writeInstructions } from "./agentFiles";
 import { arcanaRemember, arcanaTimeline } from "./arcana";
-import { vercelEnvPull } from "./vercel";
+import { vercelEnvNames, vercelEnvPull } from "./vercel";
 
 const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
 const DEFAULT_MODEL = "anthropic/claude-opus-4.8";
@@ -212,7 +212,7 @@ function inventory(agentPath: string): {
  * Env var NAMES (never values) that likely name a message target or connector —
  * so the model wires a schedule to the right channel-id var instead of guessing.
  */
-function targetEnvNames(agentPath: string): string[] {
+async function targetEnvNames(agentPath: string): Promise<string[]> {
   const names = new Set<string>();
   const re = /SLACK|DISCORD|TELEGRAM|TWILIO|CHANNEL|WEBHOOK|CONNECTOR/;
   for (const f of [".env", ".env.local"]) {
@@ -225,6 +225,13 @@ function targetEnvNames(agentPath: string): string[] {
       }
     } catch {
       // no such file
+    }
+  }
+  // Deployed vars live on Vercel (not local .env), so check there too — else a
+  // target that's already set gets wrongly flagged as a missing prereq.
+  for (const n of await vercelEnvNames(agentPath)) {
+    if (re.test(n)) {
+      names.add(n);
     }
   }
   return [...names];
@@ -258,7 +265,7 @@ Messaging a provider (Slack/Discord/etc.) from a schedule:
   The channel import path is relative to the schedules dir ("../channels/<name>.js", keep the .js). "message" is an instruction to the agent, not the literal text to send.
 - Target env var: REUSE an existing Slack channel-id var from "Relevant env vars" if there is one; otherwise use the single shared name SLACK_NUDGE_CHANNEL. NEVER invent a new per-task/per-reminder variable name (not SLACK_TESTOSTERONE_CHANNEL etc.) — one target var serves all reminders.
 - If NO channel for the provider exists, still produce the schedule, but add a prereq: "Add a <provider> channel in Integrations (a channel, not an MCP connection)."
-- If the target var isn't set yet, add a prereq naming that exact var and where to set it: "Set <VAR> to your Slack member id (U…) or a channel id (C…) — use the Slack channel's Set up → Target step, or the Environment tab."
+- Only if the target var is NOT in the "Relevant env vars" list above, add a prereq of the exact form "Set <VAR> to your Slack member id (U…) or a channel id (C…)" — nothing more (the UI turns that into an inline field). If the var IS listed, it's already set: use it, no prereq.
 
 Rules:
 - Prefer "memory" for facts and "instructions" only for behavior.
@@ -292,12 +299,13 @@ export async function draftProposal(
   const prefix = nested(agentPath);
   const inv = inventory(agentPath);
   const instructions = readInstructions(agentPath).content;
+  const envNames = await targetEnvNames(agentPath);
   const user = `Path prefix for every relPath: ${JSON.stringify(prefix)}
 Existing tools: ${inv.tools.join(", ") || "(none)"}
 Existing skills: ${inv.skills.join(", ") || "(none)"}
 Existing schedules: ${inv.schedules.join(", ") || "(none)"}
 Existing channels: ${inv.channels.join(", ") || "(none)"}
-Relevant env vars (names only, for message targets): ${targetEnvNames(agentPath).join(", ") || "(none)"}
+Relevant env vars (names only, for message targets — these ARE set, reuse them and do NOT flag them as prereqs): ${envNames.join(", ") || "(none)"}
 User's timezone: ${timezone || "unknown"} — interpret any local clock time (e.g. "9am") in THIS zone and convert to the equivalent UTC cron; state the local time + zone and the UTC in the TSDoc.
 
 Current instructions.md:

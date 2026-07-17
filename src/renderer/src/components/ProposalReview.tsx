@@ -2,7 +2,74 @@ import type { ProposalFileChange, ProposalKind } from "@shared/ipc";
 import { useEffect, useState } from "react";
 import type { UseEvolve } from "../lib/useEvolve";
 import { IconRocket } from "../ui/icons";
-import { Badge, Button, Spinner, Textarea } from "../ui/kit";
+import { Badge, Button, Input, Spinner, Textarea } from "../ui/kit";
+
+/**
+ * A prereq line. When it's a "Set VAR to …" env-var prereq, render an inline
+ * field that saves the value to Vercel (production) — so the user can resolve
+ * it right here instead of hunting for a buried env editor.
+ */
+function Prereq({
+  text,
+  agentId,
+}: {
+  text: string;
+  agentId: string | null;
+}): JSX.Element {
+  const varName = /Set\s+([A-Z][A-Z0-9_]{2,})\s+to/.exec(text)?.[1];
+  const [value, setValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  if (!(varName && agentId)) {
+    return <li>{text}</li>;
+  }
+
+  const save = async (): Promise<void> => {
+    setSaving(true);
+    setErr(null);
+    const r = await window.studio.vercel.envAdd(
+      agentId,
+      varName,
+      value.trim(),
+      "production",
+    );
+    setSaving(false);
+    if (r.ok || r.output.includes("already")) {
+      setSaved(true);
+    } else {
+      setErr(r.output || "Couldn't save.");
+    }
+  };
+
+  return (
+    <li>
+      {text}
+      {saved ? (
+        <span className="ml-1 font-medium text-success">saved ✓</span>
+      ) : (
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <Input
+            className="h-7 flex-1 font-mono text-2xs"
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="U012ABC or C012ABC"
+            value={value}
+          />
+          <Button
+            disabled={saving || !value.trim()}
+            onClick={save}
+            size="sm"
+            variant="primary"
+          >
+            {saving ? "Saving…" : "Set"}
+          </Button>
+        </div>
+      )}
+      {err ? <div className="mt-1 text-danger">{err}</div> : null}
+    </li>
+  );
+}
 
 export const KIND_LABEL: Record<ProposalKind, string> = {
   memory: "Memory",
@@ -160,9 +227,9 @@ export function ProposalReview({
         {proposal.prereqs.length > 0 ? (
           <div className="rounded-lg bg-warn/10 px-3 py-2 text-2xs text-warn">
             <div className="mb-1 font-medium">Needs setup first:</div>
-            <ul className="list-disc space-y-0.5 pl-4">
+            <ul className="list-disc space-y-1.5 pl-4">
               {proposal.prereqs.map((p) => (
-                <li key={p}>{p}</li>
+                <Prereq agentId={ev.agentId} key={p} text={p} />
               ))}
             </ul>
           </div>
