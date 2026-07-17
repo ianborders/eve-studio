@@ -32,12 +32,30 @@ export function Evolve(): JSX.Element {
   const [proposeOn, setProposeOn] = useState<boolean | null>(null);
   const [proposals, setProposals] = useState<QueuedProposal[]>([]);
   const [activeNote, setActiveNote] = useState<string | null>(null);
+  const [dismissing, setDismissing] = useState<string | null>(null);
 
   const loadProposals = (): void => {
     if (id) {
       void window.studio.evolve
         .listProposals(id)
         .then((r) => setProposals(r.ok ? r.proposals : []));
+    }
+  };
+
+  // Turn a proposal down without applying it. Marks the brain note resolved so
+  // it stops coming back — otherwise the only way out of the inbox is to
+  // approve it.
+  const dismissProposal = async (p: QueuedProposal): Promise<void> => {
+    if (!id) {
+      return;
+    }
+    setDismissing(p.note);
+    await window.studio.evolve.resolveProposal(id, p.note);
+    setProposals((list) => list.filter((x) => x.note !== p.note));
+    setDismissing(null);
+    if (activeNote === p.note) {
+      setActiveNote(null);
+      ev.reset();
     }
   };
 
@@ -174,6 +192,15 @@ export function Evolve(): JSX.Element {
                       variant="primary"
                     >
                       Review
+                    </Button>
+                    <Button
+                      disabled={dismissing === p.note}
+                      onClick={() => void dismissProposal(p)}
+                      size="sm"
+                      title="Turn this down — the agent won't ask again"
+                      variant="ghost"
+                    >
+                      {dismissing === p.note ? <Spinner /> : "Dismiss"}
                     </Button>
                   </div>
                 ))}
