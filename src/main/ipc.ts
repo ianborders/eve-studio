@@ -64,7 +64,11 @@ import {
 import { checkHealth, getAgentInfo, type SessionConn } from "./eveSession";
 import * as store from "./store";
 import { readStructure } from "./structure";
-import { deleteChannelFile, writeChannel } from "./agentChannels";
+import {
+  channelConnectors,
+  deleteChannelFile,
+  writeChannel,
+} from "./agentChannels";
 import {
   openConnectExternal,
   openConnector,
@@ -74,6 +78,7 @@ import {
   vercelConnectAttach,
   vercelConnectCreate,
   vercelConnectList,
+  vercelConnectProjectsMap,
   vercelEnvAdd,
   vercelEnvLs,
   vercelEnvPull,
@@ -505,6 +510,22 @@ export function registerIpc(): IpcHandles {
           error: err instanceof Error ? err.message : String(err),
         };
       }
+    },
+  );
+  ipcMain.handle(
+    IPC.channelWiring,
+    async (_e: IpcMainInvokeEvent, id: string) => {
+      const path = agentPathOf(id);
+      const projectId = vercelStatus(path).projectId ?? "";
+      const chans = channelConnectors(path);
+      const map = await vercelConnectProjectsMap(path);
+      return chans.map((c) => ({
+        name: c.name,
+        connector: c.connector,
+        attached: c.connector
+          ? (map[c.connector]?.includes(projectId) ?? false)
+          : null,
+      }));
     },
   );
 

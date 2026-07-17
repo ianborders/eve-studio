@@ -1,4 +1,4 @@
-import type { ChannelItem, ChannelKind } from "@shared/ipc";
+import type { ChannelItem, ChannelKind, ChannelWiring } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
 import { ConnectorPicker } from "../components/ConnectorPicker";
 import { SlackSetup } from "../components/SlackSetup";
@@ -13,6 +13,7 @@ import {
   List,
   Modal,
   Spinner,
+  StatusDot,
   ViewHeader,
   cx,
 } from "../ui/kit";
@@ -342,6 +343,7 @@ function AddChannelModal({
 export function Channels(): JSX.Element {
   const id = useStore((s) => s.activeAgentId);
   const [channels, setChannels] = useState<ChannelItem[] | null>(null);
+  const [wiring, setWiring] = useState<ChannelWiring[]>([]);
   const [loading, setLoading] = useState(false);
   const [add, setAdd] = useState<Cat | null>(null);
   const [remove, setRemove] = useState<ChannelItem | null>(null);
@@ -359,6 +361,12 @@ export function Channels(): JSX.Element {
     } finally {
       setLoading(false);
     }
+    // Wiring (connector + attachment) needs a Vercel call — load it separately
+    // so the list renders immediately and the badges fill in when ready.
+    window.studio.agents
+      .channelWiring(id)
+      .then(setWiring)
+      .catch(() => setWiring([]));
   }, [id]);
 
   useEffect(() => {
@@ -433,20 +441,37 @@ export function Channels(): JSX.Element {
                       color={cat?.color ?? "#666"}
                       className="h-8 w-8 text-[13px]"
                     />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-medium text-text">
-                          {cat?.label ?? c.name}
-                        </span>
-                        <Badge>added</Badge>
-                      </div>
-                      <div className="mt-0.5 font-mono text-2xs text-faint">
-                        channels/{c.name}.ts
-                        {c.urlPath
-                          ? ` · ${c.method ?? "POST"} ${c.urlPath}`
-                          : ""}
-                      </div>
-                    </div>
+                    {(() => {
+                      const w = wiring.find((x) => x.name === c.name);
+                      return (
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[13px] font-medium text-text">
+                              {cat?.label ?? c.name}
+                            </span>
+                            {w?.attached === true ? (
+                              <Badge tone="success">
+                                <StatusDot status="running" />
+                                connected to this agent
+                              </Badge>
+                            ) : w?.attached === false ? (
+                              <Badge tone="warn">
+                                not attached — finish setup
+                              </Badge>
+                            ) : (
+                              <Badge>added</Badge>
+                            )}
+                          </div>
+                          <div className="mt-0.5 font-mono text-2xs text-faint">
+                            channels/{c.name}.ts
+                            {w?.connector ? ` · bot ${w.connector}` : ""}
+                            {c.urlPath
+                              ? ` · ${c.method ?? "POST"} ${c.urlPath}`
+                              : ""}
+                          </div>
+                        </div>
+                      );
+                    })()}
                     {(c.kind ?? c.name) === "slack" ? (
                       <Button
                         onClick={() => setSlackSetup(true)}
