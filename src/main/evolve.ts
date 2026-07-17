@@ -1,3 +1,4 @@
+import { del as blobDel, list as blobList } from "@vercel/blob";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -633,8 +634,65 @@ function proposeToolFile(agentPath: string): string {
   return join(agentRoot(agentPath), "tools", `${PROPOSE_TOOL}.ts`);
 }
 
-/** Brain note that backs a single queued proposal. */
+/** Brain note that backs a single queued proposal (Arcana backend). */
 const PROPOSAL_NOTE_PREFIX = "eve-studio-proposal-";
+
+/** Blob pathname prefix that backs queued proposals (default backend). */
+const PROPOSAL_BLOB_PREFIX = "eve-studio-proposals/";
+
+/** Shared by both backends' generated sources, so they can't drift apart. */
+const PROPOSE_TOOL_DESCRIPTION =
+  "Propose a change to yourself — a new skill, tool, or schedule, an edit to your instructions, or a fact to remember — when the user asks you to change how you work or what you know. You cannot edit your own files; the operator approves a diff in Eve Studio. Call this instead of claiming you already changed yourself.";
+
+const PROPOSE_TOOL_DOC = `/**
+ * propose_change — let the agent ask to change itself. Managed by Eve Studio.
+ *
+ * @remarks
+ * The agent cannot edit its own files. When the user asks it to change how it
+ * works or what it knows, it calls this tool; the proposal is queued for the
+ * operator to approve in Eve Studio. Do not hand-edit — toggle it from Studio's
+ * Evolve tab.
+ */`;
+
+/**
+ * Make sure the agent can compile a Blob-backed propose_change tool.
+ *
+ * @remarks
+ * Best-effort: adds `@vercel/blob` to the agent's dependencies and installs it
+ * when absent. Without this the generated tool's import fails to build in an
+ * agent that has never used Blob.
+ */
+function ensureBlobDependency(agentPath: string): void {
+  const pkgPath = join(agentPath, "package.json");
+  if (!existsSync(pkgPath)) {
+    return;
+  }
+  try {
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    if (
+      pkg.dependencies?.["@vercel/blob"] ||
+      pkg.devDependencies?.["@vercel/blob"]
+    ) {
+      return;
+    }
+    const pm = existsSync(join(agentPath, "pnpm-lock.yaml"))
+      ? "pnpm"
+      : existsSync(join(agentPath, "yarn.lock"))
+        ? "yarn"
+        : "npm";
+    spawnSync(pm, ["add", "@vercel/blob"], {
+      cwd: agentPath,
+      encoding: "utf8",
+      timeout: 120_000,
+      env: { ...process.env, NO_COLOR: "1" },
+    });
+  } catch {
+    // leave the agent's manifest alone if it isn't parseable
+  }
+}
 
 /**
  * Generate the propose_change tool. When the agent has an Arcana brain, the
@@ -714,18 +772,10 @@ async function queueProposal(proposal: Proposal): Promise<boolean> {
   return res.ok;
 }
 
-/**
- * propose_change — let the agent ask to change itself. Managed by Eve Studio.
- *
- * @remarks
- * The agent cannot edit its own files. When the user asks it to change how it
- * works or what it knows, it calls this tool; the proposal is queued for the
- * operator to approve in Eve Studio. Do not hand-edit — toggle it from Studio's
- * Evolve tab.
- */
+${PROPOSE_TOOL_DOC}
 export default defineTool({
   description:
-    "Propose a change to yourself — a new skill, tool, or schedule, an edit to your instructions, or a fact to remember — when the user asks you to change how you work or what you know. You cannot edit your own files; the operator approves a diff in Eve Studio. Call this instead of claiming you already changed yourself.",
+    ${JSON.stringify(PROPOSE_TOOL_DESCRIPTION)},
   inputSchema: z.object({
     kind: z
       .enum(["skill", "tool", "schedule", "instructions", "memory"])
@@ -753,8 +803,89 @@ export default defineTool({
           message: \`Proposed "\${title}" — approve it in Eve Studio's Proposals inbox.\`,
         }
       : {
-          status: "pending",
-          message: \`Proposed "\${title}". Approve it in Eve Studio.\`,
+          status: "failed",
+          message: \`I could not queue "\${title}" — nothing is waiting for approval. Ask the operator to make this change in Eve Studio directly.\`,
+        };
+  },
+});
+`;
+}
+
+/**
+ * Generate the propose_change tool backed by Vercel Blob — the default when the
+ * agent has no Arcana brain.
+ *
+ * @remarks
+ * The write needs no credential in code: on Vercel, `put` resolves the ambient
+ * OIDC token, the same way the agent's other Blob tools already work. Studio
+ * reads these back with a `BLOB_READ_WRITE_TOKEN`, since it runs outside Vercel
+ * and OIDC is not accepted there. Proposals are private blobs — an intent string
+ * is not something to publish at a guessable URL.
+ */
+function proposeToolBlobSource(): string {
+  return `import { put } from "@vercel/blob";
+import { defineTool } from "eve/tools";
+import { z } from "zod";
+
+const PROPOSAL_PREFIX = ${JSON.stringify(PROPOSAL_BLOB_PREFIX)};
+
+interface Proposal {
+  id: string;
+  intent: string;
+  kind: string;
+  status: string;
+  title: string;
+  ts: string;
+}
+
+/** Queue a proposal as a private blob for Eve Studio to review. */
+async function queueProposal(proposal: Proposal): Promise<boolean> {
+  const blob = await put(
+    \`\${PROPOSAL_PREFIX}\${proposal.id}.json\`,
+    JSON.stringify(proposal),
+    {
+      access: "private",
+      contentType: "application/json",
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    }
+  );
+  return Boolean(blob.url);
+}
+
+${PROPOSE_TOOL_DOC}
+export default defineTool({
+  description:
+    ${JSON.stringify(PROPOSE_TOOL_DESCRIPTION)},
+  inputSchema: z.object({
+    kind: z
+      .enum(["skill", "tool", "schedule", "instructions", "memory"])
+      .describe("What kind of change this is."),
+    title: z.string().describe("A short label for the change."),
+    intent: z
+      .string()
+      .describe(
+        "A concrete, first-person instruction describing exactly what to create or change, phrased as the user would ask for it."
+      ),
+  }),
+  async execute({ kind, title, intent }) {
+    const proposal: Proposal = {
+      id: String(Date.now()),
+      kind,
+      title,
+      intent,
+      ts: new Date().toISOString(),
+      status: "pending",
+    };
+    const queued = await queueProposal(proposal).catch(() => false);
+    return queued
+      ? {
+          status: "queued",
+          message: \`Proposed "\${title}" — approve it in Eve Studio's Proposals inbox.\`,
+        }
+      : {
+          status: "failed",
+          message: \`I could not queue "\${title}" — nothing is waiting for approval. Ask the operator to make this change in Eve Studio directly.\`,
         };
   },
 });
@@ -766,67 +897,135 @@ export function getProposeTool(agentPath: string): boolean {
   return existsSync(proposeToolFile(agentPath));
 }
 
-/** Install or remove the opt-in propose_change tool (brain-queue baked in). */
+/**
+ * Install or remove the opt-in propose_change tool.
+ *
+ * @remarks
+ * The queue backend is baked in at authoring time: an Arcana brain when the
+ * agent has one, else Vercel Blob. Blob is the default because every eve agent
+ * deploys to Vercel, so the loop works with no third-party account.
+ */
 export function setProposeTool(
   agentPath: string,
   enabled: boolean,
-): { enabled: boolean } {
+): { enabled: boolean; backend?: "arcana" | "blob" } {
   const file = proposeToolFile(agentPath);
-  if (enabled) {
-    const brain = brainFromConnection(agentPath);
-    mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(
-      file,
-      proposeToolSource(brain.workspace ?? "", brain.envVar ?? ""),
-    );
-  } else if (existsSync(file)) {
-    rmSync(file);
+  if (!enabled) {
+    if (existsSync(file)) {
+      rmSync(file);
+    }
+    return { enabled: getProposeTool(agentPath) };
   }
-  return { enabled: getProposeTool(agentPath) };
+  const brain = brainFromConnection(agentPath);
+  const useArcana = Boolean(brain.workspace && brain.envVar);
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(
+    file,
+    useArcana
+      ? proposeToolSource(brain.workspace ?? "", brain.envVar ?? "")
+      : proposeToolBlobSource(),
+  );
+  if (!useArcana) {
+    ensureBlobDependency(agentPath);
+  }
+  return {
+    enabled: getProposeTool(agentPath),
+    backend: useArcana ? "arcana" : "blob",
+  };
 }
 
-/** Read pending proposals the agent queued into its brain (e.g. from Slack). */
-export async function listQueuedProposals(
-  brain: BrainCred,
-): Promise<QueuedProposal[]> {
+/**
+ * Where an agent's queued proposals live.
+ *
+ * @remarks
+ * Blob is the default and needs no third-party account; Arcana is used when the
+ * agent already has a brain wired, so existing setups keep working.
+ */
+export type ProposalQueue =
+  { kind: "arcana"; brain: BrainCred } | { kind: "blob"; token: string };
+
+/** Shape a stored proposal into an inbox row, or null if it isn't pending. */
+function toQueuedProposal(raw: string, note: string): QueuedProposal | null {
+  try {
+    const p = JSON.parse(raw) as Partial<QueuedProposal> & { status?: string };
+    if (p.status !== "pending" || !(p.intent && p.kind)) {
+      return null;
+    }
+    return {
+      id: String(p.id ?? note),
+      kind: p.kind,
+      title: p.title ?? "Proposed change",
+      intent: p.intent,
+      ts: p.ts ?? "",
+      note,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function listFromArcana(brain: BrainCred): Promise<QueuedProposal[]> {
   const list = await arcanaBrainList(brain.workspace, brain.key);
   if (!(list.ok && list.data)) {
     return [];
   }
-  const notes = list.data.filter((n) => n.startsWith(PROPOSAL_NOTE_PREFIX));
   const out: QueuedProposal[] = [];
-  for (const note of notes) {
+  for (const note of list.data.filter((n) =>
+    n.startsWith(PROPOSAL_NOTE_PREFIX),
+  )) {
     const rd = await arcanaBrainRead(brain.workspace, brain.key, note);
-    if (!(rd.ok && rd.data)) {
-      continue;
-    }
-    try {
-      const p = JSON.parse(rd.data) as Partial<QueuedProposal> & {
-        status?: string;
-      };
-      if (p.status === "pending" && p.intent && p.kind) {
-        out.push({
-          id: String(p.id ?? note),
-          kind: p.kind,
-          title: p.title ?? "Proposed change",
-          intent: p.intent,
-          ts: p.ts ?? "",
-          note,
-        });
+    if (rd.ok && rd.data) {
+      const p = toQueuedProposal(rd.data, note);
+      if (p) {
+        out.push(p);
       }
-    } catch {
-      // skip a malformed note
     }
   }
+  return out;
+}
+
+async function listFromBlob(token: string): Promise<QueuedProposal[]> {
+  const res = await blobList({ prefix: PROPOSAL_BLOB_PREFIX, token });
+  const out: QueuedProposal[] = [];
+  for (const b of res.blobs) {
+    // Proposals are private blobs, so the content needs the token too.
+    const r = await fetch(b.url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!r.ok) {
+      continue;
+    }
+    const p = toQueuedProposal(await r.text(), b.url);
+    if (p) {
+      out.push(p);
+    }
+  }
+  return out;
+}
+
+/** Read pending proposals the agent queued while deployed (e.g. from Slack). */
+export async function listQueuedProposals(
+  queue: ProposalQueue,
+): Promise<QueuedProposal[]> {
+  const out =
+    queue.kind === "arcana"
+      ? await listFromArcana(queue.brain)
+      : await listFromBlob(queue.token);
   out.sort((a, b) => (a.ts < b.ts ? 1 : -1));
   return out;
 }
 
-/** Mark a queued proposal resolved so it stops showing in the inbox. */
+/** Resolve a queued proposal so it stops showing in the inbox. */
 export async function resolveQueuedProposal(
-  brain: BrainCred,
+  queue: ProposalQueue,
   note: string,
 ): Promise<void> {
+  if (queue.kind === "blob") {
+    // Nothing to preserve once it's applied or turned down — drop the blob.
+    await blobDel(note, { token: queue.token }).catch(() => undefined);
+    return;
+  }
+  const { brain } = queue;
   const rd = await arcanaBrainRead(brain.workspace, brain.key, note);
   if (!(rd.ok && rd.data)) {
     return;
