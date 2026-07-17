@@ -19,7 +19,11 @@ import type {
   QueuedProposal,
 } from "../shared/ipc";
 import { agentRoot, nested, readModelConfig } from "./agentAuthoring";
-import { readInstructions, writeInstructions } from "./agentFiles";
+import {
+  alternateInstructionsForm,
+  readInstructions,
+  writeInstructions,
+} from "./agentFiles";
 import {
   arcanaBrainList,
   arcanaBrainRead,
@@ -252,8 +256,9 @@ const SYSTEM = `You are the authoring engine inside Eve Studio. You turn a plain
 Route the request to exactly one kind:
 - "memory": a durable FACT about the user (preferences, context). Belongs in the agent's brain, not its code. Return no files.
 - "instructions": a stable change to BEHAVIOR, policy, or persona. Patch instructions.md.
-- "skill": a reusable procedure or body of knowledge. Create <prefix>skills/<slug>/SKILL.md with YAML frontmatter (name, description) then the guidance body. The description is the routing hint.
-- "tool": a typed action the agent calls. Create <prefix>tools/<snake_name>.ts using defineTool from "eve/tools" and a zod inputSchema. Relative imports need a .js extension.
+- "skill": a reusable procedure or body of knowledge. Create <prefix>skills/<slug>/SKILL.md with YAML frontmatter carrying ONLY a description key, then the guidance body. The name comes from the folder path — never add a name field. The description is the routing hint.
+- "tool": a typed action the agent calls. Create <prefix>tools/<snake_name>.ts with a default-exported defineTool from "eve/tools", a zod inputSchema, and an async execute. Relative imports need a .js extension. TypeScript is strict — annotate every parameter, never leave an implicit any.
+  Gate the tool if it does anything sensitive, irreversible, external-side-effecting, financial, or regulated (deleting, sending, posting, paying, calling a third party): import { always } from "eve/tools/approval" and set approval: always(), so the user confirms each call. Use once() only for repeat-safe actions.
 - "schedule": recurring proactive work (a cron that wakes the agent). Create <prefix>schedules/<slug>.ts using defineSchedule from "eve/schedules".
 
 Cron & time zones:
@@ -506,6 +511,16 @@ function assertWritable(agentPath: string, relPath: string): void {
   if (!ok) {
     throw new Error(`Refusing to write a protected path: ${relPath}`);
   }
+  // Authoring instructions.md next to an instructions.ts (or instructions/ dir)
+  // is an eve build error — refuse rather than break the agent's build.
+  if (fromRoot === "instructions.md") {
+    const other = alternateInstructionsForm(agentPath);
+    if (other) {
+      throw new Error(
+        `This agent's prompt lives in ${other}, which Studio can't edit — adding instructions.md alongside it would break the build. Edit ${other} by hand.`,
+      );
+    }
+  }
 }
 
 /** Best-effort: commit the written files so the change has a revert point. */
@@ -634,25 +649,68 @@ const ARCANA_WORKSPACE = ${JSON.stringify(workspace)};
 const ARCANA_KEY_ENV = ${JSON.stringify(keyEnv)};
 const ARCANA_MCP = "https://mcp.arcana.kybernesis.ai/mcp";
 
+interface Proposal {
+  id: string;
+  intent: string;
+  kind: string;
+  status: string;
+  title: string;
+  ts: string;
+}
+
 /** Queue a proposal into an Arcana brain note for Eve Studio to review. */
-async function queueProposal(proposal) {
+async function queueProposal(proposal: Proposal): Promise<boolean> {
   const key = ARCANA_KEY_ENV ? process.env[ARCANA_KEY_ENV] : undefined;
-  if (!(key && ARCANA_WORKSPACE)) return false;
-  const headers = {
-    Authorization: "Bearer " + key,
+  if (!(key && ARCANA_WORKSPACE)) {
+    return false;
+  }
+  const headers: Record<string, string> = {
+    Authorization: \`Bearer \${key}\`,
     "X-Kyberagent-Agent": ARCANA_WORKSPACE,
     "Content-Type": "application/json",
     Accept: "application/json, text/event-stream",
   };
-  const rpc = (body, extra) =>
-    fetch(ARCANA_MCP, { method: "POST", headers: { ...headers, ...(extra || {}) }, body: JSON.stringify(body) });
-  const init = await rpc({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "eve", version: "1" } } });
-  if (!init.ok) return false;
+  const rpc = (
+    body: unknown,
+    extra?: Record<string, string>
+  ): Promise<Response> =>
+    fetch(ARCANA_MCP, {
+      method: "POST",
+      headers: { ...headers, ...(extra ?? {}) },
+      body: JSON.stringify(body),
+    });
+  const init = await rpc({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "initialize",
+    params: {
+      protocolVersion: "2025-06-18",
+      capabilities: {},
+      clientInfo: { name: "eve", version: "1" },
+    },
+  });
+  if (!init.ok) {
+    return false;
+  }
   const sid = init.headers.get("mcp-session-id");
   await init.text();
   const session = sid ? { "Mcp-Session-Id": sid } : undefined;
   await rpc({ jsonrpc: "2.0", method: "notifications/initialized" }, session);
-  const res = await rpc({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "arcana_brain_write", arguments: { name: "${PROPOSAL_NOTE_PREFIX}" + proposal.id + ".md", content: JSON.stringify(proposal) } } }, session);
+  const res = await rpc(
+    {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: {
+        name: "arcana_brain_write",
+        arguments: {
+          name: \`${PROPOSAL_NOTE_PREFIX}\${proposal.id}.md\`,
+          content: JSON.stringify(proposal),
+        },
+      },
+    },
+    session
+  );
   return res.ok;
 }
 
@@ -669,16 +727,35 @@ export default defineTool({
   description:
     "Propose a change to yourself — a new skill, tool, or schedule, an edit to your instructions, or a fact to remember — when the user asks you to change how you work or what you know. You cannot edit your own files; the operator approves a diff in Eve Studio. Call this instead of claiming you already changed yourself.",
   inputSchema: z.object({
-    kind: z.enum(["skill", "tool", "schedule", "instructions", "memory"]).describe("What kind of change this is."),
+    kind: z
+      .enum(["skill", "tool", "schedule", "instructions", "memory"])
+      .describe("What kind of change this is."),
     title: z.string().describe("A short label for the change."),
-    intent: z.string().describe("A concrete, first-person instruction describing exactly what to create or change, phrased as the user would ask for it."),
+    intent: z
+      .string()
+      .describe(
+        "A concrete, first-person instruction describing exactly what to create or change, phrased as the user would ask for it."
+      ),
   }),
   async execute({ kind, title, intent }) {
-    const proposal = { id: String(Date.now()), kind, title, intent, ts: new Date().toISOString(), status: "pending" };
+    const proposal: Proposal = {
+      id: String(Date.now()),
+      kind,
+      title,
+      intent,
+      ts: new Date().toISOString(),
+      status: "pending",
+    };
     const queued = await queueProposal(proposal).catch(() => false);
     return queued
-      ? { status: "queued", message: "Proposed \\"" + title + "\\" — approve it in Eve Studio's Proposals inbox." }
-      : { status: "pending", message: "Proposed \\"" + title + "\\". Approve it in Eve Studio." };
+      ? {
+          status: "queued",
+          message: \`Proposed "\${title}" — approve it in Eve Studio's Proposals inbox.\`,
+        }
+      : {
+          status: "pending",
+          message: \`Proposed "\${title}". Approve it in Eve Studio.\`,
+        };
   },
 });
 `;

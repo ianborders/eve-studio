@@ -480,12 +480,27 @@ export async function vercelConnectProjectsMap(
   return map;
 }
 
-/** Attach the current project to a connector (with an eve trigger path for channels). */
-export function vercelConnectAttach(
+/**
+ * Attach the current project to a connector (with an eve trigger path for channels).
+ *
+ * When re-pointing a trigger, the Connect docs prescribe a detach → attach dance:
+ * `create --triggers` provisions a trigger at the default Connect path (which eve
+ * doesn't serve), so we detach it first, then re-attach at `/eve/v1/<svc>`. The
+ * detach is best-effort (project-scoped, harmless if nothing is attached) which
+ * also makes re-running setup idempotent instead of stacking a stale trigger.
+ */
+export async function vercelConnectAttach(
   agentPath: string,
   connector: string,
   triggerPath?: string,
 ): Promise<CmdResult> {
+  if (triggerPath) {
+    await runAsync(
+      agentPath,
+      ["connect", "detach", connector, "--yes"],
+      60_000,
+    );
+  }
   const args = ["connect", "attach", connector, "--yes"];
   if (triggerPath) {
     args.push("--triggers", "--trigger-path", triggerPath);

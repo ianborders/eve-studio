@@ -48,7 +48,15 @@ function nested(agentPath: string): string {
 /** Vercel-Connect-backed platform channels (no secrets to manage). */
 const CONNECT: Record<
   string,
-  { factory: string; mod: string; cred: string; service: string }
+  {
+    factory: string;
+    mod: string;
+    cred: string;
+    service: string;
+    /** Emit a `botName` arg (derived from the connector uid) — GitHub gates
+     * mention-driven turns on it, so the scaffold must set it. */
+    botName?: boolean;
+  }
 > = {
   slack: {
     factory: "slackChannel",
@@ -61,6 +69,7 @@ const CONNECT: Record<
     mod: "eve/channels/github",
     cred: "connectGitHubCredentials",
     service: "github",
+    botName: true,
   },
   linear: {
     factory: "linearChannel",
@@ -73,7 +82,15 @@ const CONNECT: Record<
 /** Env-var-backed platform channels. */
 const ENVCH: Record<
   string,
-  { factory: string; mod: string; body: string; env: string[] }
+  {
+    factory: string;
+    mod: string;
+    body: string;
+    env: string[];
+    /** Extra guidance emitted as a comment in the scaffold, for knobs the user
+     * must hand-edit before the channel does anything (e.g. an allow-list). */
+    note?: string;
+  }
 > = {
   discord: {
     factory: "discordChannel",
@@ -85,19 +102,22 @@ const ENVCH: Record<
     factory: "teamsChannel",
     mod: "eve/channels/teams",
     body: "teamsChannel()",
-    env: ["MICROSOFT_APP_ID"],
+    env: ["MICROSOFT_APP_ID", "MICROSOFT_APP_PASSWORD"],
+    note: "Single-tenant bots also need MICROSOFT_TENANT_ID.",
   },
   telegram: {
     factory: "telegramChannel",
     mod: "eve/channels/telegram",
-    body: "telegramChannel({})",
+    body: 'telegramChannel({ botUsername: "my_bot" })',
     env: ["TELEGRAM_BOT_TOKEN", "TELEGRAM_WEBHOOK_SECRET_TOKEN"],
+    note: "Replace botUsername with your bot's @handle (no @) — group @mentions only wake the bot when it matches.",
   },
   twilio: {
     factory: "twilioChannel",
     mod: "eve/channels/twilio",
     body: "twilioChannel({ allowFrom: [] })",
     env: ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"],
+    note: 'allowFrom is required and starts empty (allows nobody) — add the numbers that may reach the agent, e.g. ["+15551234567"].',
   },
 };
 
@@ -166,6 +186,9 @@ export default defineChannel({
   const c = CONNECT[input.kind];
   if (c) {
     const uid = input.connector ?? `${c.service}/my-agent`;
+    const botName = c.botName
+      ? `  botName: ${JSON.stringify(uid.split("/")[1] ?? "my-agent")},\n`
+      : "";
     writeFileSync(
       file,
       `import { ${c.cred} } from "@vercel/connect/eve";
@@ -176,7 +199,7 @@ import { ${c.factory} } from "${c.mod}";
  * Added by Eve Studio.
  */
 export default ${c.factory}({
-  credentials: ${c.cred}(${JSON.stringify(uid)}),
+${botName}  credentials: ${c.cred}(${JSON.stringify(uid)}),
 });
 `,
     );
@@ -188,12 +211,13 @@ export default ${c.factory}({
 
   const e = ENVCH[input.kind];
   if (e) {
+    const note = e.note ? `\n * ${e.note}` : "";
     writeFileSync(
       file,
       `import { ${e.factory} } from "${e.mod}";
 
 /**
- * ${e.factory} — reads credentials from env (${e.env.join(", ")}). Added by Eve Studio.
+ * ${e.factory} — reads credentials from env (${e.env.join(", ")}). Added by Eve Studio.${note}
  */
 export default ${e.body};
 `,
