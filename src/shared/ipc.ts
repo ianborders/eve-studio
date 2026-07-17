@@ -456,6 +456,7 @@ export const IPC = {
   channelsList: "agent:channelsList",
   channelAdd: "agent:channelAdd",
   channelWrite: "agent:channelWrite",
+  channelDelete: "agent:channelDelete",
 
   vercelStatus: "vercel:status",
   vercelEnvLs: "vercel:envLs",
