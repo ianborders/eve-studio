@@ -572,6 +572,8 @@ export const IPC = {
   evolveDetect: "evolve:detect",
   evolveGetProposeTool: "evolve:getProposeTool",
   evolveSetProposeTool: "evolve:setProposeTool",
+  evolveQueueStatus: "evolve:queueStatus",
+  evolveCreateQueueStore: "evolve:createQueueStore",
   evolveListProposals: "evolve:listProposals",
   evolveResolveProposal: "evolve:resolveProposal",
   deployGet: "agent:deployGet",

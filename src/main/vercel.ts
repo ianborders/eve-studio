@@ -380,6 +380,49 @@ export async function vercelEnvSetAll(
   return { ok, output };
 }
 
+// ---------------- Vercel Blob ----------------
+/**
+ * Create a private Blob store and connect it to the linked project.
+ *
+ * @remarks
+ * `--yes` connects the store across every environment, which is what mints
+ * `BLOB_READ_WRITE_TOKEN`. The follow-up `env pull` brings that token into
+ * `.env.local` so Studio — which runs outside Vercel, where Blob refuses OIDC —
+ * can read the agent's queued proposals.
+ *
+ * @param name - Store name; Vercel requires lowercase alphanumeric and dashes.
+ * @returns The CLI result; `ok` only when the token actually landed locally.
+ */
+export async function vercelBlobCreateStore(
+  agentPath: string,
+  name: string,
+): Promise<CmdResult> {
+  const slug =
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40) || "eve-blob";
+  const create = await runAsync(
+    agentPath,
+    ["blob", "create-store", slug, "--access", "private", "--yes"],
+    120_000,
+  );
+  if (!create.ok) {
+    return create;
+  }
+  const pull = await runAsync(agentPath, [
+    "env",
+    "pull",
+    ".env.local",
+    "--yes",
+  ]);
+  return {
+    ok: create.ok && pull.ok,
+    output: `$ vercel blob create-store ${slug} --access private --yes\n${create.output}\n\n$ vercel env pull\n${pull.output}`,
+  };
+}
+
 // ---------------- Vercel Connect ----------------
 /** List Connect connectors for the linked project (optionally by service). */
 export async function vercelConnectList(

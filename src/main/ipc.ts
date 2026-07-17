@@ -82,6 +82,7 @@ import {
 import {
   vercelConnectAttach,
   vercelConnectCreate,
+  vercelBlobCreateStore,
   vercelConnectList,
   vercelConnectProjectsMap,
   vercelEnvAdd,
@@ -202,6 +203,29 @@ function resolveQueue(agentId: string): ProposalQueue | null {
   }
   const token = keyFromEnv(agentPathOf(agentId), "BLOB_READ_WRITE_TOKEN");
   return token ? { kind: "blob", token } : null;
+}
+
+/**
+ * Whether the agent can actually queue a proposal raised while deployed.
+ *
+ * @remarks
+ * The UI needs this up front: without somewhere to queue, an agent asked over
+ * Slack to change itself can only report that it failed. Blob is the default
+ * backend and needs a store — which Studio can create.
+ */
+function proposeQueueStatus(agentId: string): {
+  backend: "arcana" | "blob";
+  ready: boolean;
+} {
+  const queue = resolveQueue(agentId);
+  if (queue) {
+    return { backend: queue.kind, ready: true };
+  }
+  const brain = brainFromConnection(agentPathOf(agentId));
+  return {
+    backend: brain.workspace && brain.envVar ? "arcana" : "blob",
+    ready: false,
+  };
 }
 
 function broadcast(channel: string, payload: unknown): void {
@@ -1079,6 +1103,28 @@ export function registerIpc(): IpcHandles {
     IPC.evolveSetProposeTool,
     (_e: IpcMainInvokeEvent, id: string, enabled: boolean) =>
       setProposeTool(agentPathOf(id), enabled),
+  );
+  ipcMain.handle(IPC.evolveQueueStatus, (_e: IpcMainInvokeEvent, id: string) =>
+    proposeQueueStatus(id),
+  );
+  ipcMain.handle(
+    IPC.evolveCreateQueueStore,
+    async (_e: IpcMainInvokeEvent, id: string) => {
+      const a = store.getAgent(id);
+      if (!a) {
+        return { ok: false, output: "Unknown agent." };
+      }
+      const r = await vercelBlobCreateStore(a.path, `${a.name}-proposals`);
+      // Only a token that actually landed locally means the inbox can read.
+      return r.ok && proposeQueueStatus(id).ready
+        ? r
+        : {
+            ok: false,
+            output:
+              r.output ||
+              "Store created, but no BLOB_READ_WRITE_TOKEN arrived — is the project linked to Vercel?",
+          };
+    },
   );
   ipcMain.handle(
     IPC.evolveListProposals,

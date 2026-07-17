@@ -280,8 +280,14 @@ const api = {
     setProposeTool: (
       id: string,
       enabled: boolean,
-    ): Promise<{ enabled: boolean }> =>
+    ): Promise<{ enabled: boolean; backend?: "arcana" | "blob" }> =>
       ipcRenderer.invoke(IPC.evolveSetProposeTool, id, enabled),
+    queueStatus: (
+      id: string,
+    ): Promise<{ backend: "arcana" | "blob"; ready: boolean }> =>
+      ipcRenderer.invoke(IPC.evolveQueueStatus, id),
+    createQueueStore: (id: string): Promise<CmdResult> =>
+      ipcRenderer.invoke(IPC.evolveCreateQueueStore, id),
     listProposals: (id: string): Promise<QueuedProposalsResult> =>
       ipcRenderer.invoke(IPC.evolveListProposals, id),
     resolveProposal: (id: string, note: string): Promise<{ ok: boolean }> =>

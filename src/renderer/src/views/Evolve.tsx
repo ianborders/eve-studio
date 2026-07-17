@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { KIND_LABEL, ProposalReview } from "../components/ProposalReview";
 import { useActiveStructure } from "../lib/useStructure";
 import { useEvolve } from "../lib/useEvolve";
-import { IconRefresh, IconWand } from "../ui/icons";
+import { IconCheck, IconRefresh, IconWand } from "../ui/icons";
 import {
   Badge,
   Button,
@@ -33,6 +33,12 @@ export function Evolve(): JSX.Element {
   const [proposals, setProposals] = useState<QueuedProposal[]>([]);
   const [activeNote, setActiveNote] = useState<string | null>(null);
   const [dismissing, setDismissing] = useState<string | null>(null);
+  const [queue, setQueue] = useState<{
+    backend: "arcana" | "blob";
+    ready: boolean;
+  } | null>(null);
+  const [creatingStore, setCreatingStore] = useState(false);
+  const [storeErr, setStoreErr] = useState<string | null>(null);
 
   const loadProposals = (): void => {
     if (id) {
@@ -64,7 +70,14 @@ export function Evolve(): JSX.Element {
       setProposeOn(null);
       setProposals([]);
       setActiveNote(null);
-      void window.studio.evolve.getProposeTool(id).then(setProposeOn);
+      setQueue(null);
+      setStoreErr(null);
+      void window.studio.evolve.getProposeTool(id).then(async (on) => {
+        setProposeOn(on);
+        if (on) {
+          setQueue(await window.studio.evolve.queueStatus(id));
+        }
+      });
       void window.studio.evolve
         .listProposals(id)
         .then((r) => setProposals(r.ok ? r.proposals : []));
@@ -109,6 +122,25 @@ export function Evolve(): JSX.Element {
     setProposeOn(next);
     const r = await window.studio.evolve.setProposeTool(id, next);
     setProposeOn(r.enabled);
+    setQueue(r.enabled ? await window.studio.evolve.queueStatus(id) : null);
+  };
+
+  // Without somewhere to queue, an agent asked over Slack to change itself can
+  // only report failure — so offer to create the store rather than let the user
+  // discover that the hard way.
+  const createStore = async (): Promise<void> => {
+    if (!id) {
+      return;
+    }
+    setCreatingStore(true);
+    setStoreErr(null);
+    const r = await window.studio.evolve.createQueueStore(id);
+    setCreatingStore(false);
+    if (r.ok) {
+      setQueue(await window.studio.evolve.queueStatus(id));
+    } else {
+      setStoreErr(r.output || "Couldn't create the store.");
+    }
   };
 
   const busy = ev.phase === "drafting" || ev.phase === "applying";
@@ -363,6 +395,51 @@ export function Evolve(): JSX.Element {
                     />
                   </button>
                 </div>
+
+                {proposeOn && queue && !queue.ready ? (
+                  <div className="space-y-2 rounded-lg border border-warn/40 bg-warn/[0.06] p-3">
+                    <div className="font-medium text-[13px] text-foreground">
+                      {queue.backend === "blob"
+                        ? "Proposals from Slack need somewhere to queue"
+                        : "This agent's brain key isn't reachable"}
+                    </div>
+                    <div className="text-2xs leading-relaxed text-muted">
+                      {queue.backend === "blob"
+                        ? "The deployed agent saves proposals to a private Vercel Blob store, and Studio reads them back here. Without one it can only tell you it couldn't queue. In-Studio chat works either way."
+                        : "Studio couldn't read the Arcana key from this agent's .env.local — run Pull env in the Deploy tab."}
+                    </div>
+                    {queue.backend === "blob" ? (
+                      <Button
+                        disabled={creatingStore}
+                        onClick={() => void createStore()}
+                        size="sm"
+                        variant="primary"
+                      >
+                        {creatingStore ? (
+                          <>
+                            <Spinner /> Creating…
+                          </>
+                        ) : (
+                          "Create the store"
+                        )}
+                      </Button>
+                    ) : null}
+                    {storeErr ? (
+                      <div className="text-2xs text-danger">{storeErr}</div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {proposeOn && queue?.ready ? (
+                  <div className="flex items-center gap-1.5 text-2xs text-muted">
+                    <IconCheck className="h-3 w-3 text-success" />
+                    Proposals queue to{" "}
+                    {queue.backend === "blob"
+                      ? "this agent's Blob store"
+                      : "this agent's Arcana brain"}
+                    .
+                  </div>
+                ) : null}
               </>
             ) : null}
 
