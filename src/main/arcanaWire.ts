@@ -74,10 +74,17 @@ export function brainFromConnection(agentPath: string): {
     return {};
   }
   const src = readFileSync(file, "utf8");
+  // A connection often reads several ARCANA_* vars — the kb_ key, but also a
+  // workspace-slug override. Take the credential-shaped one, not just the first
+  // match, or the proposal queue authenticates with the workspace slug and every
+  // queue attempt silently fails.
+  const candidates = [
+    ...src.matchAll(/process\.env\.([A-Z0-9_]*ARCANA[A-Z0-9_]*)/g),
+  ].map((m) => m[1]);
   const envVar =
-    /process\.env\.([A-Z0-9_]*ARCANA[A-Z0-9_]*|ARCANA[A-Z0-9_]*)/.exec(
-      src,
-    )?.[1];
+    candidates.find((v) => /(KEY|TOKEN|SECRET)$/.test(v)) ??
+    candidates.find((v) => !/(WORKSPACE|AGENT|SLUG|URL)$/.test(v)) ??
+    candidates[0];
   const workspace =
     /X-Kyberagent-Agent["']?\s*[:=]\s*["']([a-z0-9-]+)["']/i.exec(src)?.[1] ??
     /arcanaWorkspace\s*=\s*(?:process\.env\.[A-Z0-9_]+\s*\?\?\s*)?["']([a-z0-9-]+)["']/i.exec(

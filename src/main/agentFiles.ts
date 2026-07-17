@@ -13,13 +13,41 @@ import type {
   SkillInput,
 } from "../shared/ipc";
 
-/** The instructions.md path for an agent (nested `agent/` or flat). */
-function instructionsPath(agentPath: string): string {
-  const nested = join(agentPath, "agent", "instructions.md");
-  if (existsSync(nested) || existsSync(join(agentPath, "agent"))) {
+/** The dir holding an agent's root prompt (nested `agent/` or flat). */
+function promptRoot(agentPath: string): string {
+  const nested = join(agentPath, "agent");
+  if (existsSync(join(nested, "instructions.md")) || existsSync(nested)) {
     return nested;
   }
-  return join(agentPath, "instructions.md");
+  return agentPath;
+}
+
+/** The instructions.md path for an agent (nested `agent/` or flat). */
+function instructionsPath(agentPath: string): string {
+  return join(promptRoot(agentPath), "instructions.md");
+}
+
+/**
+ * The agent's root prompt when it is authored in a form Studio does not edit —
+ * an `instructions.ts` or an `instructions/` directory — else null.
+ *
+ * @remarks
+ * Eve treats authoring both `instructions.md` and `instructions.ts` at the root
+ * as a build error, so callers must refuse to write `instructions.md` alongside
+ * one of these rather than silently breaking the agent's build.
+ */
+export function alternateInstructionsForm(agentPath: string): string | null {
+  const root = promptRoot(agentPath);
+  if (existsSync(join(root, "instructions.md"))) {
+    return null;
+  }
+  if (existsSync(join(root, "instructions.ts"))) {
+    return "instructions.ts";
+  }
+  if (existsSync(join(root, "instructions"))) {
+    return "instructions/";
+  }
+  return null;
 }
 
 export interface InstructionsFile {
