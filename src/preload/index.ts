@@ -219,6 +219,8 @@ const api = {
       target: string,
     ): Promise<CmdResult> =>
       ipcRenderer.invoke(IPC.vercelEnvAdd, id, name, value, target),
+    envSetAll: (id: string, name: string, value: string): Promise<CmdResult> =>
+      ipcRenderer.invoke(IPC.vercelEnvSetAll, id, name, value),
     prodInfo: (id: string): Promise<ProdInfo> =>
       ipcRenderer.invoke(IPC.vercelProdInfo, id),
     modelReadiness: (id: string): Promise<ModelReadiness> =>

@@ -226,7 +226,9 @@ async function targetEnvNames(agentPath: string): Promise<string[]> {
   for (const f of [".env", ".env.local"]) {
     try {
       const src = readFileSync(join(agentPath, f), "utf8");
-      for (const m of src.matchAll(/^([A-Z][A-Z0-9_]*)=/gm)) {
+      // Require a non-empty value — an empty `VAR=` isn't really "set", and
+      // treating it as set is what silently skipped a scheduled Slack DM.
+      for (const m of src.matchAll(/^([A-Z][A-Z0-9_]*)=[ \t]*\S/gm)) {
         if (re.test(m[1])) {
           names.add(m[1]);
         }

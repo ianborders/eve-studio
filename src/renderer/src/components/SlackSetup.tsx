@@ -77,14 +77,13 @@ export function SlackSetup({
   const saveTarget = async (): Promise<void> => {
     setSavingTarget(true);
     setTargetErr(null);
-    const r = await window.studio.vercel.envAdd(
+    const r = await window.studio.vercel.envSetAll(
       agentId,
       envName.trim(),
       targetId.trim(),
-      "production",
     );
     setSavingTarget(false);
-    if (r.ok || r.output.includes("already")) {
+    if (r.ok) {
       setSavedTarget(true);
     } else {
       setTargetErr(r.output || "Couldn't save the env var.");
