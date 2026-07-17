@@ -5,6 +5,7 @@ import { useStore } from "../store";
 export type EvolvePhase = "idle" | "drafting" | "review" | "applying" | "done";
 
 export interface UseEvolve {
+  agentId: string | null;
   phase: EvolvePhase;
   proposal: EvolveProposal | null;
   result: EvolveApplyResult | null;
@@ -97,6 +98,7 @@ export function useEvolve(agentId: string | null): UseEvolve {
   };
 
   return {
+    agentId,
     phase,
     proposal,
     result,

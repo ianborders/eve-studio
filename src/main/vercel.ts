@@ -161,6 +161,22 @@ export function vercelEnvPull(agentPath: string): CmdResult {
   return run(agentPath, ["env", "pull", ".env.local", "--yes"]);
 }
 
+/** Env var NAMES set on the linked Vercel project (across all targets). */
+export async function vercelEnvNames(agentPath: string): Promise<string[]> {
+  const r = await runAsync(agentPath, ["env", "ls"], 60_000);
+  if (!r.ok) {
+    return [];
+  }
+  const names = new Set<string>();
+  for (const line of r.output.split("\n")) {
+    const tok = line.trim().split(/\s+/)[0];
+    if (/^[A-Z][A-Z0-9_]{2,}$/.test(tok)) {
+      names.add(tok);
+    }
+  }
+  return [...names];
+}
+
 const MODEL_CRED_VARS = [
   "VERCEL_OIDC_TOKEN",
   "AI_GATEWAY_API_KEY",
