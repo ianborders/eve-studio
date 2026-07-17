@@ -1,6 +1,6 @@
 /**
  * Auto-update via electron-updater. Polls the GitHub Releases feed (configured
- * in package.json `build.publish` → github ianborders/eve-studio) and pushes a
+ * in package.json `build.publish` → github KybernesisAI/eve-studio) and pushes a
  * single UpdateState to the renderer, which renders the UPDATE → RESTART badge.
  * No native dialogs.
  *

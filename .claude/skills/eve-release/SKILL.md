@@ -7,7 +7,7 @@ description: Cut a signed, notarized Eve Studio release from main. Picks the sma
 
 Pushing a `vX.Y.Z` tag fires `.github/workflows/release.yml`, which builds on
 `macos-14`, **signs + notarizes**, and publishes the app to a GitHub Release on
-this repo (`ianborders/eve-studio`, public). `electron-updater` in shipped apps
+this repo (`KybernesisAI/eve-studio`, public). `electron-updater` in shipped apps
 polls that release's `latest-mac.yml`; apps on a lower version then show the
 **UPDATE → RESTART** control in the sidebar footer.
 

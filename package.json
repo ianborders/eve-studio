@@ -89,7 +89,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "ianborders",
+      "owner": "KybernesisAI",
       "repo": "eve-studio",
       "releaseType": "release"
     }
