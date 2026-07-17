@@ -83,6 +83,7 @@ import {
   vercelConnectAttach,
   vercelConnectCreate,
   vercelBlobCreateStore,
+  vercelConnectCreateStream,
   vercelConnectList,
   vercelConnectProjectsMap,
   vercelEnvAdd,
@@ -667,6 +668,25 @@ export function registerIpc(): IpcHandles {
       name: string,
       triggers: boolean,
     ) => vercelConnectCreate(agentPathOf(id), type, name, triggers),
+  );
+  ipcMain.handle(
+    IPC.vercelConnectorCreateStream,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      type: string,
+      name: string,
+      triggers: boolean,
+    ) =>
+      vercelConnectCreateStream(
+        agentPathOf(id),
+        type,
+        name,
+        triggers,
+        // The authorize URL is single-use and short-lived — get it on screen the
+        // instant the CLI prints it, not when the command finally exits.
+        (data) => broadcast(IPC.vercelConnectorCreateChunk, { id, data }),
+      ),
   );
   ipcMain.handle(
     IPC.connectorAttach,

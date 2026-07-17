@@ -468,6 +468,82 @@ export async function vercelConnectList(
 }
 
 /**
+ * Create a Connect connector, streaming the CLI's output as it arrives.
+ *
+ * @remarks
+ * Managed services (slack/github/linear) print a **single-use** authorize URL
+ * and then block until the browser step finishes. Buffering the output until the
+ * command returns is therefore a deadlock: the link only surfaces once its code
+ * is already spent or expired, so every click 409s with "Request code is already
+ * in use" and the connector is never created. Streaming puts the link on screen
+ * the moment it's printed, while it still works.
+ *
+ * @param onChunk - Called with each stdout/stderr chunk as it arrives.
+ * @returns The full output once the command exits (or times out).
+ */
+export function vercelConnectCreateStream(
+  agentPath: string,
+  type: string,
+  name: string,
+  triggers: boolean,
+  onChunk: (data: string) => void,
+): Promise<CmdResult> {
+  const args = ["connect", "create", type, "--name", name];
+  if (triggers) {
+    args.push("--triggers");
+  }
+  return new Promise((resolve) => {
+    let v: { cmd: string; pre: string[] };
+    try {
+      v = resolveVercel();
+    } catch (e) {
+      resolve({
+        ok: false,
+        output: e instanceof Error ? e.message : String(e),
+      });
+      return;
+    }
+    const child = spawn(v.cmd, [...v.pre, ...args], {
+      cwd: agentPath,
+      env: { ...process.env, NO_COLOR: "1" },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let out = "";
+    let done = false;
+    const finish = (r: CmdResult): void => {
+      if (!done) {
+        done = true;
+        resolve(r);
+      }
+    };
+    // Generous: the clock is the user's browser step, not the CLI.
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      finish({
+        ok: false,
+        output:
+          `${out}\n(timed out — finish authorizing in the browser, then Refresh)`.trim(),
+      });
+    }, 300_000);
+    const emit = (d: Buffer): void => {
+      const s = d.toString();
+      out += s;
+      onChunk(s);
+    };
+    child.stdout?.on("data", emit);
+    child.stderr?.on("data", emit);
+    child.on("error", (e) => {
+      clearTimeout(timer);
+      finish({ ok: false, output: e.message });
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      finish({ ok: code === 0, output: out.trim() || `(exit ${code})` });
+    });
+  });
+}
+
+/**
  * Create a Connect connector: `vercel connect create <type> --name <n> [--triggers]`.
  * Managed services (slack/github/linear) may return an authorize URL to complete
  * app installation in the browser.
