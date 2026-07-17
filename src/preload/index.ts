@@ -159,6 +159,8 @@ const api = {
       input: ScheduleInput,
     ): Promise<FileWriteResult> =>
       ipcRenderer.invoke(IPC.scheduleCreate, id, input),
+    runSchedule: (id: string, name: string): Promise<CmdResult> =>
+      ipcRenderer.invoke(IPC.scheduleRun, id, name),
     capabilityFiles: (
       id: string,
       kind: CapabilityKind,

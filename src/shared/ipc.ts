@@ -528,6 +528,7 @@ export const IPC = {
   subagentCreate: "agent:subagentCreate",
   hookCreate: "agent:hookCreate",
   scheduleCreate: "agent:scheduleCreate",
+  scheduleRun: "agent:scheduleRun",
   capabilityFiles: "agent:capabilityFiles",
   capabilityWrite: "agent:capabilityWrite",
   capabilityDelete: "agent:capabilityDelete",

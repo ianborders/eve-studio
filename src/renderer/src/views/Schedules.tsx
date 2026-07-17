@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CapabilityEditor } from "../components/CapabilityEditor";
 import { useActiveStructure } from "../lib/useStructure";
+import { useStore } from "../store";
 import {
   IconCalendar,
   IconChevronRight,
@@ -148,8 +149,31 @@ function describeCron(cron?: string): string | null {
 
 export function Schedules(): JSX.Element {
   const { id, structure, loading, reload } = useActiveStructure();
+  const running = useStore((s) =>
+    id ? s.runtime[id]?.status === "running" : false,
+  );
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+  const [testing, setTesting] = useState<string | null>(null);
+  const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(
+    null,
+  );
+
+  const runTest = async (name: string): Promise<void> => {
+    if (!id) {
+      return;
+    }
+    setTesting(name);
+    setTestMsg(null);
+    const r = await window.studio.agents.runSchedule(id, name);
+    setTesting(null);
+    setTestMsg({
+      ok: r.ok,
+      text: r.ok
+        ? `Fired “${name}” once — check where it delivers (e.g. your Slack DM). If it targets a channel, that only sends when the target env var is set locally too.`
+        : r.output,
+    });
+  };
 
   if (loading && !structure) {
     return (
@@ -185,6 +209,26 @@ export function Schedules(): JSX.Element {
       />
 
       <div className="flex-1 overflow-auto">
+        {testMsg ? (
+          <div className="mx-auto max-w-2xl px-4 pt-4">
+            <div
+              className={`flex items-start justify-between gap-3 rounded-lg px-3 py-2 text-2xs ${
+                testMsg.ok
+                  ? "bg-success/10 text-success"
+                  : "bg-danger/10 text-danger"
+              }`}
+            >
+              <span className="leading-relaxed">{testMsg.text}</span>
+              <button
+                className="shrink-0 opacity-70 hover:opacity-100"
+                onClick={() => setTestMsg(null)}
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        ) : null}
         {schedules.length === 0 ? (
           <EmptyState
             icon={<IconCalendar className="h-6 w-6" />}
@@ -219,6 +263,22 @@ export function Schedules(): JSX.Element {
                     right={
                       <div className="flex items-center gap-2">
                         {s.cron ? <Badge>{s.cron}</Badge> : null}
+                        <Button
+                          disabled={!running || testing === s.name}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void runTest(s.name);
+                          }}
+                          size="sm"
+                          title={
+                            running
+                              ? "Fire this schedule once now"
+                              : "Start the agent to test"
+                          }
+                          variant="secondary"
+                        >
+                          {testing === s.name ? "Testing…" : "Test"}
+                        </Button>
                         <IconChevronRight className="h-4 w-4 text-faint opacity-0 transition-opacity group-hover:opacity-100" />
                       </div>
                     }
