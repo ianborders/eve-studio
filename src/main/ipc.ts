@@ -606,6 +606,11 @@ export function registerIpc(): IpcHandles {
     ) => vercelEnvAdd(agentPathOf(id), name, value, target),
   );
   ipcMain.handle(
+    IPC.vercelEnvSetAll,
+    (_e: IpcMainInvokeEvent, id: string, name: string, value: string) =>
+      vercelEnvSetAll(agentPathOf(id), name, value),
+  );
+  ipcMain.handle(
     IPC.connectorList,
     (_e: IpcMainInvokeEvent, id: string, service?: string) =>
       vercelConnectList(agentPathOf(id), service),
@@ -892,7 +897,9 @@ export function registerIpc(): IpcHandles {
         // too, so the DEPLOYED agent has memory (deploys don't ship local .env).
         let pushedToVercel = false;
         if (vercelStatus(a.path).linked) {
-          pushedToVercel = vercelEnvSetAll(a.path, input.envVar, input.key).ok;
+          pushedToVercel = (
+            await vercelEnvSetAll(a.path, input.envVar, input.key)
+          ).ok;
         }
         return { ok: true, files, pushedToVercel };
       } catch (err) {

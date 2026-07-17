@@ -97,6 +97,7 @@ function runAsync(
   agentPath: string,
   args: string[],
   timeoutMs = 180_000,
+  input?: string,
 ): Promise<CmdResult> {
   return new Promise((resolve) => {
     let v: { cmd: string; pre: string[] };
@@ -112,8 +113,13 @@ function runAsync(
     const child = spawn(v.cmd, [...v.pre, ...args], {
       cwd: agentPath,
       env: { ...process.env, NO_COLOR: "1" },
-      stdio: ["ignore", "pipe", "pipe"],
+      // Pipe stdin only when we have input to feed (e.g. `env add`); otherwise
+      // ignore it so an interactive command can never hang waiting on input.
+      stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
     });
+    if (input !== undefined) {
+      child.stdin?.end(input);
+    }
     let out = "";
     let done = false;
     const finish = (r: CmdResult): void => {
@@ -343,26 +349,31 @@ export function vercelEnvAdd(
 }
 
 /** Idempotently set an env var for a target (remove any existing, then add). */
-export function vercelEnvSet(
+export async function vercelEnvSet(
   agentPath: string,
   name: string,
   value: string,
   target: string,
-): CmdResult {
-  run(agentPath, ["env", "rm", name, target, "--yes"]); // ignore "not found"
-  return run(agentPath, ["env", "add", name, target], `${value}\n`);
+): Promise<CmdResult> {
+  await runAsync(agentPath, ["env", "rm", name, target, "--yes"], 60_000); // ignore "not found"
+  return runAsync(
+    agentPath,
+    ["env", "add", name, target],
+    60_000,
+    `${value}\n`,
+  );
 }
 
 /** Set an env var across production/preview/development so it works everywhere. */
-export function vercelEnvSetAll(
+export async function vercelEnvSetAll(
   agentPath: string,
   name: string,
   value: string,
-): CmdResult {
+): Promise<CmdResult> {
   let ok = true;
   let output = "";
   for (const target of ["production", "preview", "development"]) {
-    const r = vercelEnvSet(agentPath, name, value, target);
+    const r = await vercelEnvSet(agentPath, name, value, target);
     ok = ok && r.ok;
     output += `[${target}] ${r.output}\n`;
   }

@@ -560,6 +560,7 @@ export const IPC = {
   vercelEnvLs: "vercel:envLs",
   vercelEnvPull: "vercel:envPull",
   vercelEnvAdd: "vercel:envAdd",
+  vercelEnvSetAll: "vercel:envSetAll",
   vercelProdInfo: "vercel:prodInfo",
   vercelLink: "vercel:link",
   vercelTeams: "vercel:teams",

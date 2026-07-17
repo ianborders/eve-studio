@@ -29,14 +29,13 @@ function Prereq({
   const save = async (): Promise<void> => {
     setSaving(true);
     setErr(null);
-    const r = await window.studio.vercel.envAdd(
+    const r = await window.studio.vercel.envSetAll(
       agentId,
       varName,
       value.trim(),
-      "production",
     );
     setSaving(false);
-    if (r.ok || r.output.includes("already")) {
+    if (r.ok) {
       setSaved(true);
     } else {
       setErr(r.output || "Couldn't save.");
