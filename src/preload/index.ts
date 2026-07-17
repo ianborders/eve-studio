@@ -245,6 +245,23 @@ const api = {
       triggers: boolean,
     ): Promise<CmdResult> =>
       ipcRenderer.invoke(IPC.connectorCreate, id, type, name, triggers),
+    /** Create a connector, streaming output so the authorize link shows live. */
+    connectorCreateStream: (
+      id: string,
+      type: string,
+      name: string,
+      triggers: boolean,
+    ): Promise<CmdResult> =>
+      ipcRenderer.invoke(
+        IPC.vercelConnectorCreateStream,
+        id,
+        type,
+        name,
+        triggers,
+      ),
+    onConnectorCreateChunk: (
+      cb: (c: { id: string; data: string }) => void,
+    ): (() => void) => sub(IPC.vercelConnectorCreateChunk, cb),
     connectorAttach: (
       id: string,
       connector: string,

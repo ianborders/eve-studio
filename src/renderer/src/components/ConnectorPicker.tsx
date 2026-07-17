@@ -45,6 +45,17 @@ export function ConnectorPicker({
     void load();
   }, [load]);
 
+  // The CLI prints a single-use authorize URL then blocks on the browser step,
+  // so stream its output — waiting for the command to return would only ever
+  // surface a link whose code is already spent.
+  useEffect(() => {
+    return window.studio.vercel.onConnectorCreateChunk((c) => {
+      if (c.id === agentId) {
+        setOutput((o) => o + c.data);
+      }
+    });
+  }, [agentId]);
+
   const create = async (): Promise<void> => {
     if (!service) {
       return;
@@ -53,14 +64,16 @@ export function ConnectorPicker({
     setOutput(
       `$ vercel connect create ${service} --name ${newName || "my-agent"} --triggers\n`,
     );
-    const r = await window.studio.vercel.connectorCreate(
+    const r = await window.studio.vercel.connectorCreateStream(
       agentId,
       service,
       newName || "my-agent",
       true,
     );
     setCreating(false);
-    setOutput((o) => o + r.output);
+    if (!r.ok) {
+      setOutput((o) => (o.includes(r.output) ? o : `${o}\n${r.output}`));
+    }
     await load();
   };
 
@@ -128,15 +141,27 @@ export function ConnectorPicker({
       {output ? (
         <>
           {/^https?:\/\//m.test(output) ? (
-            <a
-              href={(output.match(/https?:\/\/\S+/) ?? [""])[0]}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-2xs text-accent hover:underline"
-            >
-              <IconExternal className="h-3 w-3" />
-              Open to finish authorizing in the browser
-            </a>
+            <div className="space-y-1.5 rounded-lg border border-accent/40 bg-accent/[0.05] p-3">
+              <div className="font-medium text-[13px] text-foreground">
+                {creating
+                  ? "Authorize the bot to finish"
+                  : "Authorization link (may have expired)"}
+              </div>
+              <div className="text-2xs leading-relaxed text-muted">
+                Opens Slack in your browser — pick the workspace and allow it.
+                The link works once, so if it errors, hit Create again for a
+                fresh one.
+              </div>
+              <a
+                className="inline-flex items-center gap-1 text-2xs text-accent hover:underline"
+                href={(output.match(/https?:\/\/\S+/) ?? [""])[0]}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <IconExternal className="h-3 w-3" />
+                Open to authorize
+              </a>
+            </div>
           ) : null}
           <Console text={output} busy={creating} className="max-h-40" />
         </>

@@ -588,6 +588,8 @@ export const IPC = {
 
   cliRun: "cli:run",
   cliCancel: "cli:cancel",
+  vercelConnectorCreateStream: "vercel:connectorCreateStream",
+  vercelConnectorCreateChunk: "vercel:connectorCreateChunk",
   evalList: "eval:list",
 
   // push channels
