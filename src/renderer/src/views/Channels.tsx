@@ -12,7 +12,6 @@ import {
   List,
   Modal,
   Spinner,
-  StatusDot,
   ViewHeader,
   cx,
 } from "../ui/kit";
@@ -391,6 +390,15 @@ export function Channels(): JSX.Element {
           {/* Configured */}
           <div className="space-y-2.5">
             <Kicker>Configured</Kicker>
+            <p className="text-2xs leading-relaxed text-muted">
+              “Added” means the channel file exists in the agent. Connect-based
+              channels (Slack, GitHub, Linear) also need their connector
+              attached &amp; authorized in Vercel, plus a redeploy, before they
+              can send or receive. A channel lets the agent reply where its
+              events arrive and be posted to by schedules — it is{" "}
+              <span className="font-medium">not</span> a tool the agent can call
+              to message you from a normal chat.
+            </p>
             <List>
               <div className="flex items-center gap-3 px-3 py-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-subtle text-faint">
@@ -425,10 +433,7 @@ export function Channels(): JSX.Element {
                         <span className="text-[13px] font-medium text-text">
                           {cat?.label ?? c.name}
                         </span>
-                        <Badge tone="success">
-                          <StatusDot status="running" />
-                          connected
-                        </Badge>
+                        <Badge>added</Badge>
                       </div>
                       <div className="mt-0.5 font-mono text-2xs text-faint">
                         channels/{c.name}.ts
@@ -474,10 +479,7 @@ export function Channels(): JSX.Element {
                       </div>
                     </div>
                     {added ? (
-                      <Badge tone="success">
-                        <StatusDot status="running" />
-                        connected
-                      </Badge>
+                      <Badge>added</Badge>
                     ) : (
                       <Button
                         variant="secondary"
