@@ -1,7 +1,70 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentStructure } from "../shared/ipc";
+
+function agentRootOf(agentPath: string): string {
+  return existsSync(join(agentPath, "agent"))
+    ? join(agentPath, "agent")
+    : agentPath;
+}
+
+/** Names in a capability dir — `.ts` files (stripped) or subdirectories. */
+function listDir(dir: string, mode: "ts" | "dirs"): string[] {
+  try {
+    return readdirSync(dir, { withFileTypes: true })
+      .filter((e) =>
+        mode === "dirs"
+          ? e.isDirectory()
+          : e.isFile() && e.name.endsWith(".ts"),
+      )
+      .map((e) => (mode === "dirs" ? e.name : e.name.slice(0, -3)));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Merge capabilities authored on disk that the compiled manifest misses.
+ *
+ * @remarks
+ * `readStructure` reads `.eve/compile`'s manifest, which only `eve build`
+ * regenerates — `eve dev` does not. So a freshly authored schedule/tool/skill
+ * (e.g. from Evolve) is invisible until the next build. Folding in the source
+ * files keeps counts and lists honest immediately, without a slow rebuild.
+ */
+function mergeAuthored(
+  agentPath: string,
+  base: AgentStructure,
+): AgentStructure {
+  const root = agentRootOf(agentPath);
+  const named = (
+    arr: { name: string }[],
+    names: string[],
+  ): { name: string }[] => {
+    const out = [...arr];
+    for (const n of names) {
+      if (!out.some((x) => x.name === n)) {
+        out.push({ name: n });
+      }
+    }
+    return out;
+  };
+  const hooks = [...base.hooks];
+  for (const n of listDir(join(root, "hooks"), "ts")) {
+    if (!hooks.includes(n)) {
+      hooks.push(n);
+    }
+  }
+  return {
+    ...base,
+    schedules: named(base.schedules, listDir(join(root, "schedules"), "ts")),
+    tools: named(base.tools, listDir(join(root, "tools"), "ts")),
+    skills: named(base.skills, listDir(join(root, "skills"), "dirs")),
+    subagents: named(base.subagents, listDir(join(root, "subagents"), "dirs")),
+    hooks,
+  };
+}
 
 const EMPTY = {
   tools: [] as never[],
@@ -157,7 +220,7 @@ export function readStructure(agentPath: string): AgentStructure {
 
   const existing = readCompiledFile(compiledPath);
   if (existing) {
-    return existing;
+    return mergeAuthored(agentPath, existing);
   }
 
   // No compiled artifact yet — build once, then read.
@@ -176,10 +239,13 @@ export function readStructure(agentPath: string): AgentStructure {
 
   const built = readCompiledFile(compiledPath);
   if (built) {
-    return built;
+    return mergeAuthored(agentPath, built);
   }
-  return empty(
-    "none",
-    "No compiled manifest. Start the agent (or run `eve build` in its folder) to inspect its structure.",
+  return mergeAuthored(
+    agentPath,
+    empty(
+      "none",
+      "No compiled manifest. Start the agent (or run `eve build` in its folder) to inspect its structure.",
+    ),
   );
 }
