@@ -12,6 +12,7 @@ import { create } from "zustand";
 /** Per-agent workspace tabs (plus the global "settings"). */
 export type Section =
   | "chat"
+  | "evolve"
   | "instructions"
   | "capabilities"
   | "integrations"

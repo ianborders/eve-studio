@@ -86,6 +86,14 @@ import {
   vercelWhoami,
 } from "./vercel";
 import { modelReadiness } from "./vercel";
+import {
+  applyProposal,
+  detectPatterns,
+  draftProposal,
+  getProposeTool,
+  setProposeTool,
+} from "./evolve";
+import type { EvolveProposal } from "../shared/ipc";
 
 /** Read a variable from an agent's .env.local (for deployed route auth). */
 function readEnvLocal(agentPath: string, name: string): string | null {
@@ -917,6 +925,32 @@ export function registerIpc(): IpcHandles {
   );
   ipcMain.handle(IPC.modelReadiness, (_e: IpcMainInvokeEvent, id: string) =>
     modelReadiness(agentPathOf(id)),
+  );
+  ipcMain.handle(
+    IPC.evolveDraft,
+    (_e: IpcMainInvokeEvent, id: string, intent: string) =>
+      draftProposal(agentPathOf(id), intent),
+  );
+  ipcMain.handle(
+    IPC.evolveApply,
+    (_e: IpcMainInvokeEvent, id: string, proposal: EvolveProposal) =>
+      applyProposal(agentPathOf(id), proposal, store.getBrain(id) ?? null),
+  );
+  ipcMain.handle(IPC.evolveDetect, (_e: IpcMainInvokeEvent, id: string) =>
+    detectPatterns(
+      agentPathOf(id),
+      store.listThreads(id).map((t) => t.title),
+      store.getBrain(id) ?? null,
+    ),
+  );
+  ipcMain.handle(
+    IPC.evolveGetProposeTool,
+    (_e: IpcMainInvokeEvent, id: string) => getProposeTool(agentPathOf(id)),
+  );
+  ipcMain.handle(
+    IPC.evolveSetProposeTool,
+    (_e: IpcMainInvokeEvent, id: string, enabled: boolean) =>
+      setProposeTool(agentPathOf(id), enabled),
   );
   ipcMain.handle(
     IPC.vercelLink,
