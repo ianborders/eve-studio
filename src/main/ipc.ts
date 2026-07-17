@@ -68,6 +68,7 @@ import {
 } from "./cli";
 import { checkHealth, getAgentInfo, type SessionConn } from "./eveSession";
 import * as store from "./store";
+import { gatewayModels } from "./gateway";
 import { readStructure } from "./structure";
 import {
   channelConnectors,
@@ -1097,6 +1098,9 @@ export function registerIpc(): IpcHandles {
   );
   ipcMain.handle(IPC.modelReadiness, (_e: IpcMainInvokeEvent, id: string) =>
     modelReadiness(agentPathOf(id)),
+  );
+  ipcMain.handle(IPC.gatewayModels, (_e: IpcMainInvokeEvent, id: string) =>
+    gatewayModels(agentPathOf(id)),
   );
   ipcMain.handle(
     IPC.evolveDraft,

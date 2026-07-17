@@ -270,6 +270,19 @@ export interface ModelConfig {
   note: string | null;
 }
 
+/** A chat model offered by the agent's linked AI Gateway. */
+export interface GatewayModel {
+  id: string;
+  name: string;
+  owner: string;
+  contextWindow?: number;
+}
+export interface GatewayModelsResult {
+  ok: boolean;
+  models: GatewayModel[];
+  error?: string;
+}
+
 // --- env ---
 export interface EnvFile {
   name: string;
@@ -567,6 +580,7 @@ export const IPC = {
   vercelWhoami: "vercel:whoami",
   vercelLogin: "vercel:login",
   modelReadiness: "vercel:modelReadiness",
+  gatewayModels: "vercel:gatewayModels",
   evolveDraft: "evolve:draft",
   evolveApply: "evolve:apply",
   evolveDetect: "evolve:detect",
