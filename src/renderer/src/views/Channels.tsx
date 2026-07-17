@@ -1,6 +1,7 @@
 import type { ChannelItem, ChannelKind } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
 import { ConnectorPicker } from "../components/ConnectorPicker";
+import { SlackSetup } from "../components/SlackSetup";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
 import { IconPlus, IconRefresh, IconServer, IconTrash } from "../ui/icons";
@@ -346,6 +347,7 @@ export function Channels(): JSX.Element {
   const [remove, setRemove] = useState<ChannelItem | null>(null);
   const [removing, setRemoving] = useState(false);
   const [removeErr, setRemoveErr] = useState<string | null>(null);
+  const [slackSetup, setSlackSetup] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) {
@@ -445,6 +447,15 @@ export function Channels(): JSX.Element {
                           : ""}
                       </div>
                     </div>
+                    {(c.kind ?? c.name) === "slack" ? (
+                      <Button
+                        onClick={() => setSlackSetup(true)}
+                        size="sm"
+                        variant="secondary"
+                      >
+                        Set up
+                      </Button>
+                    ) : null}
                     <IconButton
                       onClick={() => {
                         setRemoveErr(null);
@@ -497,9 +508,14 @@ export function Channels(): JSX.Element {
                         variant="secondary"
                         size="sm"
                         disabled={!id}
-                        onClick={() => setAdd(cat)}
+                        onClick={() =>
+                          cat.kind === "slack"
+                            ? setSlackSetup(true)
+                            : setAdd(cat)
+                        }
                       >
-                        <IconPlus className="h-3.5 w-3.5" /> Add
+                        <IconPlus className="h-3.5 w-3.5" />{" "}
+                        {cat.kind === "slack" ? "Set up" : "Add"}
                       </Button>
                     )}
                   </div>
@@ -515,6 +531,14 @@ export function Channels(): JSX.Element {
           agentId={id}
           cat={add}
           onClose={() => setAdd(null)}
+          onDone={load}
+        />
+      ) : null}
+
+      {slackSetup && id ? (
+        <SlackSetup
+          agentId={id}
+          onClose={() => setSlackSetup(false)}
           onDone={load}
         />
       ) : null}
