@@ -21,21 +21,31 @@ function envPath(agentPath: string): string {
   return join(agentPath, ".env");
 }
 
-/** Read a single `KEY=value` from a dotenv file (value may be quoted). */
+/**
+ * Read a single `KEY=value` from the agent's dotenv files (value may be quoted).
+ *
+ * @remarks
+ * Checks `.env.local` before `.env`, the same order eve itself uses: an agent
+ * linked to Vercel gets its keys from `vercel env pull`, which writes
+ * `.env.local` and often leaves no `.env` at all. Reading only `.env` made the
+ * brain credential resolve to null for those agents, which silently emptied the
+ * Proposals inbox even though the notes were queued fine.
+ */
 function readEnvVar(agentPath: string, name: string): string | null {
-  const p = envPath(agentPath);
-  if (!existsSync(p)) {
-    return null;
+  const key = name.replace(/[^A-Z0-9_]/gi, "");
+  const re = new RegExp(`^\\s*${key}\\s*=\\s*(.*)$`, "m");
+  for (const file of [".env.local", envPath(agentPath)]) {
+    const p = file.startsWith(".") ? join(agentPath, file) : file;
+    if (!existsSync(p)) {
+      continue;
+    }
+    const m = re.exec(readFileSync(p, "utf8"));
+    const v = m?.[1]?.trim().replace(/^["']|["']$/g, "");
+    if (v) {
+      return v;
+    }
   }
-  const re = new RegExp(
-    `^\\s*${name.replace(/[^A-Z0-9_]/gi, "")}\\s*=\\s*(.*)$`,
-    "m",
-  );
-  const m = re.exec(readFileSync(p, "utf8"));
-  if (!m) {
-    return null;
-  }
-  return m[1].trim().replace(/^["']|["']$/g, "") || null;
+  return null;
 }
 
 /**
