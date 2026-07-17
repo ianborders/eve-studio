@@ -187,6 +187,11 @@ const api = {
       input: ChannelAddInput,
     ): Promise<ChannelWriteResult> =>
       ipcRenderer.invoke(IPC.channelWrite, id, input),
+    channelDelete: (
+      id: string,
+      name: string,
+    ): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC.channelDelete, id, name),
     onStatusChanged: (cb: (s: AgentRuntimeState) => void): (() => void) =>
       sub(IPC.agentStatusChanged, cb),
     onLog: (cb: (m: LogChunk) => void): (() => void) => sub(IPC.agentLog, cb),

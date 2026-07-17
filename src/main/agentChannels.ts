@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ChannelAddInput, ChannelKind } from "../shared/ipc";
 
@@ -171,4 +171,21 @@ export default ${e.body};
   }
 
   throw new Error(`Unknown channel kind: ${input.kind}`);
+}
+
+/**
+ * Delete a channel by removing its `channels/<name>.ts` file.
+ *
+ * @remarks
+ * `name` must be a simple slug (no path separators) so it can never escape the
+ * channels directory. Deployed events routed to a removed channel simply stop.
+ */
+export function deleteChannelFile(agentPath: string, name: string): void {
+  if (!/^[a-z0-9-]+$/i.test(name)) {
+    throw new Error("Invalid channel name.");
+  }
+  const file = join(agentRoot(agentPath), "channels", `${name}.ts`);
+  if (existsSync(file)) {
+    rmSync(file);
+  }
 }

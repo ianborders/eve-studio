@@ -64,7 +64,7 @@ import {
 import { checkHealth, getAgentInfo, type SessionConn } from "./eveSession";
 import * as store from "./store";
 import { readStructure } from "./structure";
-import { writeChannel } from "./agentChannels";
+import { deleteChannelFile, writeChannel } from "./agentChannels";
 import {
   openConnectExternal,
   openConnector,
@@ -474,6 +474,20 @@ export function registerIpc(): IpcHandles {
     ) => {
       try {
         return { ok: true, ...writeChannel(agentPathOf(id), input) };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    },
+  );
+  ipcMain.handle(
+    IPC.channelDelete,
+    (_e: IpcMainInvokeEvent, id: string, name: string) => {
+      try {
+        deleteChannelFile(agentPathOf(id), name);
+        return { ok: true };
       } catch (err) {
         return {
           ok: false,

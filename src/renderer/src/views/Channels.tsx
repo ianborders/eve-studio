@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ConnectorPicker } from "../components/ConnectorPicker";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
-import { IconPlus, IconRefresh, IconServer } from "../ui/icons";
+import { IconPlus, IconRefresh, IconServer, IconTrash } from "../ui/icons";
 import {
   Badge,
   Button,
@@ -12,7 +12,6 @@ import {
   List,
   Modal,
   Spinner,
-  StatusDot,
   ViewHeader,
   cx,
 } from "../ui/kit";
@@ -344,6 +343,9 @@ export function Channels(): JSX.Element {
   const [channels, setChannels] = useState<ChannelItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [add, setAdd] = useState<Cat | null>(null);
+  const [remove, setRemove] = useState<ChannelItem | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [removeErr, setRemoveErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) {
@@ -391,6 +393,15 @@ export function Channels(): JSX.Element {
           {/* Configured */}
           <div className="space-y-2.5">
             <Kicker>Configured</Kicker>
+            <p className="text-2xs leading-relaxed text-muted">
+              “Added” means the channel file exists in the agent. Connect-based
+              channels (Slack, GitHub, Linear) also need their connector
+              attached &amp; authorized in Vercel, plus a redeploy, before they
+              can send or receive. A channel lets the agent reply where its
+              events arrive and be posted to by schedules — it is{" "}
+              <span className="font-medium">not</span> a tool the agent can call
+              to message you from a normal chat.
+            </p>
             <List>
               <div className="flex items-center gap-3 px-3 py-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-subtle text-faint">
@@ -425,10 +436,7 @@ export function Channels(): JSX.Element {
                         <span className="text-[13px] font-medium text-text">
                           {cat?.label ?? c.name}
                         </span>
-                        <Badge tone="success">
-                          <StatusDot status="running" />
-                          connected
-                        </Badge>
+                        <Badge>added</Badge>
                       </div>
                       <div className="mt-0.5 font-mono text-2xs text-faint">
                         channels/{c.name}.ts
@@ -437,6 +445,15 @@ export function Channels(): JSX.Element {
                           : ""}
                       </div>
                     </div>
+                    <IconButton
+                      onClick={() => {
+                        setRemoveErr(null);
+                        setRemove(c);
+                      }}
+                      title="Remove channel"
+                    >
+                      <IconTrash className="h-3.5 w-3.5" />
+                    </IconButton>
                   </div>
                 );
               })}
@@ -474,10 +491,7 @@ export function Channels(): JSX.Element {
                       </div>
                     </div>
                     {added ? (
-                      <Badge tone="success">
-                        <StatusDot status="running" />
-                        connected
-                      </Badge>
+                      <Badge>added</Badge>
                     ) : (
                       <Button
                         variant="secondary"
@@ -503,6 +517,55 @@ export function Channels(): JSX.Element {
           onClose={() => setAdd(null)}
           onDone={load}
         />
+      ) : null}
+
+      {remove && id ? (
+        <Modal
+          onClose={() => setRemove(null)}
+          title={`Remove ${CATALOG.find((x) => x.kind === (remove.kind ?? remove.name))?.label ?? remove.name}?`}
+          width="max-w-md"
+        >
+          <div className="space-y-3 p-4">
+            <p className="text-[13px] leading-relaxed text-muted">
+              Deletes{" "}
+              <span className="font-mono text-text">
+                channels/{remove.name}.ts
+              </span>{" "}
+              from the agent. Redeploy for it to take effect. The Vercel Connect
+              connector stays attached — remove that in Vercel if you no longer
+              want it.
+            </p>
+            {removeErr ? (
+              <div className="text-xs text-danger">{removeErr}</div>
+            ) : null}
+            <div className="flex justify-end gap-2">
+              <Button onClick={() => setRemove(null)} variant="ghost">
+                Cancel
+              </Button>
+              <Button
+                disabled={removing}
+                onClick={async () => {
+                  setRemoving(true);
+                  setRemoveErr(null);
+                  const r = await window.studio.agents.channelDelete(
+                    id,
+                    remove.name,
+                  );
+                  setRemoving(false);
+                  if (r.ok) {
+                    setRemove(null);
+                    void load();
+                  } else {
+                    setRemoveErr(r.error ?? "Failed to remove.");
+                  }
+                }}
+                variant="danger"
+              >
+                {removing ? "Removing…" : "Remove"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       ) : null}
     </div>
   );
