@@ -350,6 +350,34 @@ export function registerIpc(): IpcHandles {
   ipcMain.handle(IPC.agentStatus, (_e: IpcMainInvokeEvent, id: string) =>
     agents.state(id),
   );
+  ipcMain.handle(
+    IPC.scheduleRun,
+    async (_e: IpcMainInvokeEvent, id: string, name: string) => {
+      const st = agents.state(id);
+      if (st.status !== "running" || !st.url) {
+        return {
+          ok: false,
+          output:
+            "Start the agent locally first — the test route only runs under eve dev.",
+        };
+      }
+      try {
+        const res = await fetch(
+          `${st.url}/eve/v1/dev/schedules/${encodeURIComponent(name)}`,
+          { method: "POST" },
+        );
+        const body = await res.text();
+        return res.ok
+          ? { ok: true, output: body.slice(0, 600) }
+          : { ok: false, output: `HTTP ${res.status}: ${body.slice(0, 300)}` };
+      } catch (e) {
+        return {
+          ok: false,
+          output: e instanceof Error ? e.message : String(e),
+        };
+      }
+    },
+  );
   ipcMain.handle(IPC.agentInfo, (_e: IpcMainInvokeEvent, id: string) => {
     const url = agents.url(id);
     if (!url) {
