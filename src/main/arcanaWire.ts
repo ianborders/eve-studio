@@ -54,25 +54,36 @@ export function detectBrain(
     .filter((c) => (c.url ?? "").toLowerCase().includes("arcana"))
     .map((c) => ({ name: c.name, url: c.url }));
 
-  let workspace: string | undefined;
-  let envVar: string | undefined;
-
-  const file = join(connectionsDir(agentPath), "arcana.ts");
-  if (existsSync(file)) {
-    const src = readFileSync(file, "utf8");
-    envVar = /process\.env\.([A-Z0-9_]*ARCANA[A-Z0-9_]*|ARCANA[A-Z0-9_]*)/.exec(
-      src,
-    )?.[1];
-    workspace =
-      /X-Kyberagent-Agent["']?\s*[:=]\s*["']([a-z0-9-]+)["']/i.exec(src)?.[1] ??
-      /arcanaWorkspace\s*=\s*(?:process\.env\.[A-Z0-9_]+\s*\?\?\s*)?["']([a-z0-9-]+)["']/i.exec(
-        src,
-      )?.[1];
-  }
-
+  const { workspace, envVar } = brainFromConnection(agentPath);
   const keyPresent = envVar ? readEnvVar(agentPath, envVar) !== null : false;
 
   return { connections, workspace, envVar, keyPresent };
+}
+
+/**
+ * Parse the agent's Arcana connection file for its workspace + key env var,
+ * without needing the compiled structure. Used to resolve a brain credential
+ * for the proposal queue.
+ */
+export function brainFromConnection(agentPath: string): {
+  workspace?: string;
+  envVar?: string;
+} {
+  const file = join(connectionsDir(agentPath), "arcana.ts");
+  if (!existsSync(file)) {
+    return {};
+  }
+  const src = readFileSync(file, "utf8");
+  const envVar =
+    /process\.env\.([A-Z0-9_]*ARCANA[A-Z0-9_]*|ARCANA[A-Z0-9_]*)/.exec(
+      src,
+    )?.[1];
+  const workspace =
+    /X-Kyberagent-Agent["']?\s*[:=]\s*["']([a-z0-9-]+)["']/i.exec(src)?.[1] ??
+    /arcanaWorkspace\s*=\s*(?:process\.env\.[A-Z0-9_]+\s*\?\?\s*)?["']([a-z0-9-]+)["']/i.exec(
+      src,
+    )?.[1];
+  return { workspace, envVar };
 }
 
 /** Read the key from an agent's `.env` for a given env-var name. */

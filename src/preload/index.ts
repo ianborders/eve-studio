@@ -43,6 +43,7 @@ import {
   type ModelReadiness,
   type ProdInfo,
   type QueryHit,
+  type QueuedProposalsResult,
   type SandboxInfo,
   type ScheduleInput,
   type SkillInput,
@@ -279,6 +280,10 @@ const api = {
       enabled: boolean,
     ): Promise<{ enabled: boolean }> =>
       ipcRenderer.invoke(IPC.evolveSetProposeTool, id, enabled),
+    listProposals: (id: string): Promise<QueuedProposalsResult> =>
+      ipcRenderer.invoke(IPC.evolveListProposals, id),
+    resolveProposal: (id: string, note: string): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke(IPC.evolveResolveProposal, id, note),
   },
 
   dialog: {

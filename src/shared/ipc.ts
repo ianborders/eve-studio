@@ -493,6 +493,22 @@ export interface EvolveDetectResult {
 }
 /** Name of the opt-in tool the agent calls to propose a change to itself. */
 export const PROPOSE_TOOL_NAME = "propose_change";
+/** A proposal the agent queued from outside Studio (e.g. a Slack DM). */
+export interface QueuedProposal {
+  id: string;
+  kind: ProposalKind;
+  title: string;
+  intent: string;
+  /** ISO timestamp the agent proposed it. */
+  ts: string;
+  /** The brain note backing this proposal (used to mark it resolved). */
+  note: string;
+}
+export interface QueuedProposalsResult {
+  ok: boolean;
+  proposals: QueuedProposal[];
+  error?: string;
+}
 
 export const IPC = {
   appInfo: "app:info",
@@ -555,6 +571,8 @@ export const IPC = {
   evolveDetect: "evolve:detect",
   evolveGetProposeTool: "evolve:getProposeTool",
   evolveSetProposeTool: "evolve:setProposeTool",
+  evolveListProposals: "evolve:listProposals",
+  evolveResolveProposal: "evolve:resolveProposal",
   deployGet: "agent:deployGet",
   deploySet: "agent:deploySet",
   deployHealth: "agent:deployHealth",

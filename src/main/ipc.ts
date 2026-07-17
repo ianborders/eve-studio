@@ -52,7 +52,12 @@ import {
   arcanaTimeline,
   arcanaValidate,
 } from "./arcana";
-import { detectBrain, keyFromEnv, wireBrain } from "./arcanaWire";
+import {
+  brainFromConnection,
+  detectBrain,
+  keyFromEnv,
+  wireBrain,
+} from "./arcanaWire";
 import { ChatController } from "./chat";
 import {
   addChannel,
@@ -96,6 +101,8 @@ import {
   detectPatterns,
   draftProposal,
   getProposeTool,
+  listQueuedProposals,
+  resolveQueuedProposal,
   setProposeTool,
 } from "./evolve";
 import type { EvolveProposal } from "../shared/ipc";
@@ -155,6 +162,27 @@ function requireBrain(agentId: string): store.BrainCred {
     throw new Error("No brain configured for this agent.");
   }
   return cred;
+}
+
+/**
+ * Resolve an agent's Arcana brain credential — a brain saved in Studio, else
+ * detected from the agent's own Arcana connection + env key. Lets the proposal
+ * queue work without the user separately wiring the brain in Studio.
+ */
+function resolveBrainCred(agentId: string): store.BrainCred | null {
+  const saved = store.getBrain(agentId);
+  if (saved) {
+    return saved;
+  }
+  const path = agentPathOf(agentId);
+  const d = brainFromConnection(path);
+  if (d.workspace && d.envVar) {
+    const key = keyFromEnv(path, d.envVar);
+    if (key) {
+      return { workspace: d.workspace, envVar: d.envVar, key };
+    }
+  }
+  return null;
 }
 
 function broadcast(channel: string, payload: unknown): void {
@@ -1025,6 +1053,31 @@ export function registerIpc(): IpcHandles {
     IPC.evolveSetProposeTool,
     (_e: IpcMainInvokeEvent, id: string, enabled: boolean) =>
       setProposeTool(agentPathOf(id), enabled),
+  );
+  ipcMain.handle(
+    IPC.evolveListProposals,
+    async (_e: IpcMainInvokeEvent, id: string) => {
+      const brain = resolveBrainCred(id);
+      if (!brain) {
+        return {
+          ok: false,
+          proposals: [],
+          error:
+            "No Arcana brain on this agent — the proposal queue needs one.",
+        };
+      }
+      return { ok: true, proposals: await listQueuedProposals(brain) };
+    },
+  );
+  ipcMain.handle(
+    IPC.evolveResolveProposal,
+    async (_e: IpcMainInvokeEvent, id: string, note: string) => {
+      const brain = resolveBrainCred(id);
+      if (brain) {
+        await resolveQueuedProposal(brain, note);
+      }
+      return { ok: true };
+    },
   );
   ipcMain.handle(
     IPC.vercelLink,
