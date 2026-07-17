@@ -2,11 +2,13 @@
 
 **A desktop control center for [Eve](https://vercel.com/eve) agents.** Run, chat with, build, wire up, and deploy every Eve agent on your machine — from one native app, without living in a terminal.
 
-Eve Studio is an Electron app that discovers the Eve agents on your disk and gives each one a full workspace: a chat console (local **and** deployed), a prompt/model editor, first-class editing for every capability (tools, skills, subagents, hooks, schedules), integrations (connections & channels), long-term memory, one-click Vercel deploys, and evals.
+Eve Studio is an Electron app that discovers the Eve agents on your disk and gives each one a full workspace: **self-improvement** (Evolve), a chat console (local **and** deployed), a prompt/model editor, first-class editing for every capability (tools, skills, subagents, hooks, schedules), integrations (connections & channels), long-term memory, one-click Vercel deploys, and evals.
 
 ![Eve Studio](docs/screenshot.png)
 
-> Status: early / personal project (`v0.0.1`), macOS-first. Built on the Eve **beta**.
+**→ [evestudio.dev](https://evestudio.dev)** · signed & notarized macOS builds with an in-app auto-updater.
+
+> Status: early, macOS-first (`v0.3.0`). Built on the Eve **beta**.
 
 ---
 
@@ -14,8 +16,9 @@ Eve Studio is an Electron app that discovers the Eve agents on your disk and giv
 
 Point it at a folder that contains an Eve agent (or create a new one in-app) and you get, per agent:
 
-- **Chat** — a clean conversation console that streams the agent's turns, tool calls, subagent delegations, reasoning, and approval prompts. Talk to the **local dev server** or your **deployed production** agent from the same window. Threads live inline in the sidebar and can be **archived** so the list stays tidy.
-- **Instructions & Model** — edit the system prompt (`instructions.md`) and the model/reasoning (`agent.ts`) directly.
+- **Evolve** — tell an agent to change *itself*, in plain English. Say it in the Evolve tab, in chat (Studio detects it), or DM the deployed agent on **Slack**. Studio drafts the change with the agent's *own* model, shows you the exact diff, and on your approval writes the files and **git-commits** them — a revert point per change. It routes intent to the right kind automatically: a new **skill**, **tool**, **schedule**, an `instructions.md` edit, or a **fact for memory**. Proposals raised from a deployed agent queue to a private **Vercel Blob** store by default (or an **Arcana** brain if one is wired), and Studio can create that store in a click. Nothing changes without your yes, and the agent stays base Eve — no self-editing at runtime.
+- **Chat** — a clean conversation console that streams the agent's turns, tool calls, subagent delegations, reasoning, and approval prompts. Talk to the **local dev server** or your **deployed production** agent from the same window. The composer bar shows the **model the session is running** alongside live token/cost. Threads live inline in the sidebar and can be **archived** so the list stays tidy.
+- **Instructions & Model** — edit the system prompt (`instructions.md`) directly, and pick the model from the **live AI Gateway catalog** — search 200+ chat models across Anthropic, OpenAI, xAI, Google, Moonshot, Z.ai, DeepSeek and more, right in the app. Set reasoning effort per agent too.
 - **Capabilities** — browse **tools, skills, subagents, and hooks**, scaffold new ones, and **open · edit · delete** their source files in an in-app editor (SKILL.md for skills; `agent.ts` + `instructions.md` for subagents).
 - **Integrations** — manage **connections** (MCP / OpenAPI) and **channels**, and wire Vercel **Connect** connectors.
 - **Memory** — see whether the agent is using Eve's native durable sessions or an external long-term brain ([Arcana](https://kybernesis.ai)), and wire it up.
@@ -52,8 +55,9 @@ Eve is **filesystem-first**: an agent's capabilities are discovered from its dir
 ```
 
 - **Chat** talks to the Eve session HTTP API (`POST /eve/v1/session`, `GET …/stream`) — the same contract locally and against a deployed URL (with a Deployment Protection bypass header for protected deployments).
-- **Structure** (the tabs' contents) is read from Eve's compiled agent manifest, so what you see is exactly what Eve discovered.
-- **Authoring** writes real files with the same scaffolds Eve expects, and edits/deletes are path-safe (nothing outside the agent directory is ever touched).
+- **Structure** (the tabs' contents) is read from Eve's compiled agent manifest, with the authored source (`agent.ts`, capability dirs) overlaid — so a model or capability you just changed shows immediately, even before the manifest is rebuilt.
+- **Evolve** drafts changes through the agent's own linked **AI Gateway** (its configured model), then writes real files with the same scaffolds Eve expects. Every apply is a git commit; edits/deletes are path-safe (nothing outside the agent directory is ever touched).
+- **Model catalog** is fetched live from the linked gateway's `/v1/models`, filtered to chat models — so the picker always reflects what's actually available.
 - **Deploy** shells out to the Vercel CLI for linking, env pull/push, connector management, and production deploys.
 
 ### Project layout
