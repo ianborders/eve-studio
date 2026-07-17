@@ -83,6 +83,74 @@ function run(agentPath: string, args: string[], input?: string): CmdResult {
   }
 }
 
+/**
+ * Non-blocking variant of {@link run} for slow/interactive commands.
+ *
+ * @remarks
+ * `spawnSync` freezes the Electron main process (and the whole UI) until the
+ * command returns — fine for quick reads, fatal for `connect create`/`attach`,
+ * which wait on browser OAuth. This spawns asynchronously so the event loop
+ * stays free, closes stdin so the CLI can never block waiting for input, and
+ * kills the child on timeout instead of hanging.
+ */
+function runAsync(
+  agentPath: string,
+  args: string[],
+  timeoutMs = 180_000,
+): Promise<CmdResult> {
+  return new Promise((resolve) => {
+    let v: { cmd: string; pre: string[] };
+    try {
+      v = resolveVercel();
+    } catch (e) {
+      resolve({
+        ok: false,
+        output: e instanceof Error ? e.message : String(e),
+      });
+      return;
+    }
+    const child = spawn(v.cmd, [...v.pre, ...args], {
+      cwd: agentPath,
+      env: { ...process.env, NO_COLOR: "1" },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let out = "";
+    let done = false;
+    const finish = (r: CmdResult): void => {
+      if (!done) {
+        done = true;
+        resolve(r);
+      }
+    };
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      finish({
+        ok: false,
+        output:
+          `${out}\n(timed out after ${Math.round(timeoutMs / 1000)}s — the command may need a browser step; continue in Vercel Connect)`.trim(),
+      });
+    }, timeoutMs);
+    child.stdout?.on("data", (d) => {
+      out += d.toString();
+    });
+    child.stderr?.on("data", (d) => {
+      out += d.toString();
+    });
+    child.on("error", (e) => {
+      clearTimeout(timer);
+      const msg =
+        (e as NodeJS.ErrnoException).code === "ENOENT"
+          ? "Couldn't run Vercel — the runtime isn't ready yet. Try again in a moment."
+          : e.message;
+      finish({ ok: false, output: msg });
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      finish({ ok: code === 0, output: out.trim() || `(exit ${code})` });
+    });
+  });
+}
+
 /** `vercel env ls` — list production/preview/development env var names. */
 export function vercelEnvLs(agentPath: string): CmdResult {
   return run(agentPath, ["env", "ls"]);
@@ -287,10 +355,10 @@ export function vercelEnvSetAll(
 
 // ---------------- Vercel Connect ----------------
 /** List Connect connectors for the linked project (optionally by service). */
-export function vercelConnectList(
+export async function vercelConnectList(
   agentPath: string,
   service?: string,
-): { ok: boolean; connectors: ConnectorItem[]; output?: string } {
+): Promise<{ ok: boolean; connectors: ConnectorItem[]; output?: string }> {
   const args = [
     "connect",
     "list",
@@ -302,7 +370,7 @@ export function vercelConnectList(
   if (service) {
     args.push("--service", service);
   }
-  const r = run(agentPath, args);
+  const r = await runAsync(agentPath, args);
   if (!r.ok) {
     return { ok: false, connectors: [], output: r.output };
   }
@@ -339,12 +407,14 @@ export function vercelConnectCreate(
   type: string,
   name: string,
   triggers: boolean,
-): CmdResult {
+): Promise<CmdResult> {
   const args = ["connect", "create", type, "--name", name, "--format", "json"];
   if (triggers) {
     args.push("--triggers");
   }
-  return run(agentPath, args);
+  // Managed services open a browser OAuth step — cap the wait so a stalled
+  // authorization surfaces a message instead of hanging the UI.
+  return runAsync(agentPath, args, 120_000);
 }
 
 /** Attach the current project to a connector (with an eve trigger path for channels). */
@@ -352,10 +422,10 @@ export function vercelConnectAttach(
   agentPath: string,
   connector: string,
   triggerPath?: string,
-): CmdResult {
+): Promise<CmdResult> {
   const args = ["connect", "attach", connector, "--yes"];
   if (triggerPath) {
     args.push("--triggers", "--trigger-path", triggerPath);
   }
-  return run(agentPath, args);
+  return runAsync(agentPath, args, 120_000);
 }
