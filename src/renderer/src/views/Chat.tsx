@@ -259,13 +259,30 @@ export function Chat(): JSX.Element {
   const ready = target === "deployed" ? true : running;
   const agentName = agents.find((a) => a.id === activeAgentId)?.name ?? "Agent";
 
-  const submit = (): void => {
+  const submit = (asMessage = false): void => {
     const text = draft.trim();
     if (!text || streaming || !ready || !activeThreadId) {
       return;
     }
+    // A self-change request goes to the approval flow, not the agent — the agent
+    // can't edit itself, so sending it there just gets a refusal.
+    if (!asMessage && looksLikeEvolveIntent(text)) {
+      openEvolve();
+      return;
+    }
     setDraft("");
     void send(text);
+  };
+
+  // Escape hatch from the Evolve modal: send the text as a normal message.
+  const sendAsMessage = (): void => {
+    const text = draft.trim();
+    setEvolveOpen(false);
+    ev.reset();
+    setDraft("");
+    if (text && ready && activeThreadId) {
+      void send(text);
+    }
   };
 
   const canSend =
@@ -362,7 +379,7 @@ export function Chat(): JSX.Element {
           />
           <button
             type="button"
-            onClick={submit}
+            onClick={() => submit()}
             disabled={!canSend}
             title="Send"
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-text text-white transition-[background-color,transform] duration-150 hover:bg-text/80 active:scale-95 disabled:bg-black/[0.05] disabled:text-faint"
@@ -396,8 +413,15 @@ export function Chat(): JSX.Element {
       {evolveOpen ? (
         <Modal onClose={closeEvolve} title="Evolve this" width="max-w-xl">
           <div className="space-y-3 p-4">
-            <div className="rounded-lg bg-canvas px-3 py-2 text-[13px] text-muted">
-              “{evolveText}”
+            <div className="flex items-start justify-between gap-3 rounded-lg bg-canvas px-3 py-2">
+              <span className="text-[13px] text-muted">“{evolveText}”</span>
+              <button
+                className="shrink-0 whitespace-nowrap text-2xs text-faint underline decoration-border-strong underline-offset-2 hover:text-foreground"
+                onClick={sendAsMessage}
+                type="button"
+              >
+                send as a message instead
+              </button>
             </div>
             {ev.phase === "drafting" ? (
               <div className="flex items-center gap-2 text-[13px] text-muted">

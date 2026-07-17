@@ -13,8 +13,8 @@ export interface UseEvolve {
   running: boolean;
   /** Draft a proposal from an intent, moving to the review phase. */
   draft: (intent: string) => Promise<void>;
-  /** Apply the current proposal (write files / remember). */
-  apply: () => Promise<void>;
+  /** Apply the current proposal, or an edited copy from the review UI. */
+  apply: (edited?: EvolveProposal) => Promise<void>;
   /** Stop + start the agent to load the change locally. */
   restart: () => Promise<void>;
   /** Return to idle, clearing the current proposal/result. */
@@ -53,7 +53,8 @@ export function useEvolve(agentId: string | null): UseEvolve {
     }
     setPhase("drafting");
     setError(null);
-    const r = await window.studio.evolve.draft(agentId, text);
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const r = await window.studio.evolve.draft(agentId, text, timezone);
     if (r.ok && r.proposal) {
       setProposal(r.proposal);
       setPhase("review");
@@ -63,12 +64,17 @@ export function useEvolve(agentId: string | null): UseEvolve {
     }
   };
 
-  const apply = async (): Promise<void> => {
-    if (!(agentId && proposal)) {
+  /** Apply the proposal — or an edited copy from the review UI. */
+  const apply = async (edited?: EvolveProposal): Promise<void> => {
+    const toApply = edited ?? proposal;
+    if (!(agentId && toApply)) {
       return;
     }
+    if (edited) {
+      setProposal(edited);
+    }
     setPhase("applying");
-    const r = await window.studio.evolve.apply(agentId, proposal);
+    const r = await window.studio.evolve.apply(agentId, toApply);
     setResult(r);
     setPhase("done");
     if (r.ok) {

@@ -280,6 +280,7 @@ function langOf(relPath: string): ProposalFileChange["language"] {
 export async function draftProposal(
   agentPath: string,
   intent: string,
+  timezone?: string,
 ): Promise<EvolveDraftResult> {
   const trimmed = intent.trim();
   if (!trimmed) {
@@ -295,6 +296,7 @@ Existing skills: ${inv.skills.join(", ") || "(none)"}
 Existing schedules: ${inv.schedules.join(", ") || "(none)"}
 Existing channels: ${inv.channels.join(", ") || "(none)"}
 Relevant env vars (names only, for message targets): ${targetEnvNames(agentPath).join(", ") || "(none)"}
+User's timezone: ${timezone || "unknown"} — interpret any local clock time (e.g. "9am") in THIS zone and convert to the equivalent UTC cron; state the local time + zone and the UTC in the TSDoc.
 
 Current instructions.md:
 """

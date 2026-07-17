@@ -255,8 +255,12 @@ const api = {
   },
 
   evolve: {
-    draft: (id: string, intent: string): Promise<EvolveDraftResult> =>
-      ipcRenderer.invoke(IPC.evolveDraft, id, intent),
+    draft: (
+      id: string,
+      intent: string,
+      timezone?: string,
+    ): Promise<EvolveDraftResult> =>
+      ipcRenderer.invoke(IPC.evolveDraft, id, intent, timezone),
     apply: (id: string, proposal: EvolveProposal): Promise<EvolveApplyResult> =>
       ipcRenderer.invoke(IPC.evolveApply, id, proposal),
     detect: (id: string): Promise<EvolveDetectResult> =>
