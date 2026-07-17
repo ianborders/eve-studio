@@ -51,7 +51,7 @@ const CATALOG: Cat[] = [
     label: "Microsoft Teams",
     desc: "Messages + Adaptive Cards.",
     auth: "env",
-    env: ["MICROSOFT_APP_ID"],
+    env: ["MICROSOFT_APP_ID", "MICROSOFT_APP_PASSWORD"],
     color: "#4b53bc",
   },
   {
