@@ -79,6 +79,8 @@ const api = {
       ipcRenderer.invoke(IPC.agentStart, id),
     stop: (id: string): Promise<AgentRuntimeState> =>
       ipcRenderer.invoke(IPC.agentStop, id),
+    restart: (id: string): Promise<AgentRuntimeState> =>
+      ipcRenderer.invoke(IPC.agentRestart, id),
     status: (id: string): Promise<AgentRuntimeState> =>
       ipcRenderer.invoke(IPC.agentStatus, id),
     info: (id: string): Promise<unknown> =>

@@ -233,6 +233,41 @@ export class AgentManager {
     this.killTree(r);
   }
 
+  /**
+   * Stop, wait for the old child to actually exit, then start.
+   *
+   * @remarks
+   * A naive stop-then-start no-ops: `stop()` kills the child but its `exit`
+   * fires asynchronously, so `start()` still sees the old record as "running"
+   * and returns early — then the dying child flips status to "stopped". Waiting
+   * for the record to clear (or a short cap) before starting avoids that race.
+   */
+  async restart(
+    agentId: string,
+    agentPath: string,
+  ): Promise<AgentRuntimeState> {
+    const r = this.running.get(agentId);
+    if (r) {
+      const gone = new Promise<void>((res) => {
+        if (r.adopted) {
+          res();
+          return;
+        }
+        r.proc.once("exit", () => res());
+      });
+      this.stop(agentId);
+      await Promise.race([
+        gone,
+        new Promise<void>((res) => setTimeout(res, 5000)),
+      ]);
+    }
+    // Ensure the record is cleared so start() doesn't early-return.
+    for (let i = 0; i < 20 && this.running.has(agentId); i++) {
+      await new Promise<void>((res) => setTimeout(res, 100));
+    }
+    return this.start(agentId, agentPath);
+  }
+
   stopAll(): void {
     for (const [, r] of this.running) {
       r.stopping = true;

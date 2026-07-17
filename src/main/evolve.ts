@@ -256,7 +256,9 @@ Messaging a provider (Slack/Discord/etc.) from a schedule:
       },
     });
   The channel import path is relative to the schedules dir ("../channels/<name>.js", keep the .js). "message" is an instruction to the agent, not the literal text to send.
+- Target env var: REUSE an existing Slack channel-id var from "Relevant env vars" if there is one; otherwise use the single shared name SLACK_NUDGE_CHANNEL. NEVER invent a new per-task/per-reminder variable name (not SLACK_TESTOSTERONE_CHANNEL etc.) — one target var serves all reminders.
 - If NO channel for the provider exists, still produce the schedule, but add a prereq: "Add a <provider> channel in Integrations (a channel, not an MCP connection)."
+- If the target var isn't set yet, add a prereq naming that exact var and where to set it: "Set <VAR> to your Slack member id (U…) or a channel id (C…) — use the Slack channel's Set up → Target step, or the Environment tab."
 
 Rules:
 - Prefer "memory" for facts and "instructions" only for behavior.
