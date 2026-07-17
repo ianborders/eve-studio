@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentStructure } from "../shared/ipc";
+import { readModelConfig } from "./agentAuthoring";
 import { eveBin } from "./cli";
 
 function agentRootOf(agentPath: string): string {
@@ -57,8 +58,15 @@ function mergeAuthored(
       hooks.push(n);
     }
   }
+  // Read the model straight from agent.ts. The compiled manifest is only
+  // rewritten by `eve build`; `eve dev` and `eve deploy` leave it stale, so the
+  // manifest's model can lag what's actually authored (and deployed) — every
+  // consumer of structure.model would show the old model after a switch.
+  const authoredModel = readModelConfig(agentPath).model;
+
   return {
     ...base,
+    model: authoredModel ?? base.model,
     schedules: named(base.schedules, listDir(join(root, "schedules"), "ts")),
     tools: named(base.tools, listDir(join(root, "tools"), "ts")),
     skills: named(base.skills, listDir(join(root, "skills"), "dirs")),
