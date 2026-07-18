@@ -16,6 +16,13 @@ const PATTERNS: RegExp[] = [
   // behavior/persona edits
   /\b(from now on|going forward|always|never)\b/i,
   /\byou should (always|never|start|stop)\b/i,
+  // identity / persona declarations ("your name is Mythos", "call yourself X",
+  // "you are now called X", "your role/job/persona is …"). Kept tight — a match
+  // diverts the message into Evolve, so bare "you are" is intentionally excluded.
+  /\byour name(?:'s| is)\b/i,
+  /\byou(?:'re| are) (?:now )?(?:called|named)\b/i,
+  /\bcall yourself\b/i,
+  /\byour (?:role|job|purpose|persona|personality|tone|voice|identity) is\b/i,
   // recurring / proactive work
   /\b(every|each)\s+(morning|day|night|week|weekday|hour|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i,
   /\bat \d{1,2}\s?(am|pm|:\d{2})\b[^.?!]*\b(dm|message|post|send|slack|email)\b/i,
