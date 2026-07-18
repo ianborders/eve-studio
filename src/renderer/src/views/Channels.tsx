@@ -3,13 +3,18 @@ import type {
   ChannelKind,
   ChannelWiring,
   DiscordStatus,
+  TeamsStatus,
   TelegramStatus,
+  TwilioStatus,
 } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
 import { ConnectorPicker } from "../components/ConnectorPicker";
+import { ConnectSetup } from "../components/ConnectSetup";
 import { DiscordSetup } from "../components/DiscordSetup";
 import { SlackSetup } from "../components/SlackSetup";
+import { TeamsSetup } from "../components/TeamsSetup";
 import { TelegramSetup } from "../components/TelegramSetup";
+import { TwilioSetup } from "../components/TwilioSetup";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
 import { IconPlus, IconRefresh, IconServer, IconTrash } from "../ui/icons";
@@ -360,8 +365,15 @@ export function Channels(): JSX.Element {
   const [slackSetup, setSlackSetup] = useState(false);
   const [telegramSetup, setTelegramSetup] = useState(false);
   const [discordSetup, setDiscordSetup] = useState(false);
+  const [twilioSetup, setTwilioSetup] = useState(false);
+  const [teamsSetup, setTeamsSetup] = useState(false);
+  const [connectSetup, setConnectSetup] = useState<"github" | "linear" | null>(
+    null,
+  );
   const [tg, setTg] = useState<TelegramStatus | null>(null);
   const [dc, setDc] = useState<DiscordStatus | null>(null);
+  const [tw, setTw] = useState<TwilioStatus | null>(null);
+  const [tm, setTm] = useState<TeamsStatus | null>(null);
   const [finishing, setFinishing] = useState<string | null>(null);
   const [finishMsg, setFinishMsg] = useState<{
     name: string;
@@ -395,6 +407,14 @@ export function Channels(): JSX.Element {
       .status(id)
       .then(setDc)
       .catch(() => setDc(null));
+    window.studio.twilio
+      .status(id)
+      .then(setTw)
+      .catch(() => setTw(null));
+    window.studio.teams
+      .status(id)
+      .then(setTm)
+      .catch(() => setTm(null));
   }, [id]);
 
   useEffect(() => {
@@ -409,7 +429,7 @@ export function Channels(): JSX.Element {
    * deploy without reopening the wizard.
    */
   const finishChannel = async (
-    kind: "telegram" | "discord",
+    kind: "telegram" | "discord" | "twilio",
     name: string,
   ): Promise<void> => {
     if (!id) {
@@ -428,7 +448,18 @@ export function Channels(): JSX.Element {
       return;
     }
     const base = alias.url.replace(/\/+$/, "");
-    if (kind === "telegram") {
+    if (kind === "twilio") {
+      const r = await window.studio.twilio.setWebhooks(id, base);
+      setFinishMsg(
+        r.ok && r.live
+          ? { name, ok: true, text: "Number webhooks set — connected." }
+          : {
+              name,
+              ok: false,
+              text: r.error ?? "Couldn't set the number's webhooks.",
+            },
+      );
+    } else if (kind === "telegram") {
       const r = await window.studio.telegram.registerWebhook(
         id,
         `${base}/eve/v1/telegram`,
@@ -530,7 +561,8 @@ export function Channels(): JSX.Element {
                 const kind = c.kind ?? c.name;
                 const needsFinish =
                   (kind === "telegram" && tg?.configured && !tg.live) ||
-                  (kind === "discord" && dc?.configured && !dc.live);
+                  (kind === "discord" && dc?.configured && !dc.live) ||
+                  (kind === "twilio" && tw?.configured && !tw.live);
                 return (
                   <div key={c.name} className="px-3 py-3">
                     <div className="flex items-center gap-3">
@@ -581,6 +613,40 @@ export function Channels(): JSX.Element {
                                 ) : (
                                   <Badge>added</Badge>
                                 )
+                              ) : (c.kind ?? c.name) === "twilio" ? (
+                                tw?.live ? (
+                                  <Badge tone="success">
+                                    <StatusDot status="running" />
+                                    connected to this agent
+                                  </Badge>
+                                ) : tw?.lastError ? (
+                                  <Badge tone="warn">
+                                    webhooks blocked — needs attention
+                                  </Badge>
+                                ) : tw?.configured ? (
+                                  <Badge tone="warn">
+                                    webhooks not set — finish setup
+                                  </Badge>
+                                ) : (
+                                  <Badge>added</Badge>
+                                )
+                              ) : (c.kind ?? c.name) === "teams" ? (
+                                tm?.live ? (
+                                  <Badge tone="success">
+                                    <StatusDot status="running" />
+                                    credentials valid
+                                  </Badge>
+                                ) : tm?.lastError ? (
+                                  <Badge tone="warn">
+                                    credentials rejected — re-check
+                                  </Badge>
+                                ) : tm?.configured ? (
+                                  <Badge tone="warn">
+                                    set endpoint in Azure
+                                  </Badge>
+                                ) : (
+                                  <Badge>added</Badge>
+                                )
                               ) : w?.attached === true ? (
                                 <Badge tone="success">
                                   <StatusDot status="running" />
@@ -608,7 +674,11 @@ export function Channels(): JSX.Element {
                         <Button
                           onClick={() =>
                             finishChannel(
-                              kind === "discord" ? "discord" : "telegram",
+                              kind === "discord"
+                                ? "discord"
+                                : kind === "twilio"
+                                  ? "twilio"
+                                  : "telegram",
                               c.name,
                             )
                           }
@@ -644,6 +714,30 @@ export function Channels(): JSX.Element {
                       ) : kind === "discord" ? (
                         <Button
                           onClick={() => setDiscordSetup(true)}
+                          size="sm"
+                          variant="secondary"
+                        >
+                          Set up
+                        </Button>
+                      ) : kind === "twilio" ? (
+                        <Button
+                          onClick={() => setTwilioSetup(true)}
+                          size="sm"
+                          variant="secondary"
+                        >
+                          Set up
+                        </Button>
+                      ) : kind === "teams" ? (
+                        <Button
+                          onClick={() => setTeamsSetup(true)}
+                          size="sm"
+                          variant="secondary"
+                        >
+                          Set up
+                        </Button>
+                      ) : kind === "github" || kind === "linear" ? (
+                        <Button
+                          onClick={() => setConnectSetup(kind)}
                           size="sm"
                           variant="secondary"
                         >
@@ -721,13 +815,24 @@ export function Channels(): JSX.Element {
                               ? setTelegramSetup(true)
                               : cat.kind === "discord"
                                 ? setDiscordSetup(true)
-                                : setAdd(cat)
+                                : cat.kind === "twilio"
+                                  ? setTwilioSetup(true)
+                                  : cat.kind === "teams"
+                                    ? setTeamsSetup(true)
+                                    : cat.kind === "github" ||
+                                        cat.kind === "linear"
+                                      ? setConnectSetup(cat.kind)
+                                      : setAdd(cat)
                         }
                       >
                         <IconPlus className="h-3.5 w-3.5" />{" "}
                         {cat.kind === "slack" ||
                         cat.kind === "telegram" ||
-                        cat.kind === "discord"
+                        cat.kind === "discord" ||
+                        cat.kind === "twilio" ||
+                        cat.kind === "teams" ||
+                        cat.kind === "github" ||
+                        cat.kind === "linear"
                           ? "Set up"
                           : "Add"}
                       </Button>
@@ -769,6 +874,31 @@ export function Channels(): JSX.Element {
         <DiscordSetup
           agentId={id}
           onClose={() => setDiscordSetup(false)}
+          onDone={load}
+        />
+      ) : null}
+
+      {twilioSetup && id ? (
+        <TwilioSetup
+          agentId={id}
+          onClose={() => setTwilioSetup(false)}
+          onDone={load}
+        />
+      ) : null}
+
+      {teamsSetup && id ? (
+        <TeamsSetup
+          agentId={id}
+          onClose={() => setTeamsSetup(false)}
+          onDone={load}
+        />
+      ) : null}
+
+      {connectSetup && id ? (
+        <ConnectSetup
+          agentId={id}
+          service={connectSetup}
+          onClose={() => setConnectSetup(null)}
           onDone={load}
         />
       ) : null}

@@ -213,11 +213,23 @@ ${botName}  credentials: ${c.cred}(${JSON.stringify(uid)}),
   if (e) {
     const note = e.note ? `\n * ${e.note}` : "";
     // Telegram bakes the verified @handle into the factory so group @mentions
-    // wake the right bot; other env channels use their static body.
-    const body =
-      input.kind === "telegram" && input.botUsername
-        ? `telegramChannel({ botUsername: ${JSON.stringify(input.botUsername)} })`
-        : e.body;
+    // wake the right bot; Twilio bakes the allow-list + outbound number so it
+    // gates inbound and can reply/originate SMS. Other env channels use e.body.
+    let body = e.body;
+    if (input.kind === "telegram" && input.botUsername) {
+      body = `telegramChannel({ botUsername: ${JSON.stringify(input.botUsername)} })`;
+    } else if (input.kind === "twilio") {
+      const allow = (input.twilioAllowFrom ?? "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const from = input.twilioFrom?.trim();
+      const opts: string[] = [`allowFrom: ${JSON.stringify(allow)}`];
+      if (from) {
+        opts.push(`messaging: { from: ${JSON.stringify(from)} }`);
+      }
+      body = `twilioChannel({ ${opts.join(", ")} })`;
+    }
     writeFileSync(
       file,
       `import { ${e.factory} } from "${e.mod}";
