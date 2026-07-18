@@ -63,6 +63,22 @@ export interface DiscordCred {
   commandsRegistered?: boolean;
 }
 
+/** Twilio credentials + chosen number, keyed by agent id (see {@link TelegramCred}). */
+export interface TwilioCred {
+  accountSid: string;
+  authToken: string;
+  phoneSid: string;
+  phoneNumber: string;
+  allowFrom?: string;
+}
+
+/** Teams (Azure Bot) credentials, keyed by agent id (see {@link TelegramCred}). */
+export interface TeamsCred {
+  appId: string;
+  appPassword: string;
+  tenantId?: string;
+}
+
 interface Db {
   agents: AgentRecord[];
   threads: ThreadRecord[];
@@ -71,6 +87,8 @@ interface Db {
   deploy: Record<string, DeploySettings>;
   telegram: Record<string, TelegramCred>;
   discord: Record<string, DiscordCred>;
+  twilio: Record<string, TwilioCred>;
+  teams: Record<string, TeamsCred>;
 }
 
 let dbPath = "";
@@ -83,6 +101,8 @@ let db: Db = {
   deploy: {},
   telegram: {},
   discord: {},
+  twilio: {},
+  teams: {},
 };
 
 export function initStore(): void {
@@ -101,6 +121,8 @@ export function initStore(): void {
         deploy: parsed.deploy ?? {},
         telegram: parsed.telegram ?? {},
         discord: parsed.discord ?? {},
+        twilio: parsed.twilio ?? {},
+        teams: parsed.teams ?? {},
       };
     } catch {
       db = {
@@ -111,6 +133,8 @@ export function initStore(): void {
         deploy: {},
         telegram: {},
         discord: {},
+        twilio: {},
+        teams: {},
       };
     }
   } else {
@@ -238,6 +262,32 @@ export function setDiscord(agentId: string, cred: DiscordCred): void {
 }
 export function deleteDiscord(agentId: string): void {
   delete db.discord[agentId];
+  persist();
+}
+
+// --- twilio credentials (keyed by agent id) ---
+export function getTwilio(agentId: string): TwilioCred | undefined {
+  return db.twilio[agentId];
+}
+export function setTwilio(agentId: string, cred: TwilioCred): void {
+  db.twilio[agentId] = { ...db.twilio[agentId], ...cred };
+  persist();
+}
+export function deleteTwilio(agentId: string): void {
+  delete db.twilio[agentId];
+  persist();
+}
+
+// --- teams credentials (keyed by agent id) ---
+export function getTeams(agentId: string): TeamsCred | undefined {
+  return db.teams[agentId];
+}
+export function setTeams(agentId: string, cred: TeamsCred): void {
+  db.teams[agentId] = { ...db.teams[agentId], ...cred };
+  persist();
+}
+export function deleteTeams(agentId: string): void {
+  delete db.teams[agentId];
   persist();
 }
 

@@ -53,7 +53,15 @@ import {
   type DiscordStatus,
   type DiscordVerifyResult,
   type SubagentInput,
+  type TeamsCredInput,
+  type TeamsStatus,
+  type TeamsVerifyResult,
   type TelegramCredInput,
+  type TwilioCredInput,
+  type TwilioNumbersResult,
+  type TwilioStatus,
+  type TwilioVerifyResult,
+  type TwilioWebhookResult,
   type TelegramStatus,
   type TelegramVerifyResult,
   type TelegramWebhookResult,
@@ -340,6 +348,40 @@ const api = {
     /** Set + verify the interactions endpoint at the deployed agent. */
     setEndpoint: (id: string, url: string): Promise<DiscordEndpointResult> =>
       ipcRenderer.invoke(IPC.discordSetEndpoint, id, url),
+  },
+
+  twilio: {
+    /** Validate Account SID + Auth Token. */
+    verify: (sid: string, token: string): Promise<TwilioVerifyResult> =>
+      ipcRenderer.invoke(IPC.twilioVerify, sid, token),
+    /** List the account's phone numbers. */
+    numbers: (sid: string, token: string): Promise<TwilioNumbersResult> =>
+      ipcRenderer.invoke(IPC.twilioNumbers, sid, token),
+    /** Persist the creds + chosen number. */
+    save: (id: string, cred: TwilioCredInput): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke(IPC.twilioSave, id, cred),
+    /** Point the saved number's SMS + Voice webhooks at the deployment base. */
+    setWebhooks: (id: string, base: string): Promise<TwilioWebhookResult> =>
+      ipcRenderer.invoke(IPC.twilioSetWebhooks, id, base),
+    /** Live connection status for the Channels badge. */
+    status: (id: string): Promise<TwilioStatus> =>
+      ipcRenderer.invoke(IPC.twilioStatus, id),
+  },
+
+  teams: {
+    /** Validate the App ID + client secret (and optional tenant). */
+    verify: (
+      appId: string,
+      password: string,
+      tenantId?: string,
+    ): Promise<TeamsVerifyResult> =>
+      ipcRenderer.invoke(IPC.teamsVerify, appId, password, tenantId),
+    /** Persist the Azure Bot creds. */
+    save: (id: string, cred: TeamsCredInput): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke(IPC.teamsSave, id, cred),
+    /** Live status for the Channels badge (credential validity). */
+    status: (id: string): Promise<TeamsStatus> =>
+      ipcRenderer.invoke(IPC.teamsStatus, id),
   },
 
   evolve: {

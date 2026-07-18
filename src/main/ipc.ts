@@ -75,6 +75,13 @@ import {
   discordVerify,
 } from "./discord";
 import {
+  twilioListNumbers,
+  twilioNumberStatus,
+  twilioSetWebhooks,
+  twilioVerify,
+} from "./twilio";
+import { teamsVerify } from "./teams";
+import {
   telegramSetWebhook,
   telegramVerify,
   telegramWebhookInfo,
@@ -1270,6 +1277,110 @@ export function registerIpc(): IpcHandles {
     async (_e: IpcMainInvokeEvent, id: string) => {
       await ensureNodeRuntime();
       return vercelProdAlias(agentPathOf(id));
+    },
+  );
+  // --- Twilio ---
+  ipcMain.handle(
+    IPC.twilioVerify,
+    (_e: IpcMainInvokeEvent, sid: string, token: string) =>
+      twilioVerify(sid, token),
+  );
+  ipcMain.handle(
+    IPC.twilioNumbers,
+    (_e: IpcMainInvokeEvent, sid: string, token: string) =>
+      twilioListNumbers(sid, token),
+  );
+  ipcMain.handle(
+    IPC.twilioSave,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      cred: import("../shared/ipc").TwilioCredInput,
+    ) => {
+      store.setTwilio(id, cred);
+      return { ok: true };
+    },
+  );
+  ipcMain.handle(
+    IPC.twilioSetWebhooks,
+    async (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      base: string,
+    ): Promise<import("../shared/ipc").TwilioWebhookResult> => {
+      const cred = store.getTwilio(id);
+      if (!cred?.accountSid || !cred.phoneSid) {
+        return { ok: false, error: "Finish the number step first." };
+      }
+      return twilioSetWebhooks(
+        cred.accountSid,
+        cred.authToken,
+        cred.phoneSid,
+        base,
+      );
+    },
+  );
+  ipcMain.handle(
+    IPC.twilioStatus,
+    async (
+      _e: IpcMainInvokeEvent,
+      id: string,
+    ): Promise<import("../shared/ipc").TwilioStatus> => {
+      const cred = store.getTwilio(id);
+      if (!cred?.accountSid || !cred.phoneSid) {
+        return { configured: false };
+      }
+      const r = await twilioNumberStatus(
+        cred.accountSid,
+        cred.authToken,
+        cred.phoneSid,
+      );
+      return {
+        configured: true,
+        live: r.ok ? r.live : false,
+        phoneNumber: cred.phoneNumber ?? null,
+        smsUrl: r.ok ? (r.smsUrl ?? null) : null,
+        lastError: r.ok ? null : (r.error ?? null),
+      };
+    },
+  );
+  // --- Microsoft Teams ---
+  ipcMain.handle(
+    IPC.teamsVerify,
+    (
+      _e: IpcMainInvokeEvent,
+      appId: string,
+      password: string,
+      tenantId?: string,
+    ) => teamsVerify(appId, password, tenantId),
+  );
+  ipcMain.handle(
+    IPC.teamsSave,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      cred: import("../shared/ipc").TeamsCredInput,
+    ) => {
+      store.setTeams(id, cred);
+      return { ok: true };
+    },
+  );
+  ipcMain.handle(
+    IPC.teamsStatus,
+    async (
+      _e: IpcMainInvokeEvent,
+      id: string,
+    ): Promise<import("../shared/ipc").TeamsStatus> => {
+      const cred = store.getTeams(id);
+      if (!cred?.appId) {
+        return { configured: false };
+      }
+      const r = await teamsVerify(cred.appId, cred.appPassword, cred.tenantId);
+      return {
+        configured: true,
+        live: r.ok,
+        lastError: r.ok ? null : (r.error ?? null),
+      };
     },
   );
   ipcMain.handle(IPC.discordVerify, (_e: IpcMainInvokeEvent, token: string) =>

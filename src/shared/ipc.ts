@@ -409,6 +409,10 @@ export interface ChannelAddInput {
   overwrite?: boolean;
   /** Telegram bot @handle (no @) baked into telegramChannel({ botUsername }). */
   botUsername?: string;
+  /** Twilio outbound "from" number, baked into twilioChannel({ messaging: { from } }). */
+  twilioFrom?: string;
+  /** Twilio allow-list (comma-separated E.164), baked into twilioChannel({ allowFrom }). */
+  twilioAllowFrom?: string;
 }
 
 /** Result of validating a Telegram bot token via getMe. */
@@ -440,6 +444,76 @@ export interface TelegramCredInput {
   webhookSecret: string;
   botUsername?: string;
   webhookUrl?: string;
+}
+
+/** Result of validating Twilio Account SID + Auth Token. */
+export interface TwilioVerifyResult {
+  ok: boolean;
+  friendlyName?: string | null;
+  error?: string;
+}
+
+/** A phone number on the Twilio account. */
+export interface TwilioNumber {
+  sid: string;
+  phoneNumber: string;
+  friendlyName: string;
+  smsUrl: string;
+}
+
+/** List of the account's phone numbers. */
+export interface TwilioNumbersResult {
+  ok: boolean;
+  numbers: TwilioNumber[];
+  error?: string;
+}
+
+/** Result of pointing a Twilio number's webhooks at the agent (or reading them). */
+export interface TwilioWebhookResult {
+  ok: boolean;
+  smsUrl?: string;
+  /** The number's SMS webhook points at this deployment. */
+  live?: boolean;
+  error?: string;
+}
+
+/** Persisted Twilio credentials Studio holds for an agent. */
+export interface TwilioCredInput {
+  accountSid: string;
+  authToken: string;
+  phoneSid: string;
+  phoneNumber: string;
+  allowFrom?: string;
+}
+
+/** Live Twilio connection status for the Channels badge. */
+export interface TwilioStatus {
+  configured: boolean;
+  live?: boolean;
+  phoneNumber?: string | null;
+  smsUrl?: string | null;
+  lastError?: string | null;
+}
+
+/** Result of validating Microsoft Teams (Azure Bot) credentials. */
+export interface TeamsVerifyResult {
+  ok: boolean;
+  error?: string;
+}
+
+/** Persisted Teams credentials Studio holds for an agent. */
+export interface TeamsCredInput {
+  appId: string;
+  appPassword: string;
+  tenantId?: string;
+}
+
+/** Live Teams connection status for the Channels badge (credential validity). */
+export interface TeamsStatus {
+  configured: boolean;
+  /** Credentials still mint a Bot Connector token. */
+  live?: boolean;
+  lastError?: string | null;
 }
 
 /** Result of validating a Discord bot token (derives app id + public key). */
@@ -678,6 +752,14 @@ export const IPC = {
   discordStatus: "discord:status",
   discordRegisterCommands: "discord:registerCommands",
   discordSetEndpoint: "discord:setEndpoint",
+  twilioVerify: "twilio:verify",
+  twilioNumbers: "twilio:numbers",
+  twilioSave: "twilio:save",
+  twilioStatus: "twilio:status",
+  twilioSetWebhooks: "twilio:setWebhooks",
+  teamsVerify: "teams:verify",
+  teamsSave: "teams:save",
+  teamsStatus: "teams:status",
   vercelProdAlias: "vercel:prodAlias",
   evolveDraft: "evolve:draft",
   evolveApply: "evolve:apply",
