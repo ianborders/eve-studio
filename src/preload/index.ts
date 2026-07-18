@@ -234,8 +234,8 @@ const api = {
       ipcRenderer.invoke(IPC.vercelTeams, id),
     whoami: (id: string): Promise<VercelWhoami> =>
       ipcRenderer.invoke(IPC.vercelWhoami, id),
-    loginStart: (id: string, email: string): Promise<string> =>
-      ipcRenderer.invoke(IPC.vercelLogin, id, email),
+    loginStart: (id: string): Promise<string> =>
+      ipcRenderer.invoke(IPC.vercelLogin, id),
     connectorList: (
       id: string,
       service?: string,

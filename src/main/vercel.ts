@@ -218,13 +218,25 @@ export function modelReadiness(agentPath: string): ModelReadiness {
  * Link the agent to Vercel and pull an AI Gateway credential — all non-interactively.
  * `vercel link --yes` creates/links a project under the default team; `env pull`
  * drops VERCEL_OIDC_TOKEN into .env.local so the model can run locally.
+ *
+ * @remarks
+ * Async on purpose: `spawnSync` freezes the whole Electron UI until it returns,
+ * and `link` + `env pull` can each take many seconds (or download the CLI on a
+ * first run). Running them via {@link runAsync} keeps the app responsive.
  */
-export function vercelLink(agentPath: string, team?: string): CmdResult {
+export async function vercelLink(
+  agentPath: string,
+  team?: string,
+): Promise<CmdResult> {
   // Accounts with >1 team can't be auto-selected non-interactively, so pass the
   // chosen team explicitly (from the UI's team picker) to both commands.
   const scope = team ? ["--team", team] : [];
-  const link = run(agentPath, ["link", "--yes", ...scope]);
-  const pull = run(agentPath, ["env", "pull", ".env.local", "--yes", ...scope]);
+  const link = await runAsync(agentPath, ["link", "--yes", ...scope], 120_000);
+  const pull = await runAsync(
+    agentPath,
+    ["env", "pull", ".env.local", "--yes", ...scope],
+    120_000,
+  );
   return {
     ok: link.ok && pull.ok,
     output: `$ vercel link --yes${team ? ` --team ${team}` : ""}\n${link.output}\n\n$ vercel env pull\n${pull.output}`,
@@ -232,8 +244,10 @@ export function vercelLink(agentPath: string, team?: string): CmdResult {
 }
 
 /** List the teams/scopes the signed-in user belongs to (`vercel teams ls`). */
-export function vercelTeams(agentPath: string): VercelTeamsResult {
-  const r = run(agentPath, ["teams", "ls"]);
+export async function vercelTeams(
+  agentPath: string,
+): Promise<VercelTeamsResult> {
+  const r = await runAsync(agentPath, ["teams", "ls"], 60_000);
   if (!r.ok) {
     return { ok: false, teams: [], error: r.output };
   }
@@ -255,8 +269,10 @@ export function vercelTeams(agentPath: string): VercelTeamsResult {
 }
 
 /** Who is signed in to the Vercel CLI, if anyone (`vercel whoami`). */
-export function vercelWhoami(agentPath: string): VercelWhoami {
-  const r = run(agentPath, ["whoami"]);
+export async function vercelWhoami(agentPath: string): Promise<VercelWhoami> {
+  // Polled every few seconds during sign-in — must be async so each probe never
+  // blocks the UI thread (see {@link vercelLink}).
+  const r = await runAsync(agentPath, ["whoami"], 30_000);
   if (
     !r.ok ||
     /no existing credentials|not authenticated|vercel login/i.test(r.output)
@@ -278,20 +294,29 @@ export function vercelWhoami(agentPath: string): VercelWhoami {
 }
 
 /**
- * Start `vercel login <email>`, streaming the CLI's real output (email/security
- * code instructions). The caller detects success by polling {@link vercelWhoami}.
- * Returns the child process so the caller can kill it on cancel/timeout.
+ * Start the browser-based Vercel sign-in, streaming the CLI's output (it prints a
+ * `vercel.com/oauth/device` URL and opens the browser). The caller detects success
+ * by polling {@link vercelWhoami} and reacts to exit for the failure path. Returns
+ * the child process so the caller can kill it on cancel/timeout.
+ *
+ * @remarks
+ * Uses the modern OAuth device flow — no email, no terminal. `--non-interactive`
+ * is required, not optional: without a TTY, a bare `vercel login` blocks forever
+ * on an interactive provider prompt it can never receive (the indefinite hang
+ * users hit). With the flag the CLI goes straight to the device URL and waits on
+ * the browser step. stdin is ignored so nothing can ever wait on input. (The old
+ * `vercel login <email>` positional is deprecated and prints a warning.)
  */
 export function startVercelLogin(
   agentPath: string,
-  email: string,
   onData: (s: string) => void,
   onExit: (code: number | null) => void,
 ): ChildProcess {
   const v = resolveVercel();
-  const child = spawn(v.cmd, [...v.pre, "login", email], {
+  const child = spawn(v.cmd, [...v.pre, "login", "--non-interactive"], {
     cwd: agentPath,
     env: { ...process.env, NO_COLOR: "1" },
+    stdio: ["ignore", "pipe", "pipe"],
   });
   child.stdout?.on("data", (b: Buffer) => onData(b.toString()));
   child.stderr?.on("data", (b: Buffer) => onData(b.toString()));

@@ -1,17 +1,23 @@
 import type { ModelReadiness, VercelTeam, VercelWhoami } from "@shared/ipc";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCliRun } from "../lib/useCli";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
 import { IconPlug } from "../ui/icons";
 import { Button, Kicker } from "../ui/kit";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Terminal cursor/erase codes the CLI emits even under NO_COLOR — strip for display. */
+const stripAnsi = (s: string): string =>
+  // eslint-disable-next-line no-control-regex
+  s.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").replace(/\x1b[()][AB012]/g, "");
+
+/** The OAuth device URL the CLI prints — surfaced as a button for non-technical users. */
+const DEVICE_URL_RE = /(https?:\/\/vercel\.com\/oauth\/device\?\S+)/;
 
 /**
  * Shown in Chat when an agent has no model credential (not linked to Vercel).
- * Handles the whole no-terminal path: sign in to Vercel (email verification) →
- * pick a team → link + pull the AI Gateway token.
+ * Handles the whole no-terminal path: sign in to Vercel (browser OAuth — no email,
+ * no terminal) → pick a team → link + pull the AI Gateway token.
  */
 export function NeedsLink({
   agentId,
@@ -27,7 +33,6 @@ export function NeedsLink({
   const [auth, setAuth] = useState<VercelWhoami | null>(null);
   const [teams, setTeams] = useState<VercelTeam[]>([]);
   const [team, setTeam] = useState("");
-  const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [output, setOutput] = useState("");
@@ -62,8 +67,8 @@ export function NeedsLink({
     void refresh();
   }, [refresh]);
 
-  // While the email sign-in is in flight, poll whoami — the CLI writes the auth
-  // once the user confirms in their email, so this is how we detect success.
+  // While the browser sign-in is in flight, poll whoami — the CLI writes the auth
+  // once the user approves in the browser, so this is how we detect success.
   useEffect(() => {
     if (!signingIn) {
       return;
@@ -79,20 +84,71 @@ export function NeedsLink({
     return () => clearInterval(iv);
   }, [signingIn, agentId, loadTeams]);
 
+  // When the login process exits, resolve the outcome so the button can never
+  // get stuck on "Waiting…": success (authed) advances; anything else surfaces
+  // the CLI's output as an error and re-enables Sign in.
+  useEffect(() => {
+    if (!signingIn || login.exitCode === undefined) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const who = await window.studio.vercel.whoami(agentId);
+      if (cancelled) {
+        return;
+      }
+      if (who.authed) {
+        setSigningIn(false);
+        setAuth(who);
+        await loadTeams();
+      } else {
+        setSigningIn(false);
+        setErr(
+          "Sign-in didn't complete. Open the Vercel page in your browser and approve, then try again.",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [login.exitCode, signingIn, agentId, loadTeams]);
+
+  // The CLI prints (and tries to open) a device URL; make sure it opens even if
+  // the sandboxed child couldn't, and only once per URL.
+  const deviceUrl = useMemo(
+    () => DEVICE_URL_RE.exec(login.output)?.[1] ?? null,
+    [login.output],
+  );
+  const openedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (deviceUrl && openedRef.current !== deviceUrl) {
+      openedRef.current = deviceUrl;
+      window.open(deviceUrl, "_blank");
+    }
+  }, [deviceUrl]);
+
+  // Kill an in-flight sign-in if the user navigates away. `login.cancel` is a
+  // fresh closure each render, so hold it in a ref and run cleanup on unmount only
+  // (depending on it directly would cancel the login on every render).
+  const cancelRef = useRef(login.cancel);
+  cancelRef.current = login.cancel;
+  useEffect(() => () => cancelRef.current(), []);
+
   if (!ready || ready.hasCredential) {
     return null;
   }
 
   const signIn = async (): Promise<void> => {
-    if (!EMAIL_RE.test(email.trim())) {
-      setErr("Enter the email for your Vercel account.");
-      return;
-    }
     setErr(null);
+    openedRef.current = null;
     setSigningIn(true);
-    await login.start(() =>
-      window.studio.vercel.loginStart(agentId, email.trim()),
-    );
+    await login.start(() => window.studio.vercel.loginStart(agentId));
+  };
+
+  const cancelSignIn = (): void => {
+    login.cancel();
+    setSigningIn(false);
+    setErr(null);
   };
 
   const connect = async (): Promise<void> => {
@@ -114,7 +170,11 @@ export function NeedsLink({
         await startAgent(agentId);
       }
     } else {
-      setErr("Linking didn't produce a credential — check the output.");
+      setErr(
+        r.ok
+          ? "Linking didn't produce a credential — check the output below."
+          : "Couldn't connect to Vercel — check the output below, then try again.",
+      );
     }
   };
 
@@ -149,7 +209,7 @@ export function NeedsLink({
           <div className="text-[13px] leading-snug text-muted">
             {authed
               ? "This agent's model runs through the Vercel AI Gateway — pick a team and connect. No terminal."
-              : "This agent's model runs through the Vercel AI Gateway. Sign in with your Vercel email to continue — no terminal."}
+              : "This agent's model runs through the Vercel AI Gateway. Sign in in your browser to continue — no email, no terminal."}
           </div>
         </div>
 
@@ -181,40 +241,43 @@ export function NeedsLink({
               {busy ? "Connecting…" : "Connect to Vercel"}
             </Button>
           </>
-        ) : (
-          <>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  void signIn();
-                }
-              }}
-              placeholder="you@email.com"
-              disabled={signingIn}
-              className="no-drag w-52 shrink-0 rounded-lg border border-border bg-panel px-2.5 py-1.5 text-[13px] text-text outline-none placeholder:text-faint hover:border-border-strong focus:border-border-strong disabled:opacity-60"
-            />
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={signIn}
-              disabled={signingIn}
-            >
-              {signingIn ? "Waiting…" : "Sign in"}
+        ) : signingIn ? (
+          <div className="flex shrink-0 items-center gap-2">
+            {deviceUrl ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.open(deviceUrl, "_blank")}
+              >
+                Open sign-in ↗
+              </Button>
+            ) : null}
+            <Button variant="ghost" size="sm" onClick={cancelSignIn}>
+              Cancel
             </Button>
-          </>
+            <Button variant="primary" size="sm" disabled>
+              Waiting…
+            </Button>
+          </div>
+        ) : (
+          <Button variant="primary" size="sm" onClick={signIn}>
+            Sign in with Vercel
+          </Button>
         )}
       </div>
 
       {!authed && (signingIn || login.output) ? (
         <div className="mt-2.5">
           <div className="mb-1.5 text-2xs text-muted">
-            Follow the steps in the email Vercel just sent — this updates
-            automatically once you confirm.
+            {deviceUrl
+              ? "A Vercel sign-in page opened in your browser — approve it there. This updates automatically."
+              : "Opening the Vercel sign-in page in your browser — this updates automatically once you approve."}
           </div>
-          <Console text={login.output} busy={signingIn} className="max-h-40" />
+          <Console
+            text={stripAnsi(login.output)}
+            busy={signingIn}
+            className="max-h-40"
+          />
         </div>
       ) : null}
 

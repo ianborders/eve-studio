@@ -1,3 +1,4 @@
+import type { ChildProcess } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import {
@@ -304,6 +305,10 @@ export function registerIpc(): IpcHandles {
     (runId, data) => broadcast(IPC.cliChunk, { runId, data }),
     (runId, code) => broadcast(IPC.cliExit, { runId, code }),
   );
+
+  // Live `vercel login` processes, keyed by runId, so cliCancel (or unmount) can
+  // kill a sign-in that the user abandoned instead of leaking a waiting process.
+  const loginChildren = new Map<string, ChildProcess>();
 
   const chat = new ChatController(
     (threadId, event) => broadcast(IPC.chatEvent, { threadId, event }),
@@ -760,6 +765,15 @@ export function registerIpc(): IpcHandles {
   );
   ipcMain.handle(IPC.cliCancel, (_e: IpcMainInvokeEvent, runId: string) => {
     cli.cancel(runId);
+    const login = loginChildren.get(runId);
+    if (login) {
+      try {
+        login.kill("SIGKILL");
+      } catch {
+        // already gone
+      }
+      loginChildren.delete(runId);
+    }
     return true;
   });
   ipcMain.handle(IPC.evalList, (_e: IpcMainInvokeEvent, id: string) => {
@@ -1198,23 +1212,38 @@ export function registerIpc(): IpcHandles {
   );
   ipcMain.handle(
     IPC.vercelLogin,
-    async (_e: IpcMainInvokeEvent, id: string, email: string) => {
-      await ensureNodeRuntime();
+    async (_e: IpcMainInvokeEvent, id: string) => {
       const runId = store.rid();
+      try {
+        await ensureNodeRuntime();
+      } catch (err) {
+        // Runtime couldn't be provisioned (e.g. offline first run) — report it as
+        // a failed run so the UI shows the reason and re-enables the button,
+        // rather than spawning against a missing Node and hanging.
+        const msg = err instanceof Error ? err.message : String(err);
+        broadcast(IPC.cliChunk, { runId, data: `${msg}\n` });
+        broadcast(IPC.cliExit, { runId, code: -1 });
+        return runId;
+      }
       const child = startVercelLogin(
         agentPathOf(id),
-        email,
         (data) => broadcast(IPC.cliChunk, { runId, data }),
-        (code) => broadcast(IPC.cliExit, { runId, code }),
+        (code) => {
+          loginChildren.delete(runId);
+          broadcast(IPC.cliExit, { runId, code });
+        },
       );
-      // Don't leave a login process hanging if the user never finishes.
-      setTimeout(() => {
+      loginChildren.set(runId, child);
+      // The device code expires; don't leave a process waiting forever if the
+      // user never finishes in the browser. Its exit drives the UI's failure path.
+      const killTimer = setTimeout(() => {
         try {
-          child.kill("SIGTERM");
+          child.kill("SIGKILL");
         } catch {
           // already gone
         }
       }, 5 * 60_000);
+      child.on("exit", () => clearTimeout(killTimer));
       return runId;
     },
   );
