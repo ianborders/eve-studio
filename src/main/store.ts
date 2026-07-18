@@ -37,17 +37,53 @@ export interface DeploySettings {
   bypassSecret?: string;
 }
 
+/**
+ * Telegram bot credentials + webhook state, keyed by agent id.
+ *
+ * @remarks
+ * Held so Studio can show a live connection badge and re-register the webhook
+ * after a redeploy without the user re-pasting the token. `webhookSecret` must
+ * match `TELEGRAM_WEBHOOK_SECRET_TOKEN` in the deployment — kept stable here so a
+ * repair doesn't force a redeploy. Plaintext local JSON for now (same as brains);
+ * an OS-keychain vault is a later hardening pass.
+ */
+export interface TelegramCred {
+  botToken: string;
+  webhookSecret: string;
+  botUsername?: string;
+  webhookUrl?: string;
+}
+
+/** Discord bot credentials + endpoint state, keyed by agent id (see {@link TelegramCred}). */
+export interface DiscordCred {
+  botToken: string;
+  applicationId: string;
+  publicKey: string;
+  endpointUrl?: string;
+  commandsRegistered?: boolean;
+}
+
 interface Db {
   agents: AgentRecord[];
   threads: ThreadRecord[];
   cursors: Record<string, SessionCursor>;
   brains: Record<string, BrainCred>;
   deploy: Record<string, DeploySettings>;
+  telegram: Record<string, TelegramCred>;
+  discord: Record<string, DiscordCred>;
 }
 
 let dbPath = "";
 let eventsDir = "";
-let db: Db = { agents: [], threads: [], cursors: {}, brains: {}, deploy: {} };
+let db: Db = {
+  agents: [],
+  threads: [],
+  cursors: {},
+  brains: {},
+  deploy: {},
+  telegram: {},
+  discord: {},
+};
 
 export function initStore(): void {
   const dataDir = app.getPath("userData");
@@ -63,9 +99,19 @@ export function initStore(): void {
         cursors: parsed.cursors ?? {},
         brains: parsed.brains ?? {},
         deploy: parsed.deploy ?? {},
+        telegram: parsed.telegram ?? {},
+        discord: parsed.discord ?? {},
       };
     } catch {
-      db = { agents: [], threads: [], cursors: {}, brains: {}, deploy: {} };
+      db = {
+        agents: [],
+        threads: [],
+        cursors: {},
+        brains: {},
+        deploy: {},
+        telegram: {},
+        discord: {},
+      };
     }
   } else {
     persist();
@@ -166,6 +212,32 @@ export function setBrain(agentId: string, cred: BrainCred): void {
 }
 export function deleteBrain(agentId: string): void {
   delete db.brains[agentId];
+  persist();
+}
+
+// --- telegram credentials (keyed by agent id) ---
+export function getTelegram(agentId: string): TelegramCred | undefined {
+  return db.telegram[agentId];
+}
+export function setTelegram(agentId: string, cred: TelegramCred): void {
+  db.telegram[agentId] = { ...db.telegram[agentId], ...cred };
+  persist();
+}
+export function deleteTelegram(agentId: string): void {
+  delete db.telegram[agentId];
+  persist();
+}
+
+// --- discord credentials (keyed by agent id) ---
+export function getDiscord(agentId: string): DiscordCred | undefined {
+  return db.discord[agentId];
+}
+export function setDiscord(agentId: string, cred: DiscordCred): void {
+  db.discord[agentId] = { ...db.discord[agentId], ...cred };
+  persist();
+}
+export function deleteDiscord(agentId: string): void {
+  delete db.discord[agentId];
   persist();
 }
 

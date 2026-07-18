@@ -212,6 +212,12 @@ ${botName}  credentials: ${c.cred}(${JSON.stringify(uid)}),
   const e = ENVCH[input.kind];
   if (e) {
     const note = e.note ? `\n * ${e.note}` : "";
+    // Telegram bakes the verified @handle into the factory so group @mentions
+    // wake the right bot; other env channels use their static body.
+    const body =
+      input.kind === "telegram" && input.botUsername
+        ? `telegramChannel({ botUsername: ${JSON.stringify(input.botUsername)} })`
+        : e.body;
     writeFileSync(
       file,
       `import { ${e.factory} } from "${e.mod}";
@@ -219,7 +225,7 @@ ${botName}  credentials: ${c.cred}(${JSON.stringify(uid)}),
 /**
  * ${e.factory} — reads credentials from env (${e.env.join(", ")}). Added by Eve Studio.${note}
  */
-export default ${e.body};
+export default ${body};
 `,
     );
     return {

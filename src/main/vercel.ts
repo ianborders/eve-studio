@@ -363,6 +363,40 @@ export function vercelProdInfo(agentPath: string): ProdInfo {
   return { ok: true };
 }
 
+/**
+ * The stable production alias (auto-tracks the latest prod deploy), for webhooks
+ * that must survive redeploys.
+ *
+ * @remarks
+ * `vercel ls --prod` returns the *per-deployment* immutable URL — registering a
+ * webhook there breaks on the next deploy. The production aliases (from
+ * `vercel inspect`) always point at current prod, so we prefer the shortest one
+ * (a custom domain if present, else the clean `<project>-<hash>.vercel.app`).
+ */
+export async function vercelProdAlias(
+  agentPath: string,
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const ls = await runAsync(agentPath, ["ls", "--prod"], 60_000);
+  const deployUrl = (/https:\/\/\S+/.exec(ls.output) ?? [""])[0];
+  if (!deployUrl) {
+    return {
+      ok: false,
+      error: ls.output || "No production deployment found — deploy first.",
+    };
+  }
+  const insp = await runAsync(agentPath, ["inspect", deployUrl], 60_000);
+  const aliases = [
+    ...insp.output.matchAll(/https:\/\/[a-z0-9.-]+\.vercel\.app/gi),
+  ]
+    .map((m) => m[0])
+    .filter((u) => u !== deployUrl);
+  if (aliases.length === 0) {
+    return { ok: true, url: deployUrl };
+  }
+  const best = aliases.sort((a, b) => a.length - b.length)[0];
+  return { ok: true, url: best.replace(/\/+$/, "") };
+}
+
 /** `vercel env add <NAME> <target>` with the value fed on stdin (non-interactive). */
 export function vercelEnvAdd(
   agentPath: string,

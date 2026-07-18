@@ -69,6 +69,16 @@ import {
 } from "./cli";
 import { checkHealth, getAgentInfo, type SessionConn } from "./eveSession";
 import * as store from "./store";
+import {
+  discordRegisterCommands,
+  discordSetEndpoint,
+  discordVerify,
+} from "./discord";
+import {
+  telegramSetWebhook,
+  telegramVerify,
+  telegramWebhookInfo,
+} from "./telegram";
 import { gatewayModels } from "./gateway";
 import { readStructure } from "./structure";
 import {
@@ -94,6 +104,7 @@ import {
   vercelEnvSetAll,
   startVercelLogin,
   vercelLink,
+  vercelProdAlias,
   vercelProdInfo,
   vercelStatus,
   vercelTeams,
@@ -1208,6 +1219,159 @@ export function registerIpc(): IpcHandles {
     async (_e: IpcMainInvokeEvent, id: string) => {
       await ensureNodeRuntime();
       return vercelWhoami(agentPathOf(id));
+    },
+  );
+  ipcMain.handle(IPC.telegramVerify, (_e: IpcMainInvokeEvent, token: string) =>
+    telegramVerify(token),
+  );
+  ipcMain.handle(
+    IPC.telegramSetWebhook,
+    (_e: IpcMainInvokeEvent, token: string, url: string, secret: string) =>
+      telegramSetWebhook(token, url, secret),
+  );
+  ipcMain.handle(
+    IPC.telegramWebhookInfo,
+    (_e: IpcMainInvokeEvent, token: string) => telegramWebhookInfo(token),
+  );
+  ipcMain.handle(
+    IPC.telegramSave,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      cred: import("../shared/ipc").TelegramCredInput,
+    ) => {
+      store.setTelegram(id, cred);
+      return { ok: true };
+    },
+  );
+  ipcMain.handle(
+    IPC.telegramStatus,
+    async (
+      _e: IpcMainInvokeEvent,
+      id: string,
+    ): Promise<import("../shared/ipc").TelegramStatus> => {
+      const cred = store.getTelegram(id);
+      if (!cred?.botToken) {
+        return { configured: false };
+      }
+      const info = await telegramWebhookInfo(cred.botToken);
+      return {
+        configured: true,
+        live: info.ok ? info.live : false,
+        url: info.url ?? null,
+        pending: info.pending ?? 0,
+        lastError: info.ok ? (info.lastError ?? null) : (info.error ?? null),
+        botUsername: cred.botUsername ?? null,
+      };
+    },
+  );
+  ipcMain.handle(
+    IPC.vercelProdAlias,
+    async (_e: IpcMainInvokeEvent, id: string) => {
+      await ensureNodeRuntime();
+      return vercelProdAlias(agentPathOf(id));
+    },
+  );
+  ipcMain.handle(IPC.discordVerify, (_e: IpcMainInvokeEvent, token: string) =>
+    discordVerify(token),
+  );
+  ipcMain.handle(
+    IPC.discordSave,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      cred: import("../shared/ipc").DiscordCredInput,
+    ) => {
+      store.setDiscord(id, cred);
+      return { ok: true };
+    },
+  );
+  ipcMain.handle(
+    IPC.discordRegisterCommands,
+    async (_e: IpcMainInvokeEvent, id: string) => {
+      const cred = store.getDiscord(id);
+      if (!cred?.botToken || !cred.applicationId) {
+        return { ok: false, error: "Finish the Bot step first." };
+      }
+      const r = await discordRegisterCommands(
+        cred.botToken,
+        cred.applicationId,
+      );
+      if (r.ok) {
+        store.setDiscord(id, { ...cred, commandsRegistered: true });
+      }
+      return r;
+    },
+  );
+  ipcMain.handle(
+    IPC.discordSetEndpoint,
+    async (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      url: string,
+    ): Promise<import("../shared/ipc").DiscordEndpointResult> => {
+      const cred = store.getDiscord(id);
+      if (!cred?.botToken) {
+        return { ok: false, error: "Finish the Bot step first." };
+      }
+      const r = await discordSetEndpoint(cred.botToken, url);
+      if (r.ok) {
+        store.setDiscord(id, { ...cred, endpointUrl: url });
+      }
+      return r;
+    },
+  );
+  ipcMain.handle(
+    IPC.discordStatus,
+    async (
+      _e: IpcMainInvokeEvent,
+      id: string,
+    ): Promise<import("../shared/ipc").DiscordStatus> => {
+      const cred = store.getDiscord(id);
+      if (!cred?.botToken) {
+        return { configured: false };
+      }
+      // getApplications/@me both validates the token and reports whether an
+      // interactions endpoint is set (Discord only allows one once verified).
+      const r = await discordVerify(cred.botToken);
+      if (!r.ok) {
+        return { configured: true, live: false, lastError: r.error ?? null };
+      }
+      const url = r.endpointUrl ?? cred.endpointUrl ?? null;
+      return {
+        configured: true,
+        live: Boolean(url),
+        url,
+        name: r.name ?? null,
+        lastError: null,
+      };
+    },
+  );
+  ipcMain.handle(
+    IPC.telegramRegisterWebhook,
+    async (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      url: string,
+    ): Promise<import("../shared/ipc").TelegramWebhookResult> => {
+      const cred = store.getTelegram(id);
+      if (!cred?.botToken) {
+        return {
+          ok: false,
+          error: "No saved bot — finish the Bot step first.",
+        };
+      }
+      // Register with the STORED secret so it always matches the deployed env —
+      // never a freshly generated one that would force a redeploy.
+      const r = await telegramSetWebhook(
+        cred.botToken,
+        url,
+        cred.webhookSecret,
+      );
+      if (r.ok) {
+        store.setTelegram(id, { ...cred, webhookUrl: url });
+      }
+      return r;
     },
   );
   ipcMain.handle(

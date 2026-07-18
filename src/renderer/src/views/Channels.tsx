@@ -1,7 +1,15 @@
-import type { ChannelItem, ChannelKind, ChannelWiring } from "@shared/ipc";
+import type {
+  ChannelItem,
+  ChannelKind,
+  ChannelWiring,
+  DiscordStatus,
+  TelegramStatus,
+} from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
 import { ConnectorPicker } from "../components/ConnectorPicker";
+import { DiscordSetup } from "../components/DiscordSetup";
 import { SlackSetup } from "../components/SlackSetup";
+import { TelegramSetup } from "../components/TelegramSetup";
 import { useStore } from "../store";
 import { Console } from "../ui/Console";
 import { IconPlus, IconRefresh, IconServer, IconTrash } from "../ui/icons";
@@ -350,6 +358,16 @@ export function Channels(): JSX.Element {
   const [removing, setRemoving] = useState(false);
   const [removeErr, setRemoveErr] = useState<string | null>(null);
   const [slackSetup, setSlackSetup] = useState(false);
+  const [telegramSetup, setTelegramSetup] = useState(false);
+  const [discordSetup, setDiscordSetup] = useState(false);
+  const [tg, setTg] = useState<TelegramStatus | null>(null);
+  const [dc, setDc] = useState<DiscordStatus | null>(null);
+  const [finishing, setFinishing] = useState<string | null>(null);
+  const [finishMsg, setFinishMsg] = useState<{
+    name: string;
+    ok: boolean;
+    text: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     if (!id) {
@@ -367,11 +385,89 @@ export function Channels(): JSX.Element {
       .channelWiring(id)
       .then(setWiring)
       .catch(() => setWiring([]));
+    // Telegram isn't Connect-based, so its live status comes from getWebhookInfo
+    // against the saved bot token (returns configured:false when never set up).
+    window.studio.telegram
+      .status(id)
+      .then(setTg)
+      .catch(() => setTg(null));
+    window.studio.discord
+      .status(id)
+      .then(setDc)
+      .catch(() => setDc(null));
   }, [id]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  /**
+   * One-click completion for the deploy-then-verify step that env-webhook
+   * channels can't do until the agent is live: resolve the stable production
+   * URL and register the webhook (Telegram) / verify the interactions endpoint
+   * (Discord) using the saved creds. This is what closes the setup loop after a
+   * deploy without reopening the wizard.
+   */
+  const finishChannel = async (
+    kind: "telegram" | "discord",
+    name: string,
+  ): Promise<void> => {
+    if (!id) {
+      return;
+    }
+    setFinishing(name);
+    setFinishMsg(null);
+    const alias = await window.studio.vercel.prodAlias(id);
+    if (!alias.ok || !alias.url) {
+      setFinishing(null);
+      setFinishMsg({
+        name,
+        ok: false,
+        text: "No production deployment found — deploy the agent first, then finish setup.",
+      });
+      return;
+    }
+    const base = alias.url.replace(/\/+$/, "");
+    if (kind === "telegram") {
+      const r = await window.studio.telegram.registerWebhook(
+        id,
+        `${base}/eve/v1/telegram`,
+      );
+      setFinishMsg(
+        r.ok && !r.lastError
+          ? { name, ok: true, text: "Webhook registered — connected." }
+          : {
+              name,
+              ok: false,
+              text: r.lastError
+                ? /401|403|unauthorized|forbidden/i.test(r.lastError)
+                  ? "Telegram is blocked by Vercel Deployment Protection — turn off Vercel Authentication for Production, then retry."
+                  : `Telegram couldn't deliver: ${r.lastError}`
+                : (r.error ?? "Couldn't register the webhook."),
+            },
+      );
+    } else {
+      const r = await window.studio.discord.setEndpoint(
+        id,
+        `${base}/eve/v1/discord`,
+      );
+      setFinishMsg(
+        r.ok && r.live
+          ? { name, ok: true, text: "Endpoint verified — connected." }
+          : {
+              name,
+              ok: false,
+              text:
+                r.error &&
+                /could not be verified|not.*verif|401|403/i.test(r.error)
+                  ? "Discord couldn't verify the endpoint — make sure the agent is deployed and Vercel Deployment Protection is off for Production, then retry."
+                  : (r.error ?? "Couldn't verify the endpoint."),
+            },
+      );
+    }
+    setFinishing(null);
+    void load();
+  };
 
   if (loading && !channels) {
     return (
@@ -431,65 +527,150 @@ export function Channels(): JSX.Element {
               </div>
               {authored.map((c) => {
                 const cat = CATALOG.find((x) => x.kind === (c.kind ?? c.name));
+                const kind = c.kind ?? c.name;
+                const needsFinish =
+                  (kind === "telegram" && tg?.configured && !tg.live) ||
+                  (kind === "discord" && dc?.configured && !dc.live);
                 return (
-                  <div
-                    key={c.name}
-                    className="flex items-center gap-3 px-3 py-3"
-                  >
-                    <Logo
-                      label={cat?.label ?? c.name}
-                      color={cat?.color ?? "#666"}
-                      className="h-8 w-8 text-[13px]"
-                    />
-                    {(() => {
-                      const w = wiring.find((x) => x.name === c.name);
-                      return (
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[13px] font-medium text-text">
-                              {cat?.label ?? c.name}
-                            </span>
-                            {w?.attached === true ? (
-                              <Badge tone="success">
-                                <StatusDot status="running" />
-                                connected to this agent
-                              </Badge>
-                            ) : w?.attached === false ? (
-                              <Badge tone="warn">
-                                not attached — finish setup
-                              </Badge>
-                            ) : (
-                              <Badge>added</Badge>
-                            )}
+                  <div key={c.name} className="px-3 py-3">
+                    <div className="flex items-center gap-3">
+                      <Logo
+                        label={cat?.label ?? c.name}
+                        color={cat?.color ?? "#666"}
+                        className="h-8 w-8 text-[13px]"
+                      />
+                      {(() => {
+                        const w = wiring.find((x) => x.name === c.name);
+                        return (
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-[13px] font-medium text-text">
+                                {cat?.label ?? c.name}
+                              </span>
+                              {(c.kind ?? c.name) === "telegram" ? (
+                                tg?.live ? (
+                                  <Badge tone="success">
+                                    <StatusDot status="running" />
+                                    connected to this agent
+                                  </Badge>
+                                ) : tg?.lastError ? (
+                                  <Badge tone="warn">
+                                    webhook blocked — needs attention
+                                  </Badge>
+                                ) : tg?.configured ? (
+                                  <Badge tone="warn">
+                                    webhook not live — finish setup
+                                  </Badge>
+                                ) : (
+                                  <Badge>added</Badge>
+                                )
+                              ) : (c.kind ?? c.name) === "discord" ? (
+                                dc?.live ? (
+                                  <Badge tone="success">
+                                    <StatusDot status="running" />
+                                    connected to this agent
+                                  </Badge>
+                                ) : dc?.lastError ? (
+                                  <Badge tone="warn">
+                                    endpoint blocked — needs attention
+                                  </Badge>
+                                ) : dc?.configured ? (
+                                  <Badge tone="warn">
+                                    endpoint not set — finish setup
+                                  </Badge>
+                                ) : (
+                                  <Badge>added</Badge>
+                                )
+                              ) : w?.attached === true ? (
+                                <Badge tone="success">
+                                  <StatusDot status="running" />
+                                  connected to this agent
+                                </Badge>
+                              ) : w?.attached === false ? (
+                                <Badge tone="warn">
+                                  not attached — finish setup
+                                </Badge>
+                              ) : (
+                                <Badge>added</Badge>
+                              )}
+                            </div>
+                            <div className="mt-0.5 font-mono text-2xs text-faint">
+                              channels/{c.name}.ts
+                              {w?.connector ? ` · bot ${w.connector}` : ""}
+                              {c.urlPath
+                                ? ` · ${c.method ?? "POST"} ${c.urlPath}`
+                                : ""}
+                            </div>
                           </div>
-                          <div className="mt-0.5 font-mono text-2xs text-faint">
-                            channels/{c.name}.ts
-                            {w?.connector ? ` · bot ${w.connector}` : ""}
-                            {c.urlPath
-                              ? ` · ${c.method ?? "POST"} ${c.urlPath}`
-                              : ""}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                    {(c.kind ?? c.name) === "slack" ? (
-                      <Button
-                        onClick={() => setSlackSetup(true)}
-                        size="sm"
-                        variant="secondary"
+                        );
+                      })()}
+                      {needsFinish ? (
+                        <Button
+                          onClick={() =>
+                            finishChannel(
+                              kind === "discord" ? "discord" : "telegram",
+                              c.name,
+                            )
+                          }
+                          disabled={finishing === c.name}
+                          size="sm"
+                          variant="primary"
+                        >
+                          {finishing === c.name ? (
+                            <>
+                              <Spinner /> Finishing…
+                            </>
+                          ) : (
+                            "Finish setup"
+                          )}
+                        </Button>
+                      ) : null}
+                      {kind === "slack" ? (
+                        <Button
+                          onClick={() => setSlackSetup(true)}
+                          size="sm"
+                          variant="secondary"
+                        >
+                          Set up
+                        </Button>
+                      ) : kind === "telegram" ? (
+                        <Button
+                          onClick={() => setTelegramSetup(true)}
+                          size="sm"
+                          variant="secondary"
+                        >
+                          Set up
+                        </Button>
+                      ) : kind === "discord" ? (
+                        <Button
+                          onClick={() => setDiscordSetup(true)}
+                          size="sm"
+                          variant="secondary"
+                        >
+                          Set up
+                        </Button>
+                      ) : null}
+                      <IconButton
+                        onClick={() => {
+                          setRemoveErr(null);
+                          setRemove(c);
+                        }}
+                        title="Remove channel"
                       >
-                        Set up
-                      </Button>
+                        <IconTrash className="h-3.5 w-3.5" />
+                      </IconButton>
+                    </div>
+                    {finishMsg?.name === c.name ? (
+                      <div
+                        className={`mt-2 rounded-lg px-3 py-2 text-2xs ${
+                          finishMsg.ok
+                            ? "bg-success/10 text-success"
+                            : "bg-warn/10 text-warn"
+                        }`}
+                      >
+                        {finishMsg.text}
+                      </div>
                     ) : null}
-                    <IconButton
-                      onClick={() => {
-                        setRemoveErr(null);
-                        setRemove(c);
-                      }}
-                      title="Remove channel"
-                    >
-                      <IconTrash className="h-3.5 w-3.5" />
-                    </IconButton>
                   </div>
                 );
               })}
@@ -536,11 +717,19 @@ export function Channels(): JSX.Element {
                         onClick={() =>
                           cat.kind === "slack"
                             ? setSlackSetup(true)
-                            : setAdd(cat)
+                            : cat.kind === "telegram"
+                              ? setTelegramSetup(true)
+                              : cat.kind === "discord"
+                                ? setDiscordSetup(true)
+                                : setAdd(cat)
                         }
                       >
                         <IconPlus className="h-3.5 w-3.5" />{" "}
-                        {cat.kind === "slack" ? "Set up" : "Add"}
+                        {cat.kind === "slack" ||
+                        cat.kind === "telegram" ||
+                        cat.kind === "discord"
+                          ? "Set up"
+                          : "Add"}
                       </Button>
                     )}
                   </div>
@@ -564,6 +753,22 @@ export function Channels(): JSX.Element {
         <SlackSetup
           agentId={id}
           onClose={() => setSlackSetup(false)}
+          onDone={load}
+        />
+      ) : null}
+
+      {telegramSetup && id ? (
+        <TelegramSetup
+          agentId={id}
+          onClose={() => setTelegramSetup(false)}
+          onDone={load}
+        />
+      ) : null}
+
+      {discordSetup && id ? (
+        <DiscordSetup
+          agentId={id}
+          onClose={() => setDiscordSetup(false)}
           onDone={load}
         />
       ) : null}

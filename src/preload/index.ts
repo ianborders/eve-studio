@@ -48,7 +48,15 @@ import {
   type SandboxInfo,
   type ScheduleInput,
   type SkillInput,
+  type DiscordCredInput,
+  type DiscordEndpointResult,
+  type DiscordStatus,
+  type DiscordVerifyResult,
   type SubagentInput,
+  type TelegramCredInput,
+  type TelegramStatus,
+  type TelegramVerifyResult,
+  type TelegramWebhookResult,
   type ThreadRecord,
   type TimelineEvent,
   type ToolInput,
@@ -224,6 +232,10 @@ const api = {
       ipcRenderer.invoke(IPC.vercelEnvSetAll, id, name, value),
     prodInfo: (id: string): Promise<ProdInfo> =>
       ipcRenderer.invoke(IPC.vercelProdInfo, id),
+    prodAlias: (
+      id: string,
+    ): Promise<{ ok: boolean; url?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC.vercelProdAlias, id),
     modelReadiness: (id: string): Promise<ModelReadiness> =>
       ipcRenderer.invoke(IPC.modelReadiness, id),
     gatewayModels: (id: string): Promise<GatewayModelsResult> =>
@@ -282,6 +294,52 @@ const api = {
       connector: string,
     ): Promise<{ ok: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC.connectorOpenPage, id, connector),
+  },
+
+  telegram: {
+    /** Validate a BotFather token (getMe) → bot @username + name. */
+    verify: (token: string): Promise<TelegramVerifyResult> =>
+      ipcRenderer.invoke(IPC.telegramVerify, token),
+    /** Register the webhook at `url` with `secret`, then read it back. */
+    setWebhook: (
+      token: string,
+      url: string,
+      secret: string,
+    ): Promise<TelegramWebhookResult> =>
+      ipcRenderer.invoke(IPC.telegramSetWebhook, token, url, secret),
+    /** Re-read the current webhook state (getWebhookInfo). */
+    webhookInfo: (token: string): Promise<TelegramWebhookResult> =>
+      ipcRenderer.invoke(IPC.telegramWebhookInfo, token),
+    /** Persist the bot creds so the badge + repair survive without re-pasting. */
+    save: (id: string, cred: TelegramCredInput): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke(IPC.telegramSave, id, cred),
+    /** Live connection status for the Channels badge. */
+    status: (id: string): Promise<TelegramStatus> =>
+      ipcRenderer.invoke(IPC.telegramStatus, id),
+    /** Register the webhook using the saved bot token + secret (survives redeploys). */
+    registerWebhook: (
+      id: string,
+      url: string,
+    ): Promise<TelegramWebhookResult> =>
+      ipcRenderer.invoke(IPC.telegramRegisterWebhook, id, url),
+  },
+
+  discord: {
+    /** Validate a bot token → application id + public key + name. */
+    verify: (token: string): Promise<DiscordVerifyResult> =>
+      ipcRenderer.invoke(IPC.discordVerify, token),
+    /** Persist the derived creds so the badge + repair survive redeploys. */
+    save: (id: string, cred: DiscordCredInput): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke(IPC.discordSave, id, cred),
+    /** Live connection status for the Channels badge. */
+    status: (id: string): Promise<DiscordStatus> =>
+      ipcRenderer.invoke(IPC.discordStatus, id),
+    /** Register the default /ask slash command (uses saved creds). */
+    registerCommands: (id: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC.discordRegisterCommands, id),
+    /** Set + verify the interactions endpoint at the deployed agent. */
+    setEndpoint: (id: string, url: string): Promise<DiscordEndpointResult> =>
+      ipcRenderer.invoke(IPC.discordSetEndpoint, id, url),
   },
 
   evolve: {

@@ -407,6 +407,92 @@ export interface ChannelAddInput {
   name?: string;
   /** Rewrite the channel file if it already exists (e.g. to change the bot). */
   overwrite?: boolean;
+  /** Telegram bot @handle (no @) baked into telegramChannel({ botUsername }). */
+  botUsername?: string;
+}
+
+/** Result of validating a Telegram bot token via getMe. */
+export interface TelegramVerifyResult {
+  ok: boolean;
+  id?: number;
+  username?: string | null;
+  name?: string | null;
+  error?: string;
+}
+
+/** Result of registering / inspecting the Telegram webhook. */
+export interface TelegramWebhookResult {
+  ok: boolean;
+  /** The webhook URL Telegram currently has, if any. */
+  url?: string | null;
+  /** True when a webhook is set (and matches the expected URL, when given). */
+  live?: boolean;
+  /** Queued updates Telegram hasn't delivered yet (nonzero ⇒ agent not answering). */
+  pending?: number;
+  /** Last delivery error Telegram saw, if any. */
+  lastError?: string | null;
+  error?: string;
+}
+
+/** Persisted Telegram credentials + webhook state Studio holds for an agent. */
+export interface TelegramCredInput {
+  botToken: string;
+  webhookSecret: string;
+  botUsername?: string;
+  webhookUrl?: string;
+}
+
+/** Result of validating a Discord bot token (derives app id + public key). */
+export interface DiscordVerifyResult {
+  ok: boolean;
+  applicationId?: string;
+  name?: string | null;
+  publicKey?: string | null;
+  /** Interactions endpoint already set on the app, if any. */
+  endpointUrl?: string | null;
+  error?: string;
+}
+
+/** Result of setting/verifying the Discord interactions endpoint. */
+export interface DiscordEndpointResult {
+  ok: boolean;
+  url?: string | null;
+  live?: boolean;
+  error?: string;
+}
+
+/** Persisted Discord credentials Studio holds for an agent. */
+export interface DiscordCredInput {
+  botToken: string;
+  applicationId: string;
+  publicKey: string;
+  endpointUrl?: string;
+  commandsRegistered?: boolean;
+}
+
+/** Live Discord connection status for the Channels badge. */
+export interface DiscordStatus {
+  configured: boolean;
+  /** The interactions endpoint is set (Discord only allows that once verified). */
+  live?: boolean;
+  url?: string | null;
+  name?: string | null;
+  /** Error reaching Discord / reading the app (e.g. a revoked token). */
+  lastError?: string | null;
+}
+
+/** Live Telegram connection status for the Channels badge. */
+export interface TelegramStatus {
+  /** Studio has a bot token saved for this agent. */
+  configured: boolean;
+  /** A webhook is registered and points somewhere. */
+  live?: boolean;
+  url?: string | null;
+  /** Undelivered updates queued at Telegram (nonzero ⇒ the agent isn't answering). */
+  pending?: number;
+  /** Telegram's last delivery error — e.g. a 401 from Deployment Protection. */
+  lastError?: string | null;
+  botUsername?: string | null;
 }
 /** Live wiring for one channel: which connector it uses + attachment state. */
 export interface ChannelWiring {
@@ -581,6 +667,18 @@ export const IPC = {
   vercelLogin: "vercel:login",
   modelReadiness: "vercel:modelReadiness",
   gatewayModels: "vercel:gatewayModels",
+  telegramVerify: "telegram:verify",
+  telegramSetWebhook: "telegram:setWebhook",
+  telegramWebhookInfo: "telegram:webhookInfo",
+  telegramSave: "telegram:save",
+  telegramStatus: "telegram:status",
+  telegramRegisterWebhook: "telegram:registerWebhook",
+  discordVerify: "discord:verify",
+  discordSave: "discord:save",
+  discordStatus: "discord:status",
+  discordRegisterCommands: "discord:registerCommands",
+  discordSetEndpoint: "discord:setEndpoint",
+  vercelProdAlias: "vercel:prodAlias",
   evolveDraft: "evolve:draft",
   evolveApply: "evolve:apply",
   evolveDetect: "evolve:detect",
