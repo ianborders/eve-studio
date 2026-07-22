@@ -304,6 +304,40 @@ const api = {
       ipcRenderer.invoke(IPC.connectorOpenPage, id, connector),
   },
 
+  buzz: {
+    /** Generate (or reuse) the agent's Buzz identity keypair. */
+    genKey: (id: string, relayUrl: string): Promise<import("@shared/ipc").BuzzKeyResult> =>
+      ipcRenderer.invoke(IPC.buzzGenKey, id, relayUrl),
+    /** Probe the relay: is the identity an admitted member? */
+    verify: (id: string): Promise<import("@shared/ipc").BuzzVerifyResult> =>
+      ipcRenderer.invoke(IPC.buzzVerify, id),
+    /** Push the agent's profile (kind:0) with optional avatar upload. */
+    setProfile: (
+      id: string,
+      input: { name: string; about?: string; avatarPath?: string },
+    ): Promise<import("@shared/ipc").BuzzProfileResult> =>
+      ipcRenderer.invoke(IPC.buzzSetProfile, id, input),
+    /** Write env vars + channel file + agent dep (nostr-tools) in one shot. */
+    wire: (id: string): Promise<{ ok: boolean; output: string }> =>
+      ipcRenderer.invoke(IPC.buzzWire, id),
+    /** Persist wiring (target URL, bypass secret auto-filled main-side). */
+    save: (
+      id: string,
+      patch: Partial<import("@shared/ipc").BuzzCredInput>,
+    ): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.buzzSave, id, patch),
+    /** Live status for the Channels badge + bridge controls. */
+    status: (id: string): Promise<import("@shared/ipc").BuzzStatus> =>
+      ipcRenderer.invoke(IPC.buzzStatus, id),
+    bridgeStart: (id: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC.buzzBridgeStart, id),
+    bridgeStop: (id: string): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke(IPC.buzzBridgeStop, id),
+    bridgeInstall: (id: string): Promise<{ ok: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC.buzzBridgeInstall, id),
+    bridgeUninstall: (id: string): Promise<{ ok: boolean }> =>
+      ipcRenderer.invoke(IPC.buzzBridgeUninstall, id),
+  },
+
   telegram: {
     /** Validate a BotFather token (getMe) → bot @username + name. */
     verify: (token: string): Promise<TelegramVerifyResult> =>

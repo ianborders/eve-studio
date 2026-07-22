@@ -1,4 +1,5 @@
 import type { ChildProcess } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import {
@@ -86,6 +87,18 @@ import {
   telegramVerify,
   telegramWebhookInfo,
 } from "./telegram";
+import {
+  buzzBridgeInstall,
+  buzzBridgeStart,
+  buzzBridgeStop,
+  buzzBridgeUninstall,
+  buzzBypassSecret,
+  buzzGenKey,
+  buzzSave,
+  buzzSetProfile,
+  buzzStatus,
+  buzzVerify,
+} from "./buzz";
 import { gatewayModels } from "./gateway";
 import { readStructure } from "./structure";
 import {
@@ -1227,6 +1240,97 @@ export function registerIpc(): IpcHandles {
       await ensureNodeRuntime();
       return vercelWhoami(agentPathOf(id));
     },
+  );
+  ipcMain.handle(
+    IPC.buzzGenKey,
+    (_e: IpcMainInvokeEvent, id: string, relayUrl: string) =>
+      buzzGenKey(id, relayUrl),
+  );
+  ipcMain.handle(IPC.buzzVerify, (_e: IpcMainInvokeEvent, id: string) =>
+    buzzVerify(id),
+  );
+  ipcMain.handle(
+    IPC.buzzSetProfile,
+    (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      input: { name: string; about?: string; avatarPath?: string },
+    ) => buzzSetProfile(id, input),
+  );
+  ipcMain.handle(
+    IPC.buzzSave,
+    async (
+      _e: IpcMainInvokeEvent,
+      id: string,
+      patch: Partial<import("../shared/ipc").BuzzCredInput>,
+    ) => {
+      // Fill the bypass secret automatically when the target URL lands.
+      if (patch.targetUrl && !patch.bypassSecret) {
+        const bp = await buzzBypassSecret(agentPathOf(id));
+        if (bp) {
+          patch.bypassSecret = bp;
+        }
+      }
+      return buzzSave(id, patch);
+    },
+  );
+  ipcMain.handle(IPC.buzzStatus, (_e: IpcMainInvokeEvent, id: string) =>
+    buzzStatus(id),
+  );
+  ipcMain.handle(
+    IPC.buzzWire,
+    async (_e: IpcMainInvokeEvent, id: string): Promise<{ ok: boolean; output: string }> => {
+      const cred = store.getBuzz(id);
+      if (!cred) {
+        return { ok: false, output: "No Buzz identity — run the earlier steps first." };
+      }
+      const path = agentPathOf(id);
+      const lines: string[] = [];
+      // 1. Env vars (all environments) so the deployed agent can post + verify.
+      for (const [k, v] of [
+        ["BUZZ_RELAY_URL", cred.relayUrl],
+        ["BUZZ_PRIVATE_KEY", cred.privateKey],
+        ["BUZZ_WEBHOOK_SECRET", cred.webhookSecret],
+        ["BUZZ_AGENT_NAME", cred.agentName ?? ""],
+      ] as const) {
+        const r = await vercelEnvSetAll(path, k, v);
+        lines.push(`${k}: ${r.ok ? "set" : "FAILED"}`);
+        if (!r.ok) {
+          return { ok: false, output: lines.concat(r.output).join("\n") };
+        }
+      }
+      // 2. Channel file.
+      try {
+        const w = writeChannel(path, { kind: "buzz", overwrite: true });
+        lines.push(`${w.relPath} written`);
+      } catch (err) {
+        return {
+          ok: false,
+          output: lines.concat(err instanceof Error ? err.message : String(err)).join("\n"),
+        };
+      }
+      // 3. nostr-tools dependency in the agent project.
+      const pm = existsSync(join(path, "pnpm-lock.yaml")) ? "pnpm" : "npm";
+      const inst = spawnSync(pm, pm === "pnpm" ? ["add", "nostr-tools"] : ["install", "nostr-tools"], {
+        cwd: path,
+        encoding: "utf8",
+        timeout: 180_000,
+      });
+      lines.push(inst.status === 0 ? "nostr-tools installed" : `nostr-tools install FAILED: ${inst.stderr}`);
+      return { ok: inst.status === 0, output: lines.join("\n") };
+    },
+  );
+  ipcMain.handle(IPC.buzzBridgeStart, (_e: IpcMainInvokeEvent, id: string) =>
+    buzzBridgeStart(id),
+  );
+  ipcMain.handle(IPC.buzzBridgeStop, (_e: IpcMainInvokeEvent, id: string) =>
+    buzzBridgeStop(id),
+  );
+  ipcMain.handle(IPC.buzzBridgeInstall, (_e: IpcMainInvokeEvent, id: string) =>
+    buzzBridgeInstall(id),
+  );
+  ipcMain.handle(IPC.buzzBridgeUninstall, (_e: IpcMainInvokeEvent, id: string) =>
+    buzzBridgeUninstall(id),
   );
   ipcMain.handle(IPC.telegramVerify, (_e: IpcMainInvokeEvent, token: string) =>
     telegramVerify(token),

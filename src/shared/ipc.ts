@@ -398,6 +398,7 @@ export type ChannelKind =
   | "twilio"
   | "github"
   | "linear"
+  | "buzz"
   | "custom";
 export interface ChannelAddInput {
   kind: ChannelKind;
@@ -444,6 +445,54 @@ export interface TelegramCredInput {
   webhookSecret: string;
   botUsername?: string;
   webhookUrl?: string;
+}
+
+/** Persisted Buzz credentials + wiring Studio holds for an agent. */
+export interface BuzzCredInput {
+  relayUrl: string;
+  privateKey: string;
+  publicKey: string;
+  npub: string;
+  webhookSecret: string;
+  agentName?: string;
+  /** Optional Vercel protection-bypass secret the bridge sends as a header. */
+  bypassSecret?: string;
+  /** Stable production target the bridge forwards inbound messages to. */
+  targetUrl?: string;
+}
+
+/** Generated Buzz identity for an agent. */
+export interface BuzzKeyResult {
+  ok: boolean;
+  publicKey?: string;
+  npub?: string;
+  error?: string;
+}
+
+/** Result of probing relay membership with the agent identity. */
+export interface BuzzVerifyResult {
+  ok: boolean;
+  member?: boolean;
+  channels?: number;
+  error?: string;
+}
+
+/** Result of pushing the agent profile (kind:0) to the relay. */
+export interface BuzzProfileResult {
+  ok: boolean;
+  avatarUrl?: string | null;
+  error?: string;
+}
+
+/** Live status for the Buzz channel badge + bridge controls. */
+export interface BuzzStatus {
+  configured: boolean;
+  member?: boolean;
+  bridgeRunning: boolean;
+  bridgeInstalled: boolean;
+  npub?: string;
+  relayUrl?: string;
+  lastError?: string | null;
 }
 
 /** Result of validating Twilio Account SID + Auth Token. */
@@ -741,6 +790,16 @@ export const IPC = {
   vercelLogin: "vercel:login",
   modelReadiness: "vercel:modelReadiness",
   gatewayModels: "vercel:gatewayModels",
+  buzzGenKey: "buzz:genKey",
+  buzzWire: "buzz:wire",
+  buzzVerify: "buzz:verify",
+  buzzSetProfile: "buzz:setProfile",
+  buzzSave: "buzz:save",
+  buzzStatus: "buzz:status",
+  buzzBridgeStart: "buzz:bridgeStart",
+  buzzBridgeStop: "buzz:bridgeStop",
+  buzzBridgeInstall: "buzz:bridgeInstall",
+  buzzBridgeUninstall: "buzz:bridgeUninstall",
   telegramVerify: "telegram:verify",
   telegramSetWebhook: "telegram:setWebhook",
   telegramWebhookInfo: "telegram:webhookInfo",

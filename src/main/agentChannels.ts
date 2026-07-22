@@ -183,6 +183,19 @@ export default defineChannel({
     throw new Error(`channels/${input.kind}.ts already exists.`);
   }
 
+  if (input.kind === "buzz") {
+    writeFileSync(file, BUZZ_TEMPLATE);
+    return {
+      relPath: `${nested(agentPath)}channels/buzz.ts`,
+      envVars: [
+        "BUZZ_RELAY_URL",
+        "BUZZ_PRIVATE_KEY",
+        "BUZZ_WEBHOOK_SECRET",
+        "BUZZ_AGENT_NAME",
+      ],
+    };
+  }
+
   const c = CONNECT[input.kind];
   if (c) {
     const uid = input.connector ?? `${c.service}/my-agent`;
@@ -248,6 +261,155 @@ export default ${body};
 
   throw new Error(`Unknown channel kind: ${input.kind}`);
 }
+
+/**
+ * Buzz (github.com/block/buzz) channel scaffold. Buzz is a NIP-29 Nostr relay:
+ * outbound messages are signed kind:9 events submitted over REST with NIP-98
+ * auth; inbound arrives on POST /inbound (delivered by a relay-side workflow on
+ * relays that support push, or by Studio's local bridge on hosted relays that
+ * don't). Requires the `nostr-tools` package in the agent.
+ */
+const BUZZ_TEMPLATE = `import { createHash } from "node:crypto";
+import { defineChannel, POST } from "eve/channels";
+import { finalizeEvent } from "nostr-tools/pure";
+
+/**
+ * buzz — two-way channel for a Buzz (block/buzz) workspace. Added by Eve Studio.
+ *
+ * Env: BUZZ_RELAY_URL, BUZZ_PRIVATE_KEY (agent's Nostr key, hex),
+ *      BUZZ_WEBHOOK_SECRET (gates /inbound), BUZZ_AGENT_NAME (mention strip).
+ */
+
+interface BuzzTarget {
+  /** Buzz channel UUID (DM conversations are hidden channels — same shape). */
+  channelId: string;
+}
+
+const buzzChannel = defineChannel({
+  state: { targetChannelId: null as string | null },
+
+  context(state) {
+    return { state };
+  },
+
+  routes: [
+    POST("/inbound", async (req, { receive, waitUntil }) => {
+      const secret = process.env.BUZZ_WEBHOOK_SECRET;
+      if (!secret || req.headers.get("x-buzz-secret") !== secret) {
+        return new Response("unauthorized", { status: 401 });
+      }
+      const body = (await req.json()) as {
+        text?: string;
+        author?: string;
+        channelId?: string;
+        messageId?: string;
+      };
+      const channelId = (body.channelId || "").trim();
+      const author = (body.author || "").trim();
+      const name = process.env.BUZZ_AGENT_NAME || "";
+      const mention = name
+        ? new RegExp("@\\\\s*" + name.replace(/[.*+?^\${}()|[\\]\\\\]/g, "\\\\$&"), "gi")
+        : null;
+      let text = (body.text || "").replace(/nostr:npub1[a-z0-9]+/gi, "");
+      if (mention) {
+        text = text.replace(mention, "");
+      }
+      text = text.trim();
+      if (!channelId || !text) {
+        return new Response("ignored", { status: 200 });
+      }
+      waitUntil(
+        receive(buzzChannel, {
+          message: text,
+          target: { channelId },
+          auth: {
+            authenticator: "buzz",
+            principalType: "user",
+            principalId: author || "unknown",
+            attributes: { channelId, messageId: body.messageId ?? "" },
+          },
+        }),
+      );
+      return Response.json({ ok: true });
+    }),
+  ],
+
+  async receive(input, { send }) {
+    const target = input.target as unknown as BuzzTarget;
+    return send(input.message, {
+      auth: input.auth,
+      continuationToken: \`chat:\${target.channelId}\`,
+      state: { targetChannelId: target.channelId },
+    });
+  },
+
+  events: {
+    async "message.completed"(event, channel) {
+      if (event.finishReason === "tool-calls") {
+        return;
+      }
+      const text = (event.message ?? "").trim();
+      const channelId = channel.state.targetChannelId;
+      if (!text || !channelId) {
+        return;
+      }
+      await postToBuzz(channelId, text);
+    },
+  },
+});
+
+export default buzzChannel;
+
+/** Publish text as a kind:9 message (NIP-29) via the relay's REST /events. */
+async function postToBuzz(channelId: string, text: string): Promise<void> {
+  const relay = (process.env.BUZZ_RELAY_URL || "")
+    .replace(/^ws/, "http")
+    .replace(/\\/+$/, "");
+  const keyHex = process.env.BUZZ_PRIVATE_KEY || "";
+  if (!relay || !keyHex) {
+    console.warn("[buzz] BUZZ_RELAY_URL / BUZZ_PRIVATE_KEY not set — skipping");
+    return;
+  }
+  const sk = Uint8Array.from(keyHex.match(/.{2}/g)!.map((b) => parseInt(b, 16)));
+  const message = finalizeEvent(
+    {
+      kind: 9,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [["h", channelId]],
+      content: text,
+    },
+    sk,
+  );
+  const url = \`\${relay}/events\`;
+  const body = JSON.stringify(message);
+  const auth = finalizeEvent(
+    {
+      kind: 27235,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [
+        ["u", url],
+        ["method", "POST"],
+        ["nonce", crypto.randomUUID()],
+        ["payload", createHash("sha256").update(body).digest("hex")],
+      ],
+      content: "",
+    },
+    sk,
+  );
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: \`Nostr \${Buffer.from(JSON.stringify(auth)).toString("base64")}\`,
+      "Content-Type": "application/json",
+    },
+    body,
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) {
+    throw new Error(\`[buzz] relay rejected message: HTTP \${res.status}\`);
+  }
+}
+`;
 
 /**
  * Delete a channel by removing its `channels/<name>.ts` file.

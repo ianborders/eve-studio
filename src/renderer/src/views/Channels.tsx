@@ -8,6 +8,7 @@ import type {
   TwilioStatus,
 } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
+import { BuzzSetup } from "../components/BuzzSetup";
 import { ConnectorPicker } from "../components/ConnectorPicker";
 import { ConnectSetup } from "../components/ConnectSetup";
 import { DiscordSetup } from "../components/DiscordSetup";
@@ -98,6 +99,14 @@ const CATALOG: Cat[] = [
     auth: "connect",
     service: "linear",
     color: "#5E6AD2",
+  },
+  {
+    kind: "buzz",
+    label: "Buzz",
+    desc: "Agent-native team chat by Block.",
+    auth: "env",
+    env: ["BUZZ_RELAY_URL", "BUZZ_PRIVATE_KEY", "BUZZ_WEBHOOK_SECRET"],
+    color: "#F5B700",
   },
   {
     kind: "web",
@@ -367,6 +376,7 @@ export function Channels(): JSX.Element {
   const [discordSetup, setDiscordSetup] = useState(false);
   const [twilioSetup, setTwilioSetup] = useState(false);
   const [teamsSetup, setTeamsSetup] = useState(false);
+  const [buzzSetup, setBuzzSetup] = useState(false);
   const [connectSetup, setConnectSetup] = useState<"github" | "linear" | null>(
     null,
   );
@@ -374,6 +384,7 @@ export function Channels(): JSX.Element {
   const [dc, setDc] = useState<DiscordStatus | null>(null);
   const [tw, setTw] = useState<TwilioStatus | null>(null);
   const [tm, setTm] = useState<TeamsStatus | null>(null);
+  const [bz, setBz] = useState<import("@shared/ipc").BuzzStatus | null>(null);
   const [finishing, setFinishing] = useState<string | null>(null);
   const [finishMsg, setFinishMsg] = useState<{
     name: string;
@@ -415,6 +426,10 @@ export function Channels(): JSX.Element {
       .status(id)
       .then(setTm)
       .catch(() => setTm(null));
+    window.studio.buzz
+      .status(id)
+      .then(setBz)
+      .catch(() => setBz(null));
   }, [id]);
 
   useEffect(() => {
@@ -647,6 +662,23 @@ export function Channels(): JSX.Element {
                                 ) : (
                                   <Badge>added</Badge>
                                 )
+                              ) : (c.kind ?? c.name) === "buzz" ? (
+                                bz?.member && (bz.bridgeRunning || bz.bridgeInstalled) ? (
+                                  <Badge tone="success">
+                                    <StatusDot status="running" />
+                                    connected to this agent
+                                  </Badge>
+                                ) : bz?.member ? (
+                                  <Badge tone="warn">
+                                    member — bridge not running
+                                  </Badge>
+                                ) : bz?.configured ? (
+                                  <Badge tone="warn">
+                                    awaiting workspace admission
+                                  </Badge>
+                                ) : (
+                                  <Badge>added</Badge>
+                                )
                               ) : w?.attached === true ? (
                                 <Badge tone="success">
                                   <StatusDot status="running" />
@@ -730,6 +762,14 @@ export function Channels(): JSX.Element {
                       ) : kind === "teams" ? (
                         <Button
                           onClick={() => setTeamsSetup(true)}
+                          size="sm"
+                          variant="secondary"
+                        >
+                          Set up
+                        </Button>
+                      ) : kind === "buzz" ? (
+                        <Button
+                          onClick={() => setBuzzSetup(true)}
                           size="sm"
                           variant="secondary"
                         >
@@ -819,10 +859,12 @@ export function Channels(): JSX.Element {
                                   ? setTwilioSetup(true)
                                   : cat.kind === "teams"
                                     ? setTeamsSetup(true)
-                                    : cat.kind === "github" ||
-                                        cat.kind === "linear"
-                                      ? setConnectSetup(cat.kind)
-                                      : setAdd(cat)
+                                    : cat.kind === "buzz"
+                                      ? setBuzzSetup(true)
+                                      : cat.kind === "github" ||
+                                          cat.kind === "linear"
+                                        ? setConnectSetup(cat.kind)
+                                        : setAdd(cat)
                         }
                       >
                         <IconPlus className="h-3.5 w-3.5" />{" "}
@@ -831,6 +873,7 @@ export function Channels(): JSX.Element {
                         cat.kind === "discord" ||
                         cat.kind === "twilio" ||
                         cat.kind === "teams" ||
+                        cat.kind === "buzz" ||
                         cat.kind === "github" ||
                         cat.kind === "linear"
                           ? "Set up"
@@ -882,6 +925,14 @@ export function Channels(): JSX.Element {
         <TwilioSetup
           agentId={id}
           onClose={() => setTwilioSetup(false)}
+          onDone={load}
+        />
+      ) : null}
+
+      {buzzSetup && id ? (
+        <BuzzSetup
+          agentId={id}
+          onClose={() => setBuzzSetup(false)}
           onDone={load}
         />
       ) : null}

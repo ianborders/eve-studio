@@ -8,7 +8,8 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { app } from "electron";
-import type { AgentRecord, EveEvent, ThreadRecord } from "../shared/ipc";
+import type {
+  BuzzCredInput, AgentRecord, EveEvent, ThreadRecord } from "../shared/ipc";
 
 /** Resume state for an Eve session (Eve has no server-side history — we own it). */
 export interface SessionCursor {
@@ -89,6 +90,7 @@ interface Db {
   discord: Record<string, DiscordCred>;
   twilio: Record<string, TwilioCred>;
   teams: Record<string, TeamsCred>;
+  buzz: Record<string, BuzzCredInput>;
 }
 
 let dbPath = "";
@@ -103,6 +105,7 @@ let db: Db = {
   discord: {},
   twilio: {},
   teams: {},
+  buzz: {},
 };
 
 export function initStore(): void {
@@ -123,6 +126,7 @@ export function initStore(): void {
         discord: parsed.discord ?? {},
         twilio: parsed.twilio ?? {},
         teams: parsed.teams ?? {},
+        buzz: (parsed as Partial<Db>).buzz ?? {},
       };
     } catch {
       db = {
@@ -135,6 +139,7 @@ export function initStore(): void {
         discord: {},
         twilio: {},
         teams: {},
+        buzz: {},
       };
     }
   } else {
@@ -249,6 +254,19 @@ export function setTelegram(agentId: string, cred: TelegramCred): void {
 }
 export function deleteTelegram(agentId: string): void {
   delete db.telegram[agentId];
+  persist();
+}
+
+// --- buzz credentials (keyed by agent id) ---
+export function getBuzz(agentId: string): BuzzCredInput | undefined {
+  return db.buzz[agentId];
+}
+export function setBuzz(agentId: string, cred: BuzzCredInput): void {
+  db.buzz[agentId] = { ...db.buzz[agentId], ...cred };
+  persist();
+}
+export function deleteBuzz(agentId: string): void {
+  delete db.buzz[agentId];
   persist();
 }
 
