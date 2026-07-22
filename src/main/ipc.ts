@@ -1254,7 +1254,13 @@ export function registerIpc(): IpcHandles {
     (
       _e: IpcMainInvokeEvent,
       id: string,
-      input: { name: string; about?: string; avatarPath?: string },
+      input: {
+        name: string;
+        about?: string;
+        avatarPath?: string;
+        avatarData?: string;
+        avatarMime?: string;
+      },
     ) => buzzSetProfile(id, input),
   );
   ipcMain.handle(

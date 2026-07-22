@@ -314,7 +314,13 @@ const api = {
     /** Push the agent's profile (kind:0) with optional avatar upload. */
     setProfile: (
       id: string,
-      input: { name: string; about?: string; avatarPath?: string },
+      input: {
+        name: string;
+        about?: string;
+        avatarPath?: string;
+        avatarData?: string;
+        avatarMime?: string;
+      },
     ): Promise<import("@shared/ipc").BuzzProfileResult> =>
       ipcRenderer.invoke(IPC.buzzSetProfile, id, input),
     /** Write env vars + channel file + agent dep (nostr-tools) in one shot. */

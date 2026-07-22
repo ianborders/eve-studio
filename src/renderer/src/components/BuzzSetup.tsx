@@ -37,7 +37,9 @@ export function BuzzSetup({
   // Step 2 — profile
   const [name, setName] = useState("");
   const [about, setAbout] = useState("");
-  const [avatarPath, setAvatarPath] = useState("");
+  const [avatarData, setAvatarData] = useState("");
+  const [avatarMime, setAvatarMime] = useState("");
+  const [avatarName, setAvatarName] = useState("");
   const [pushing, setPushing] = useState(false);
   const [pushed, setPushed] = useState(false);
   const [pushErr, setPushErr] = useState<string | null>(null);
@@ -76,7 +78,8 @@ export function BuzzSetup({
     const r = await window.studio.buzz.setProfile(agentId, {
       name: name.trim(),
       about: about.trim() || undefined,
-      avatarPath: avatarPath || undefined,
+      avatarData: avatarData || undefined,
+      avatarMime: avatarMime || undefined,
     });
     setPushing(false);
     if (r.ok) {
@@ -312,11 +315,26 @@ export function BuzzSetup({
                 accept="image/png,image/jpeg,image/webp"
                 className="block w-full text-2xs text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-black/[0.06] file:px-3 file:py-1.5 file:text-2xs file:font-medium file:text-text"
                 onChange={(e) => {
-                  const f = e.target.files?.[0] as (File & { path?: string }) | undefined;
-                  setAvatarPath(f?.path ?? "");
+                  const f = e.target.files?.[0];
+                  if (!f) {
+                    setAvatarData("");
+                    setAvatarName("");
+                    return;
+                  }
+                  setAvatarMime(f.type || "image/png");
+                  setAvatarName(f.name);
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    const s = String(reader.result ?? "");
+                    setAvatarData(s.slice(s.indexOf(",") + 1)); // strip data: prefix
+                  };
+                  reader.readAsDataURL(f);
                 }}
                 type="file"
               />
+              {avatarName ? (
+                <p className="mt-1 text-2xs text-faint">{avatarName} ready</p>
+              ) : null}
             </div>
             <Button
               disabled={pushing || pushed || !name.trim()}

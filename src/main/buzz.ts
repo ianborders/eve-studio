@@ -134,7 +134,14 @@ export async function buzzVerify(agentId: string): Promise<BuzzVerifyResult> {
 
 export async function buzzSetProfile(
   agentId: string,
-  input: { name: string; about?: string; avatarPath?: string },
+  input: {
+    name: string;
+    about?: string;
+    avatarPath?: string;
+    /** Base64 image bytes from the renderer (Electron 32+ removed File.path). */
+    avatarData?: string;
+    avatarMime?: string;
+  },
 ): Promise<BuzzProfileResult> {
   const cred = getBuzz(agentId);
   if (!cred) {
@@ -143,15 +150,22 @@ export async function buzzSetProfile(
   const base = httpBase(cred.relayUrl);
   let avatarUrl: string | null = null;
   try {
-    if (input.avatarPath && existsSync(input.avatarPath)) {
-      const bytes = readFileSync(input.avatarPath);
-      const sha256 = createHash("sha256").update(bytes).digest("hex");
-      const mime = input.avatarPath.toLowerCase().endsWith(".jpg") ||
+    let bytes: Buffer | null = null;
+    let mime = "image/png";
+    if (input.avatarData) {
+      bytes = Buffer.from(input.avatarData, "base64");
+      mime = input.avatarMime || "image/png";
+    } else if (input.avatarPath && existsSync(input.avatarPath)) {
+      bytes = readFileSync(input.avatarPath);
+      mime = input.avatarPath.toLowerCase().endsWith(".jpg") ||
         input.avatarPath.toLowerCase().endsWith(".jpeg")
         ? "image/jpeg"
         : input.avatarPath.toLowerCase().endsWith(".webp")
           ? "image/webp"
           : "image/png";
+    }
+    if (bytes) {
+      const sha256 = createHash("sha256").update(bytes).digest("hex");
       // Blossom upload auth: kind 24242, t=upload, x=sha256, expiration.
       const authEv = finalizeEvent(
         {
@@ -171,7 +185,7 @@ export async function buzzSetProfile(
       const up = await fetch(`${base}/media/upload`, {
         method: "PUT",
         headers: { Authorization: auth, "Content-Type": mime },
-        body: bytes,
+        body: new Uint8Array(bytes),
         signal: AbortSignal.timeout(60_000),
       });
       if (up.ok) {

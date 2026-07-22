@@ -26,6 +26,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 // Dev: resources/ sits next to node_modules. Packaged: app.asar/node_modules.
 const req = createRequire(join(here, "..", "package.json"));
 const { finalizeEvent } = req("nostr-tools/pure");
+// Electron's bundled Node (v20) has no global WebSocket — use `ws` there.
+const WebSocketImpl = globalThis.WebSocket ?? req("ws").WebSocket;
 
 const cfg = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const SK = Uint8Array.from(cfg.privateKey.match(/.{2}/g).map((b) => parseInt(b, 16)));
@@ -132,7 +134,7 @@ function onEvent(ev) {
 }
 
 function subscribe() {
-  if (!ws || ws.readyState !== WebSocket.OPEN || channels.length === 0) return;
+  if (!ws || ws.readyState !== WebSocketImpl.OPEN || channels.length === 0) return;
   ws.send(
     JSON.stringify([
       "REQ",
@@ -144,13 +146,13 @@ function subscribe() {
 }
 
 function presence() {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  if (!ws || ws.readyState !== WebSocketImpl.OPEN) return;
   ws.send(JSON.stringify(["EVENT", finalizeEvent({ kind: 20001, created_at: now(), tags: [], content: "online" }, SK)]));
 }
 
 function connect() {
   if (stopping) return;
-  ws = new WebSocket(WS_URL);
+  ws = new WebSocketImpl(WS_URL);
   ws.onopen = () => {
     log("connected", WS_URL);
     presence();
