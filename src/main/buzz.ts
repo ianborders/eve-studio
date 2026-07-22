@@ -94,10 +94,20 @@ export async function buzzVerify(agentId: string): Promise<BuzzVerifyResult> {
   if (!cred) {
     return { ok: false, error: "No Buzz identity yet — generate one first." };
   }
-  const url = `${httpBase(cred.relayUrl)}/api/channels?member=true`;
+  // Relay-level admission check: an authed POST /query succeeds (HTTP 200) only
+  // for admitted members — outsiders get 403 relay_membership_required. The
+  // kind:39002 (group members) filter also tells us how many channels the
+  // agent has been added to (0 right after admission is normal).
+  const url = `${httpBase(cred.relayUrl)}/query`;
+  const body = JSON.stringify([{ kinds: [39002], "#p": [cred.publicKey] }]);
   try {
     const res = await fetch(url, {
-      headers: { Authorization: nip98Header(cred.privateKey, "GET", url) },
+      method: "POST",
+      headers: {
+        Authorization: nip98Header(cred.privateKey, "POST", url, body),
+        "Content-Type": "application/json",
+      },
+      body,
       signal: AbortSignal.timeout(15_000),
     });
     if (res.status === 401 || res.status === 403) {
@@ -106,12 +116,14 @@ export async function buzzVerify(agentId: string): Promise<BuzzVerifyResult> {
     if (!res.ok) {
       return { ok: false, error: `Relay answered HTTP ${res.status}.` };
     }
-    const body = (await res.json().catch(() => [])) as unknown;
-    const channels = Array.isArray(body)
-      ? body.length
-      : Array.isArray((body as { channels?: unknown[] }).channels)
-        ? (body as { channels: unknown[] }).channels.length
-        : 0;
+    const events = (await res.json().catch(() => [])) as {
+      tags?: string[][];
+    }[];
+    const channels = new Set(
+      (Array.isArray(events) ? events : [])
+        .map((e) => e.tags?.find((t) => t[0] === "d")?.[1])
+        .filter(Boolean),
+    ).size;
     return { ok: true, member: true, channels };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };

@@ -53,23 +53,44 @@ function nip98(method, url, body) {
   return `Nostr ${Buffer.from(JSON.stringify(ev)).toString("base64")}`;
 }
 
-/** Refresh the member-channel list (REST). DM channels carry a hidden marker. */
+/** POST /query with NIP-98 auth; body is an ARRAY of Nostr filters. */
+async function query(filters) {
+  const url = `${HTTP_URL}/query`;
+  const body = JSON.stringify(filters);
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: nip98("POST", url, body), "Content-Type": "application/json" },
+    body,
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`query HTTP ${res.status}`);
+  return res.json();
+}
+
+/**
+ * Refresh member channels: kind:39002 (relay-signed member lists) tagged with
+ * our pubkey → channel ids; kind:39000 metadata marks DM groups `hidden`.
+ */
 async function discover() {
   try {
-    const url = `${HTTP_URL}/api/channels?member=true`;
-    const res = await fetch(url, {
-      headers: { Authorization: nip98("GET", url) },
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) return;
-    const body = await res.json();
-    const list = Array.isArray(body) ? body : (body.channels ?? []);
-    channels = list.map((c) => c.channel_id ?? c.id).filter(Boolean);
-    dmChannels = new Set(
-      list
-        .filter((c) => c.hidden === true || c.channel_type === "dm" || c.name === "DM")
-        .map((c) => c.channel_id ?? c.id),
+    const members = await query([{ kinds: [39002], "#p": [cfg.publicKey] }]);
+    const ids = [...new Set(
+      members.map((e) => (e.tags ?? []).find((t) => t[0] === "d")?.[1]).filter(Boolean),
+    )];
+    if (ids.length === 0) {
+      channels = [];
+      dmChannels = new Set();
+      return;
+    }
+    const meta = await query([{ kinds: [39000], "#d": ids }]);
+    const hidden = new Set(
+      meta
+        .filter((e) => (e.tags ?? []).some((t) => t[0] === "hidden"))
+        .map((e) => (e.tags ?? []).find((t) => t[0] === "d")?.[1])
+        .filter(Boolean),
     );
+    channels = ids;
+    dmChannels = hidden;
   } catch (e) {
     log("discover failed:", e?.message ?? e);
   }

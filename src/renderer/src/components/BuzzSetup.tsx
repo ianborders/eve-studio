@@ -262,8 +262,10 @@ export function BuzzSetup({
                 {member ? (
                   member.member ? (
                     <div className="rounded-lg bg-success/10 px-3 py-2 text-[13px] text-success">
-                      Admitted — the agent can see {member.channels ?? 0}{" "}
-                      channel(s).
+                      Admitted to the workspace
+                      {member.channels
+                        ? ` — member of ${member.channels} channel(s).`
+                        : ". Channels come later — DM the agent or add it to a channel after deploy."}
                     </div>
                   ) : (
                     <div className="rounded-lg bg-warn/10 px-3 py-2 text-2xs text-warn">
