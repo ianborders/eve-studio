@@ -8,6 +8,7 @@ import type {
   TwilioStatus,
 } from "@shared/ipc";
 import { useCallback, useEffect, useState } from "react";
+import { BuzzProfileEdit } from "../components/BuzzProfileEdit";
 import { BuzzSetup } from "../components/BuzzSetup";
 import { ConnectorPicker } from "../components/ConnectorPicker";
 import { ConnectSetup } from "../components/ConnectSetup";
@@ -377,6 +378,7 @@ export function Channels(): JSX.Element {
   const [twilioSetup, setTwilioSetup] = useState(false);
   const [teamsSetup, setTeamsSetup] = useState(false);
   const [buzzSetup, setBuzzSetup] = useState(false);
+  const [buzzProfile, setBuzzProfile] = useState(false);
   const [connectSetup, setConnectSetup] = useState<"github" | "linear" | null>(
     null,
   );
@@ -768,13 +770,22 @@ export function Channels(): JSX.Element {
                           Set up
                         </Button>
                       ) : kind === "buzz" ? (
-                        <Button
-                          onClick={() => setBuzzSetup(true)}
-                          size="sm"
-                          variant="secondary"
-                        >
-                          Set up
-                        </Button>
+                        <>
+                          <Button
+                            onClick={() => setBuzzProfile(true)}
+                            size="sm"
+                            variant="secondary"
+                          >
+                            Profile
+                          </Button>
+                          <Button
+                            onClick={() => setBuzzSetup(true)}
+                            size="sm"
+                            variant="secondary"
+                          >
+                            Set up
+                          </Button>
+                        </>
                       ) : kind === "github" || kind === "linear" ? (
                         <Button
                           onClick={() => setConnectSetup(kind)}
@@ -925,6 +936,14 @@ export function Channels(): JSX.Element {
         <TwilioSetup
           agentId={id}
           onClose={() => setTwilioSetup(false)}
+          onDone={load}
+        />
+      ) : null}
+
+      {buzzProfile && id ? (
+        <BuzzProfileEdit
+          agentId={id}
+          onClose={() => setBuzzProfile(false)}
           onDone={load}
         />
       ) : null}

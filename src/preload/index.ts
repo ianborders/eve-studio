@@ -326,6 +326,11 @@ const api = {
     /** Write env vars + channel file + agent dep (nostr-tools) in one shot. */
     wire: (id: string): Promise<{ ok: boolean; output: string }> =>
       ipcRenderer.invoke(IPC.buzzWire, id),
+    /** Current relay-side profile (kind:0) for edit prefill. */
+    getProfile: (
+      id: string,
+    ): Promise<{ ok: boolean; name?: string; about?: string; picture?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC.buzzGetProfile, id),
     /** Persist wiring (target URL, bypass secret auto-filled main-side). */
     save: (
       id: string,

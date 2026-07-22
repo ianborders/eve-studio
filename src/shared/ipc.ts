@@ -794,6 +794,7 @@ export const IPC = {
   buzzWire: "buzz:wire",
   buzzVerify: "buzz:verify",
   buzzSetProfile: "buzz:setProfile",
+  buzzGetProfile: "buzz:getProfile",
   buzzSave: "buzz:save",
   buzzStatus: "buzz:status",
   buzzBridgeStart: "buzz:bridgeStart",

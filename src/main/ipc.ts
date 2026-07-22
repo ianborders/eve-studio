@@ -93,6 +93,7 @@ import {
   buzzBridgeStop,
   buzzBridgeUninstall,
   buzzBypassSecret,
+  buzzGetProfile,
   buzzGenKey,
   buzzSave,
   buzzSetProfile,
@@ -1282,6 +1283,9 @@ export function registerIpc(): IpcHandles {
   );
   ipcMain.handle(IPC.buzzStatus, (_e: IpcMainInvokeEvent, id: string) =>
     buzzStatus(id),
+  );
+  ipcMain.handle(IPC.buzzGetProfile, (_e: IpcMainInvokeEvent, id: string) =>
+    buzzGetProfile(id),
   );
   ipcMain.handle(
     IPC.buzzWire,

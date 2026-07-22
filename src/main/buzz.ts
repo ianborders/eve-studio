@@ -226,6 +226,43 @@ export async function buzzSetProfile(
   }
 }
 
+/** Read the agent's current profile (kind:0) from the relay for prefill. */
+export async function buzzGetProfile(
+  agentId: string,
+): Promise<{ ok: boolean; name?: string; about?: string; picture?: string; error?: string }> {
+  const cred = getBuzz(agentId);
+  if (!cred) {
+    return { ok: false, error: "No Buzz identity yet." };
+  }
+  const url = `${httpBase(cred.relayUrl)}/query`;
+  const body = JSON.stringify([{ kinds: [0], authors: [cred.publicKey], limit: 1 }]);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: nip98Header(cred.privateKey, "POST", url, body),
+        "Content-Type": "application/json",
+      },
+      body,
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) {
+      return { ok: false, error: `Relay answered HTTP ${res.status}.` };
+    }
+    const events = (await res.json().catch(() => [])) as { content?: string; created_at?: number }[];
+    const latest = (Array.isArray(events) ? events : []).sort(
+      (a, b) => (b.created_at ?? 0) - (a.created_at ?? 0),
+    )[0];
+    if (!latest?.content) {
+      return { ok: true };
+    }
+    const prof = JSON.parse(latest.content) as { name?: string; about?: string; picture?: string };
+    return { ok: true, name: prof.name, about: prof.about, picture: prof.picture };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 // --- persisted config -------------------------------------------------------
 
 export function buzzSave(agentId: string, patch: Partial<BuzzCredInput>): { ok: boolean } {
