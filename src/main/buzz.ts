@@ -182,9 +182,10 @@ export async function buzzSetProfile(
         hexToBytes(cred.privateKey),
       );
       const auth = `Nostr ${Buffer.from(JSON.stringify(authEv)).toString("base64url")}`;
-      const up = await fetch(`${base}/media/upload`, {
+      // BUD-02 upload; the relay requires the hash as an x-sha-256 header too.
+      const up = await fetch(`${base}/upload`, {
         method: "PUT",
-        headers: { Authorization: auth, "Content-Type": mime },
+        headers: { Authorization: auth, "Content-Type": mime, "x-sha-256": sha256 },
         body: new Uint8Array(bytes),
         signal: AbortSignal.timeout(60_000),
       });
