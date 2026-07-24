@@ -4,7 +4,7 @@ import { electronApp, is, optimizer } from "@electron-toolkit/utils";
 import { BrowserWindow, app, nativeImage, shell } from "electron";
 import { hydratePath } from "./env";
 import { type IpcHandles, registerIpc } from "./ipc";
-import { ensureNodeRuntime, prewarmVercel } from "./runtime";
+import { ensureNodeRuntime, ensureVercelShim, prewarmVercel } from "./runtime";
 import { initStore } from "./store";
 import { setupAutoUpdater } from "./updater";
 
@@ -67,6 +67,8 @@ app.whenReady().then(() => {
   }
 
   hydratePath();
+  // Put a fallback `vercel` on PATH so deploys work with no global install.
+  ensureVercelShim();
   initStore();
   handles = registerIpc();
 
