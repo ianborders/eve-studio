@@ -1261,6 +1261,7 @@ export function registerIpc(): IpcHandles {
         avatarPath?: string;
         avatarData?: string;
         avatarMime?: string;
+        currentPicture?: string;
       },
     ) => buzzSetProfile(id, input),
   );

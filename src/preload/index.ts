@@ -320,6 +320,7 @@ const api = {
         avatarPath?: string;
         avatarData?: string;
         avatarMime?: string;
+        currentPicture?: string;
       },
     ): Promise<import("@shared/ipc").BuzzProfileResult> =>
       ipcRenderer.invoke(IPC.buzzSetProfile, id, input),
