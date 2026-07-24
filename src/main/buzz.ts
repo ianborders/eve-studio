@@ -57,17 +57,41 @@ function nip98Header(skHex: string, method: string, url: string, body?: string):
   return `Nostr ${Buffer.from(JSON.stringify(ev)).toString("base64")}`;
 }
 
+/**
+ * Canonicalize a user-entered relay URL to a `wss://host[/path]` form with no
+ * trailing slash. Buzz relays are always TLS websockets, so a schemeless entry
+ * (e.g. "team.communities.buzz.xyz") defaults to wss:// rather than failing
+ * downstream when fetch/WebSocket get a URL with no scheme.
+ */
+export function normalizeRelayUrl(relayUrl: string): string {
+  const raw = (relayUrl ?? "").trim().replace(/\/+$/, "");
+  if (!raw) return raw;
+  if (/^wss:\/\//i.test(raw)) return raw;
+  if (/^ws:\/\//i.test(raw)) return raw.replace(/^ws:\/\//i, "wss://");
+  if (/^https:\/\//i.test(raw)) return raw.replace(/^https:\/\//i, "wss://");
+  if (/^http:\/\//i.test(raw)) return raw.replace(/^http:\/\//i, "ws://");
+  return `wss://${raw}`;
+}
+
+/** Derive the relay's HTTP origin from its (normalized) websocket URL. */
 function httpBase(relayUrl: string): string {
-  return relayUrl.replace(/^ws/, "http").replace(/\/+$/, "");
+  const wss = normalizeRelayUrl(relayUrl);
+  return wss.replace(/^wss:\/\//i, "https://").replace(/^ws:\/\//i, "http://");
 }
 
 // --- identity ---------------------------------------------------------------
 
 export function buzzGenKey(agentId: string, relayUrl: string): BuzzKeyResult {
   try {
+    const relay = normalizeRelayUrl(relayUrl);
     const existing = getBuzz(agentId);
     if (existing?.privateKey) {
-      // Reuse the identity — regenerating would orphan the admitted member.
+      // Reuse the identity — regenerating would orphan the admitted member —
+      // but still adopt the (re-normalized) relay URL so correcting a bad or
+      // schemeless entry takes effect instead of the stale value persisting.
+      if (relay && relay !== existing.relayUrl) {
+        setBuzz(agentId, { ...existing, relayUrl: relay });
+      }
       return { ok: true, publicKey: existing.publicKey, npub: existing.npub };
     }
     const sk = generateSecretKey();
@@ -75,7 +99,7 @@ export function buzzGenKey(agentId: string, relayUrl: string): BuzzKeyResult {
     const publicKey = getPublicKey(sk);
     const npub = npubEncode(publicKey);
     setBuzz(agentId, {
-      relayUrl,
+      relayUrl: relay,
       privateKey,
       publicKey,
       npub,
