@@ -47,7 +47,7 @@ import {
   deleteCapability,
   writeCapabilityFile,
 } from "./agentCapabilities";
-import { ensureNodeRuntime } from "./runtime";
+import { ensureNodeRuntime, ensureVercelShim } from "./runtime";
 import {
   arcanaQuery,
   arcanaStats,
@@ -791,6 +791,11 @@ export function registerIpc(): IpcHandles {
           : kind === "deploy"
             ? ["deploy"]
             : ["eval", ...(extra?.ids ?? []), "--json"];
+      // eve deploy shells out to a bare `vercel`; re-assert the fallback shim on
+      // PATH right before so it succeeds without any global Vercel install.
+      if (kind === "deploy") {
+        ensureVercelShim();
+      }
       cli.run(runId, a.path, args);
       return runId;
     },
