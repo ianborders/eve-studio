@@ -50,6 +50,9 @@ export function BuzzProfileEdit({
       about: about.trim() || undefined,
       avatarData: avatarData || undefined,
       avatarMime: avatarMime || undefined,
+      // Retain the existing avatar when the user didn't pick a new one — kind:0
+      // is replace-all, so omitting it would wipe the current picture.
+      currentPicture: currentPic || undefined,
     });
     setSaving(false);
     if (r.ok) {

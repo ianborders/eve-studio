@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { app } from "electron";
+import { app, nativeImage } from "electron";
 import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-tools/pure";
 import { npubEncode } from "nostr-tools/nip19";
 import type {
@@ -156,6 +156,40 @@ export async function buzzVerify(agentId: string): Promise<BuzzVerifyResult> {
 
 // --- profile (kind:0 + Blossom avatar) --------------------------------------
 
+const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+// Critical + transparency chunks only. Everything else (iCCP/sRGB/gAMA/pHYs/
+// tEXt/eXIf/…) is metadata the Buzz Blossom server rejects as "non-canonical".
+const PNG_KEEP = new Set(["IHDR", "PLTE", "IDAT", "IEND", "tRNS"]);
+
+/**
+ * Rebuild a PNG keeping only the chunks needed to render it, dropping every
+ * ancillary metadata chunk. Kept chunks are copied verbatim (CRCs stay valid),
+ * so no re-encode is required. Returns the input unchanged if it isn't a PNG.
+ */
+function stripPngMetadata(buf: Buffer): Buffer {
+  if (buf.length < 8 || !buf.subarray(0, 8).equals(PNG_SIG)) {
+    return buf;
+  }
+  const out: Buffer[] = [PNG_SIG];
+  let off = 8;
+  while (off + 8 <= buf.length) {
+    const len = buf.readUInt32BE(off);
+    const type = buf.toString("ascii", off + 4, off + 8);
+    const end = off + 12 + len; // length(4) + type(4) + data(len) + crc(4)
+    if (end > buf.length) {
+      break;
+    }
+    if (PNG_KEEP.has(type)) {
+      out.push(buf.subarray(off, end));
+    }
+    off = end;
+    if (type === "IEND") {
+      break;
+    }
+  }
+  return Buffer.concat(out);
+}
+
 export async function buzzSetProfile(
   agentId: string,
   input: {
@@ -165,6 +199,12 @@ export async function buzzSetProfile(
     /** Base64 image bytes from the renderer (Electron 32+ removed File.path). */
     avatarData?: string;
     avatarMime?: string;
+    /**
+     * The avatar URL already on the profile. kind:0 is replace-all, so when the
+     * user edits name/bio without re-picking an image we must carry this forward
+     * or the published profile would silently drop the existing avatar.
+     */
+    currentPicture?: string;
   },
 ): Promise<BuzzProfileResult> {
   const cred = getBuzz(agentId);
@@ -189,6 +229,16 @@ export async function buzzSetProfile(
           : "image/png";
     }
     if (bytes) {
+      // Buzz's Blossom server rejects any image carrying metadata (HTTP 422
+      // "media contains metadata or a non-canonical metadata channel"). Skia's
+      // PNG encoder still embeds colour/ancillary chunks (iCCP/sRGB/pHYs/…), so
+      // re-encode to PNG and then strip everything but the critical chunks.
+      // Always normalize to PNG since JPEG can carry EXIF/JFIF metadata too.
+      const img = nativeImage.createFromBuffer(bytes);
+      if (!img.isEmpty()) {
+        bytes = stripPngMetadata(img.toPNG());
+        mime = "image/png";
+      }
       const sha256 = createHash("sha256").update(bytes).digest("hex");
       // Blossom upload auth: kind 24242, t=upload, x=sha256, expiration.
       const authEv = finalizeEvent(
@@ -216,6 +266,14 @@ export async function buzzSetProfile(
       if (up.ok) {
         const desc = (await up.json().catch(() => ({}))) as { url?: string };
         avatarUrl = desc.url ?? `${base}/media/${sha256}.png`;
+      } else {
+        // Surface the failure instead of silently publishing a profile with no
+        // picture — otherwise the user sees "Pushed" but the avatar never lands.
+        const detail = (await up.text().catch(() => "")).slice(0, 200);
+        return {
+          ok: false,
+          error: `Avatar upload was rejected (HTTP ${up.status})${detail ? `: ${detail}` : ""}.`,
+        };
       }
     }
 
@@ -223,8 +281,11 @@ export async function buzzSetProfile(
     if (input.about) {
       profile.about = input.about;
     }
-    if (avatarUrl) {
-      profile.picture = avatarUrl;
+    // Prefer a freshly uploaded avatar; otherwise retain the existing one so an
+    // edit that doesn't touch the image never erases it from the replace-all kind:0.
+    const picture = avatarUrl ?? input.currentPicture;
+    if (picture) {
+      profile.picture = picture;
     }
     const ev = finalizeEvent(
       { kind: 0, created_at: nowSec(), tags: [], content: JSON.stringify(profile) },
