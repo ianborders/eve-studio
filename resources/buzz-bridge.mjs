@@ -31,8 +31,13 @@ const WebSocketImpl = globalThis.WebSocket ?? req("ws").WebSocket;
 
 const cfg = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const SK = Uint8Array.from(cfg.privateKey.match(/.{2}/g).map((b) => parseInt(b, 16)));
-const WS_URL = cfg.relayUrl.replace(/^http/, "ws").replace(/\/+$/, "");
-const HTTP_URL = cfg.relayUrl.replace(/^ws/, "http").replace(/\/+$/, "");
+// Canonicalize the relay URL; a schemeless entry defaults to wss:// so neither
+// the WebSocket nor fetch() ever receives a URL it can't parse. Note a naive
+// /^ws/→http replace would turn "wss://" into "httpss://", so map explicitly.
+const RELAY_RAW = String(cfg.relayUrl ?? "").trim().replace(/\/+$/, "");
+const RELAY_SCHEMED = RELAY_RAW.replace(/^https:\/\//i, "wss://").replace(/^http:\/\//i, "ws://");
+const WS_URL = /^wss?:\/\//i.test(RELAY_SCHEMED) ? RELAY_SCHEMED : `wss://${RELAY_SCHEMED}`;
+const HTTP_URL = WS_URL.replace(/^wss:\/\//i, "https://").replace(/^ws:\/\//i, "http://");
 
 const log = (...a) => console.error(new Date().toISOString(), "[buzz-bridge]", ...a);
 
