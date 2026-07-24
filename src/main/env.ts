@@ -14,7 +14,10 @@ export function hydratePath(): void {
   }
   try {
     const shell = process.env.SHELL || "/bin/zsh";
-    const res = spawnSync(shell, ["-ilc", "echo __P__$PATH__P__"], {
+    // Brace-delimit the variable: in zsh/bash `_` is a valid identifier char, so
+    // a bare `$PATH__P__` parses as the (undefined) variable `PATH__P__` and the
+    // marker collapses to empty — silently defeating the whole probe.
+    const res = spawnSync(shell, ["-ilc", 'echo "__P__${PATH}__P__"'], {
       encoding: "utf8",
       timeout: 5000,
     });
